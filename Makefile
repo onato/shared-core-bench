@@ -41,7 +41,7 @@ coverage-kmp:
 	$(GRADLE) koverXmlReport koverVerify koverLog
 
 test-android: ## Android app unit and Robolectric tests
-	$(ANDROID_GRADLE) :app:testDebugUnitTest
+	$(ANDROID_GRADLE) :app:testDebugUnitTest :benchmark:testReleaseUnitTest
 
 lint-android:
 	$(ANDROID_GRADLE) ktlintCheck detekt
@@ -49,5 +49,18 @@ lint-android:
 coverage-android:
 	$(ANDROID_GRADLE) :app:koverXmlReportApp :app:koverVerifyApp :app:koverLogApp
 
-bench bench-report: ## Not implemented yet
+BENCH_UNSUPPORTED = $(strip $(filter-out all android,$(PLATFORM)) $(filter-out all kmp,$(CORE)) \
+	$(filter-out all embedded,$(STORAGE)) $(filter-out all core,$(SUITE)))
+
+bench: ## Run benchmarks on ANDROID_SERIAL and print the table (android, kmp, embedded, core so far)
+	@test -z "$(BENCH_UNSUPPORTED)" || { echo "bench: not implemented: $(BENCH_UNSUPPORTED)" >&2; exit 1; }
+	@test -n "$(ANDROID_SERIAL)" || { echo "bench: set ANDROID_SERIAL to a simpool lease" >&2; exit 1; }
+	rm -rf android/benchmark/build/outputs/connected_android_test_additional_output
+	ANDROID_SERIAL=$(ANDROID_SERIAL) $(ANDROID_GRADLE) :benchmark:connectedReleaseAndroidTest \
+		-Pandroid.testInstrumentationRunnerArguments.androidx.benchmark.suppressErrors=EMULATOR
+	uv run python scripts/bench_collect.py --core kmp --storage embedded --build-type release \
+		--git-sha $$(git rev-parse --short HEAD) --out report/results/$$(date +%Y%m%dT%H%M%S) \
+		android/benchmark/build/outputs/connected_android_test_additional_output
+
+bench-report: ## Not implemented yet
 	@echo "$@: not implemented" >&2; exit 1
