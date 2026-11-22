@@ -20,8 +20,8 @@ judgement calls.
 
 ### Anti-patterns
 
-From Matt Pocock's `tdd` skill (github.com/mattpocock/skills, MIT). Chasing 100% coverage pushes
-towards the first two; the review flags them even when coverage is green.
+Chasing 100% coverage pushes towards the first two; the review flags them even when coverage is
+green.
 
 - **Implementation-coupled**: mocks internal collaborators, tests private functions, or verifies
   through a side channel (querying the database instead of using the interface). The tell: it
@@ -68,7 +68,7 @@ towards the first two; the review flags them even when coverage is green.
 
 ## Code smells
 
-The review also flags these as judgement calls (Fowler, *Refactoring*, ch. 3, via Matt Pocock's
-`code-review` skill); a rule above wins where they disagree: Mysterious Name, Duplicated Code,
+The review also flags these as judgement calls (Fowler, *Refactoring*, ch. 3); a rule above wins
+where they disagree: Mysterious Name, Duplicated Code,
 Feature Envy, Data Clumps, Primitive Obsession, Repeated Switches, Shotgun Surgery, Divergent
 Change, Speculative Generality, Message Chains, Middle Man, Refused Bequest.

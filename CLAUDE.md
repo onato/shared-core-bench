@@ -31,8 +31,6 @@ code to make that test pass. Tick it only when it passes along with every other 
 
 # TDD and Tidy First
 
-Adapted from Kent Beck's CLAUDE.md for BPlusTree3 (github.com/KentBeck/BPlusTree3, commit 8c494da).
-
 - Red → Green → Refactor. Write the simplest failing test, run it, and see it fail for the
   expected reason before writing production code. A test that passes on first run proves
   nothing — fix the test.
