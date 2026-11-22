@@ -28,7 +28,7 @@ lint-scripts:
 	uv run ruff format --check scripts
 
 coverage-scripts:
-	uv run pytest -q --cov
+	uv run pytest -q --cov --cov-report=term-missing --cov-report=xml
 
 test-kmp:
 	$(GRADLE) jvmTest testAndroidHostTest
@@ -37,7 +37,7 @@ lint-kmp:
 	$(GRADLE) ktlintCheck detekt
 
 coverage-kmp:
-	$(GRADLE) koverVerify koverLog
+	$(GRADLE) koverXmlReport koverVerify koverLog
 
 bench bench-report: ## Not implemented yet
 	@echo "$@: not implemented" >&2; exit 1
