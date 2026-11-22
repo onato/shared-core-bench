@@ -50,6 +50,8 @@ and stores them in SQLite, and the list pages through them from the database. Pr
 4. **Store products** — SQLDelight schema, upsert by id inside one transaction.
 5. **Read a page** — `page(cursor, size)`, keyset paging by id.
 6. **Remote paging** — `nextFetch()` / `ingest()`: offset paging against the API, end of data.
+6b. **Ralph loop** (#20) — unattended runs from #7 on: fresh `claude -p` per issue, auto-merge on
+    green checks, stops and pings on anything needing a human.
 7. **Android app shell** — Compose app module, Kover gate, ktlint, Robolectric, empty screen test;
    joins `make` and CI.
 8. **`SharedCore` interface + KMP adapter** — app-level interface, fake for app tests.

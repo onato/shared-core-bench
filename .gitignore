@@ -10,3 +10,8 @@ xcuserdata/
 *.xcframework
 .claude/settings.local.json
 report/results/
+.venv/
+__pycache__/
+.coverage
+.pytest_cache/
+.ruff_cache/
