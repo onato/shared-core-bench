@@ -7,13 +7,16 @@ import bench.android.core.IngestResult
 import bench.android.core.PageResult
 import bench.android.core.Product
 import bench.android.core.SharedCore
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /** Pages products out of the core, fetching and ingesting remote pages when local ones run out. */
 class ProductPagingSource(
     private val core: SharedCore,
     private val fetch: (FetchRequest) -> FetchResult,
 ) : PagingSource<Long, Product>() {
-    override suspend fun load(params: LoadParams<Long>): LoadResult<Long, Product> = load(params.key, params.loadSize)
+    override suspend fun load(params: LoadParams<Long>): LoadResult<Long, Product> =
+        withContext(Dispatchers.IO) { load(params.key, params.loadSize) }
 
     private tailrec fun load(
         cursor: Long?,

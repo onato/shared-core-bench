@@ -31,6 +31,7 @@ sqldelight-jvm-driver = { module = "app.cash.sqldelight:sqlite-driver", version.
 robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
 okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }
 paging-common = { module = "androidx.paging:paging-common", version.ref = "paging" }
+paging-compose = { module = "androidx.paging:paging-compose", version.ref = "paging" }
 paging-testing = { module = "androidx.paging:paging-testing", version.ref = "paging" }
 mockwebserver = { module = "com.squareup.okhttp3:mockwebserver3", version.ref = "okhttp" }
 
