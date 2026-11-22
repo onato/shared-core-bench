@@ -46,6 +46,7 @@ dependencies {
     implementation(libs.compose.material3)
     implementation(libs.activity.compose)
     implementation(libs.okhttp)
+    implementation(libs.paging.common)
     testImplementation(platform(libs.compose.bom))
     testImplementation(libs.compose.ui.test.junit4)
     testImplementation(libs.junit)
@@ -55,6 +56,7 @@ dependencies {
     testRuntimeOnly(libs.junit.platform.launcher)
     testImplementation(libs.robolectric)
     testImplementation(libs.mockwebserver)
+    testImplementation(libs.paging.testing)
     debugImplementation(libs.compose.ui.test.manifest)
 }
 
