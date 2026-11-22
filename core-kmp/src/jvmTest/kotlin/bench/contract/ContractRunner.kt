@@ -55,6 +55,7 @@ object ContractRunner {
             "ingest" -> core.ingest(args)
             "page" -> core.page(args)
             "nextFetch" -> core.nextFetch(args)
+            "detail" -> core.detail(args)
             "stats" -> core.stats(args)
             else -> null
         }

@@ -12,6 +12,8 @@ class FakeCore : ContractCore {
 
     override fun nextFetch(args: JsonObject): JsonElement = echo("nextFetch", args)
 
+    override fun detail(args: JsonObject): JsonElement = echo("detail", args)
+
     override fun stats(args: JsonObject): JsonElement = echo("stats", args)
 
     private fun echo(

@@ -12,6 +12,8 @@ class Core private constructor(
             is PageDecoding.Products -> store(page)
         }
 
+    fun detail(id: Long): Product? = database.productQueries.byId(id, ::Product).executeAsOneOrNull()
+
     fun stats(): CoreStats = CoreStats(productCount = database.productQueries.count().executeAsOne())
 
     // Drivers throw platform exceptions (java.sql.SQLException, android.database.SQLException)

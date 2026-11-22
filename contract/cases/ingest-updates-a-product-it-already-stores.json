@@ -18,6 +18,11 @@
       },
       "expect": { "accepted": 1, "rejected": 0 }
     },
-    { "step": "stats", "expect": { "productCount": 2 } }
+    { "step": "stats", "expect": { "productCount": 2 } },
+    {
+      "step": "detail",
+      "args": { "id": 1 },
+      "expect": { "id": 1, "title": "Essence Mascara Lash Princess", "price": 8.49 }
+    }
   ]
 }

@@ -9,3 +9,6 @@ INSERT OR REPLACE INTO product (id, title, price) VALUES (?, ?, ?);
 
 count:
 SELECT count(*) FROM product;
+
+byId:
+SELECT id, title, price FROM product WHERE id = ?;

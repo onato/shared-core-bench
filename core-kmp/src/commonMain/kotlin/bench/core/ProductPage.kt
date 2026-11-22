@@ -9,7 +9,7 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.longOrNull
 
-internal data class ProductRow(
+data class Product(
     val id: Long,
     val title: String,
     val price: Double,
@@ -17,7 +17,7 @@ internal data class ProductRow(
 
 internal sealed interface PageDecoding {
     data class Products(
-        val rows: List<ProductRow>,
+        val rows: List<Product>,
         val rejected: Int,
     ) : PageDecoding
 
@@ -48,12 +48,12 @@ private fun decodeProducts(products: JsonArray): PageDecoding.Products {
     return PageDecoding.Products(rows = rows, rejected = products.size - rows.size)
 }
 
-private fun productOrNull(item: JsonElement): ProductRow? {
+private fun productOrNull(item: JsonElement): Product? {
     val fields = item as? JsonObject
     val id = number(fields?.get("id"))?.longOrNull
     val title = text(fields?.get("title"))
     val price = number(fields?.get("price"))?.doubleOrNull
-    return if (id != null && title != null && price != null) ProductRow(id, title, price) else null
+    return if (id != null && title != null && price != null) Product(id, title, price) else null
 }
 
 private fun number(field: JsonElement?): JsonPrimitive? = (field as? JsonPrimitive)?.takeUnless { it.isString }
