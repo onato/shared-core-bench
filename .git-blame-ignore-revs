@@ -8,3 +8,6 @@ f51b2ce9f963ceebe6d880b7ab6c78029663492b
 
 # Structural: clearer step results and naming in the Ralph loop (#44)
 c6a70c6e87f21d8af8ea3e2771d44898a634d075
+
+# Structural: move the contract runner into its own JVM module (#63)
+1505eee37f17e1bcae43b13d096d13f33d8c4f27
