@@ -3,6 +3,7 @@ package bench.core
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.jsonArray
@@ -21,6 +22,6 @@ internal fun decodePage(body: ByteArray): IngestResult {
 }
 
 private fun isValidProduct(item: JsonElement): Boolean {
-    val price = item.jsonObject["price"] as? JsonPrimitive ?: return false
+    val price = (item as? JsonObject)?.get("price") as? JsonPrimitive ?: return false
     return !price.isString && price.doubleOrNull != null
 }
