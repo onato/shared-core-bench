@@ -1,0 +1,100 @@
+import json
+
+import bench_collect
+
+PIXEL = {
+    "brand": "google",
+    "model": "Pixel 8 Pro",
+    "fingerprint": "google/husky/husky:16/BP2A.250605.031/13581935:user/release-keys",
+    "version": {"sdk": 36},
+}
+TIMINGS = {"median": 300, "runs": [500, 100, 300, 200, 400]}
+INGEST = {"name": "ingest1000Products", "metrics": {"timeNs": TIMINGS}}
+
+
+def androidx_report(build=PIXEL, benchmark=INGEST):
+    """The parts of androidx.benchmark's `*-benchmarkData.json` the collector reads."""
+    return {"context": {"build": build}, "benchmarks": [benchmark]}
+
+
+def collect(report=None):
+    labels = {"core": "kmp", "storage": "embedded", "build_type": "release", "git_sha": "abc1234"}
+    return bench_collect.collect(report or androidx_report(), **labels)
+
+
+def test_each_benchmark_becomes_one_row_with_its_timings():
+    [row] = collect()
+
+    assert [row[k] for k in ("suite", "workload", "n", "median_ns", "p95_ns", "runs")] == [
+        "core", "ingest1000Products", 1000, 300, 500, 5,
+    ]  # fmt: skip
+
+
+def test_rows_record_device_os_core_storage_build_type_and_git_sha():
+    [row] = collect()
+
+    keys = ("platform", "device", "os", "core", "storage", "build_type", "git_sha")
+    assert [row[k] for k in keys] == [
+        "android", "google Pixel 8 Pro", "Android API 36", "kmp", "embedded", "release", "abc1234",
+    ]  # fmt: skip
+
+
+def test_emulator_results_are_labelled_as_emulator():
+    fingerprint = (
+        "google/sdk_gphone64_arm64/emu64a:16/BE2A.250530.026.F3/13894323:userdebug/dev-keys"
+    )
+    emulator = PIXEL | {"model": "sdk_gphone64_arm64", "fingerprint": fingerprint}
+
+    [device] = collect()
+    [emulated] = collect(androidx_report(build=emulator))
+
+    assert (device["emulator"], emulated["emulator"]) == (False, True)
+
+
+def test_workload_drops_the_prefix_androidx_adds_for_suppressed_errors():
+    [row] = collect(androidx_report(benchmark=INGEST | {"name": "EMULATOR_ingest1000Products"}))
+
+    assert row["workload"] == "ingest1000Products"
+
+
+def test_table_groups_by_workload_with_cores_as_columns():
+    where = {"platform": "android", "storage": "embedded"}
+    rows = [
+        where | {"workload": "ingest1000Products", "core": "rust", "median_ns": 8_000_000},
+        where | {"workload": "decode100Products", "core": "kmp", "median_ns": 1_000_000},
+        where | {"workload": "ingest1000Products", "core": "kmp", "median_ns": 12_500_000},
+    ]
+
+    assert bench_collect.table(rows) == (
+        "| workload | platform | storage | kmp (median ms) | rust (median ms) |\n"
+        "| --- | --- | --- | --- | --- |\n"
+        "| decode100Products | android | embedded | 1.00 | - |\n"
+        "| ingest1000Products | android | embedded | 12.50 | 8.00 |\n"
+    )
+
+
+def test_main_saves_the_rows_it_finds_under_the_output_directory_and_prints_them(tmp_path, capsys):
+    device = tmp_path / "connected" / "releaseAndroidTest" / "connected" / "DOC_API36(AVD) - 16"
+    device.mkdir(parents=True)
+    (device / "bench.benchmark.test-benchmarkData.json").write_text(json.dumps(androidx_report()))
+    (device / "logcat.txt").write_text("not a report")
+    out = tmp_path / "results" / "20261123T0100"
+    labels = [
+        "--core",
+        "kmp",
+        "--storage",
+        "embedded",
+        "--build-type",
+        "release",
+        "--git-sha",
+        "a1",
+    ]
+
+    status = bench_collect.main([*labels, "--out", str(out), str(tmp_path / "connected")])
+
+    saved = json.loads((out / "results.json").read_text())
+    assert (status, [row["workload"] for row in saved]) == (0, ["ingest1000Products"])
+    assert (
+        capsys.readouterr().out.splitlines()[-1]
+        == "| ingest1000Products | android | embedded | 0.00 |"
+    )
