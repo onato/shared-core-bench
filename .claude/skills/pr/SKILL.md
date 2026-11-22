@@ -7,6 +7,11 @@ PRs are squash-merged with the PR title and body as the commit on `main`, so bot
 be read in `git log`: an imperative title under 72 characters, prefixed `Structural:` when the PR
 only rearranges code. Write the body with this template. Skip preambles and keep prose brief.
 
+Before writing the body, bring `.git-blame-ignore-revs` up to date: list the structural squash
+commits on `main` with `git log origin/main --format='%H %s' | grep ' Structural:'`, and for each
+SHA not already in the file append `# <title>` and the full SHA, committed in this PR. Mention it
+under Size when entries were added.
+
 ```markdown
 Closes #<issue>
 
