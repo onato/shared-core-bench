@@ -1,5 +1,6 @@
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
+    alias(libs.plugins.kotlin.jvm) apply false
     alias(libs.plugins.android.kmp.library)
     alias(libs.plugins.kover)
     alias(libs.plugins.ktlint)
@@ -45,6 +46,7 @@ kotlin {
             implementation(kotlin("test"))
         }
         jvmTest.dependencies {
+            implementation(project(":contract-runner"))
             implementation(libs.kotlin.test.junit5)
             implementation(libs.junit.jupiter)
             runtimeOnly(libs.junit.platform.launcher)

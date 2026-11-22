@@ -32,7 +32,7 @@ coverage-scripts:
 	uv run pytest -q --cov --cov-report=term-missing --cov-report=xml
 
 test-kmp:
-	$(GRADLE) jvmTest testAndroidHostTest
+	$(GRADLE) jvmTest testAndroidHostTest :contract-runner:test
 
 lint-kmp:
 	$(GRADLE) ktlintCheck detekt
