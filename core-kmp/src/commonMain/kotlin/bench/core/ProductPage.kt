@@ -2,21 +2,30 @@ package bench.core
 
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.doubleOrNull
-import kotlinx.serialization.json.jsonArray
-import kotlinx.serialization.json.jsonObject
 
 internal fun decodePage(body: ByteArray): IngestResult {
-    val page =
-        try {
-            Json.parseToJsonElement(body.decodeToString())
-        } catch (_: SerializationException) {
-            return IngestResult.InvalidJson
-        }
-    val products = page.jsonObject.getValue("products").jsonArray
+    val page = parseOrNull(body)
+    val products = (page as? JsonObject)?.get("products") as? JsonArray
+    return when {
+        page == null -> IngestResult.InvalidJson
+        products == null -> IngestResult.NotAProductPage
+        else -> countValid(products)
+    }
+}
+
+private fun parseOrNull(body: ByteArray): JsonElement? =
+    try {
+        Json.parseToJsonElement(body.decodeToString())
+    } catch (_: SerializationException) {
+        null
+    }
+
+private fun countValid(products: JsonArray): IngestResult.Decoded {
     val accepted = products.count(::isValidProduct)
     return IngestResult.Decoded(accepted = accepted, rejected = products.size - accepted)
 }

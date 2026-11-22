@@ -38,7 +38,7 @@ adds its first fixture.
 
 | Step | Result |
 |---|---|
-| `ingest` | `{"accepted": n, "rejected": m}` — a product without a numeric `price` is rejected and counted, unknown fields are ignored. `{"error": "invalid-json"}` when the body isn't JSON. `requestId` and `status` are passed but not used yet. |
+| `ingest` | `{"accepted": n, "rejected": m}` — a product that isn't an object, or whose `price` isn't a JSON number, is rejected and counted; unknown fields are ignored. `{"error": "invalid-json"}` when the body isn't JSON; `{"error": "not-a-product-page"}` when it is JSON but not an object with a `products` array. `requestId` and `status` are passed but not used yet. |
 
 ## Runners
 

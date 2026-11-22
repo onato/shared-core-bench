@@ -22,10 +22,16 @@ class KmpContractCore(
             }
 
             IngestResult.InvalidJson -> {
-                JsonObject(mapOf("error" to JsonPrimitive("invalid-json")))
+                errorResult("invalid-json")
+            }
+
+            IngestResult.NotAProductPage -> {
+                errorResult("not-a-product-page")
             }
         }
     }
+
+    private fun errorResult(code: String) = JsonObject(mapOf("error" to JsonPrimitive(code)))
 
     override fun page(args: JsonObject): JsonElement = notInContractYet("page")
 

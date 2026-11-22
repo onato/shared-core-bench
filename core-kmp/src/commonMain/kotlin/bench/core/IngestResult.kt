@@ -7,4 +7,6 @@ sealed interface IngestResult {
     ) : IngestResult
 
     data object InvalidJson : IngestResult
+
+    data object NotAProductPage : IngestResult
 }

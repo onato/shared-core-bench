@@ -1,0 +1,13 @@
+{
+  "steps": [
+    {
+      "step": "ingest",
+      "args": {
+        "requestId": 1,
+        "status": 200,
+        "body": "{\"products\": [{\"id\": 1, \"title\": \"Essence Mascara\", \"price\": 9.99}, 42, \"Eyeshadow Palette\", [], null], \"total\": 194, \"skip\": 0, \"limit\": 5}"
+      },
+      "expect": { "accepted": 1, "rejected": 4 }
+    }
+  ]
+}
