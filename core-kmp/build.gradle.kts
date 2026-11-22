@@ -7,7 +7,11 @@ plugins {
 }
 
 kotlin {
-    jvm()
+    jvm {
+        testRuns["test"].executionTask.configure {
+            useJUnitPlatform()
+        }
+    }
     android {
         namespace = "bench.core"
         compileSdk =
@@ -26,6 +30,12 @@ kotlin {
     sourceSets {
         commonTest.dependencies {
             implementation(kotlin("test"))
+        }
+        jvmTest.dependencies {
+            implementation(libs.kotlin.test.junit5)
+            implementation(libs.junit.jupiter)
+            implementation(libs.kotlinx.serialization.json)
+            runtimeOnly(libs.junit.platform.launcher)
         }
     }
 }
