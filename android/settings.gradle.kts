@@ -22,4 +22,4 @@ includeBuild("../core-kmp") {
     }
 }
 
-include(":app")
+include(":app", ":benchmark")
