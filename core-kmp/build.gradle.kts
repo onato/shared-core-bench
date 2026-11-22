@@ -10,6 +10,9 @@ kotlin {
     jvm {
         testRuns["test"].executionTask.configure {
             useJUnitPlatform()
+            val contractCases = rootDir.resolve("../contract/cases").canonicalFile
+            inputs.dir(contractCases).withPropertyName("contractCases")
+            systemProperty("contract.cases", contractCases.path)
         }
     }
     android {
@@ -28,13 +31,15 @@ kotlin {
         allWarningsAsErrors = true
     }
     sourceSets {
+        commonMain.dependencies {
+            implementation(libs.kotlinx.serialization.json)
+        }
         commonTest.dependencies {
             implementation(kotlin("test"))
         }
         jvmTest.dependencies {
             implementation(libs.kotlin.test.junit5)
             implementation(libs.junit.jupiter)
-            implementation(libs.kotlinx.serialization.json)
             runtimeOnly(libs.junit.platform.launcher)
         }
     }

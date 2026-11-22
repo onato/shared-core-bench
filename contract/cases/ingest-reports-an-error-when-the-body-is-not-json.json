@@ -1,0 +1,13 @@
+{
+  "steps": [
+    {
+      "step": "ingest",
+      "args": {
+        "requestId": 1,
+        "status": 200,
+        "body": "<html>502 Bad Gateway</html>"
+      },
+      "expect": { "error": "invalid-json" }
+    }
+  ]
+}
