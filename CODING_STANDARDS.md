@@ -20,8 +20,8 @@ judgement calls.
 
 ### Anti-patterns
 
-From Matt Pocock's `tdd` skill (github.com/mattpocock/skills, MIT). Chasing 100% coverage pushes
-towards the first two; the review flags them even when coverage is green.
+Chasing 100% coverage pushes towards the first two; the review flags them even when coverage is
+green.
 
 - **Implementation-coupled**: mocks internal collaborators, tests private functions, or verifies
   through a side channel (querying the database instead of using the interface). The tell: it
