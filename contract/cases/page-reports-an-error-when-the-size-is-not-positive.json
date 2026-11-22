@@ -1,0 +1,23 @@
+{
+  "steps": [
+    {
+      "step": "ingest",
+      "args": {
+        "requestId": 1,
+        "status": 200,
+        "body": "{\"products\": [{\"id\": 1, \"title\": \"Essence Mascara\", \"price\": 9.99}]}"
+      },
+      "expect": { "accepted": 1, "rejected": 0 }
+    },
+    {
+      "step": "page",
+      "args": { "cursor": null, "size": 0 },
+      "expect": { "error": "invalid-page-size" }
+    },
+    {
+      "step": "page",
+      "args": { "cursor": null, "size": -1 },
+      "expect": { "error": "invalid-page-size" }
+    }
+  ]
+}

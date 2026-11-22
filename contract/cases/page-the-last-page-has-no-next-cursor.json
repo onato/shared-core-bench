@@ -1,0 +1,34 @@
+{
+  "steps": [
+    {
+      "step": "ingest",
+      "args": {
+        "requestId": 1,
+        "status": 200,
+        "body": "{\"products\": [{\"id\": 1, \"title\": \"Essence Mascara\", \"price\": 9.99}, {\"id\": 2, \"title\": \"Eyeshadow Palette\", \"price\": 19.99}, {\"id\": 3, \"title\": \"Powder Canister\", \"price\": 14.99}, {\"id\": 4, \"title\": \"Red Nail Polish\", \"price\": 8.99}]}"
+      },
+      "expect": { "accepted": 4, "rejected": 0 }
+    },
+    {
+      "step": "page",
+      "args": { "cursor": 2, "size": 2 },
+      "expect": {
+        "items": [
+          { "id": 3, "title": "Powder Canister", "price": 14.99 },
+          { "id": 4, "title": "Red Nail Polish", "price": 8.99 }
+        ],
+        "nextCursor": null
+      }
+    },
+    {
+      "step": "page",
+      "args": { "cursor": 3, "size": 2 },
+      "expect": {
+        "items": [
+          { "id": 4, "title": "Red Nail Polish", "price": 8.99 }
+        ],
+        "nextCursor": null
+      }
+    }
+  ]
+}

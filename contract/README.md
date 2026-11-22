@@ -39,6 +39,7 @@ adds its first fixture.
 | Step | Result |
 |---|---|
 | `ingest` | `{"accepted": n, "rejected": m}` — a product that isn't an object, has no integer `id`, no string `title`, or a `price` that isn't a JSON number, is rejected and counted; unknown fields are ignored. Accepted products are upserted by `id` in one transaction. `{"error": "invalid-json"}` when the body isn't JSON; `{"error": "not-a-product-page"}` when it is JSON but not an object with a `products` array. `requestId` and `status` are passed but not used yet. |
+| `page` | `{"items": [{"id": n, "title": s, "price": x}, …], "nextCursor": n}` — up to `args.size` stored products in ascending `id` order, starting after `args.cursor` (from the first product when it is `null`). `nextCursor` is the last item's `id` when more products follow, `null` otherwise. `{"error": "invalid-page-size"}` when `size` ≤ 0. |
 | `detail` | `{"id": n, "title": s, "price": x}` for the stored product with `args.id`; `null` when there is none. |
 | `stats` | `{"productCount": n}` — the number of distinct products stored. |
 
