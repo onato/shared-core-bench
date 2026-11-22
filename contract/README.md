@@ -56,4 +56,4 @@ the result with `expect` as JSON values, so key order and whitespace don't matte
 
 | Core | Runner |
 |---|---|
-| KMP (JVM) | `core-kmp/src/jvmTest/kotlin/bench/contract/ContractRunner.kt`, run over `contract/cases` by `bench/core/KmpContractTest.kt` |
+| KMP (JVM) | `core-kmp/contract-runner/src/main/kotlin/bench/contract/ContractRunner.kt`, run over `contract/cases` by `core-kmp/src/jvmTest/kotlin/bench/core/KmpContractTest.kt` |
