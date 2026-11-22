@@ -14,8 +14,11 @@ learned.
   `Structural:` PR first.
 - **Every PR goes through** CI (lint, tests, coverage gate), the PR-size check and the Claude
   review. `main` takes no direct pushes, no force pushes, and nobody can bypass the rules.
-- **Board** (GitHub Projects): Todo → In progress → In review → Done. GitHub's built-in project
-  workflows move items on PR open and merge; the agent moves Todo → In progress when it starts.
+- **Board** (GitHub Projects): Todo → In progress → In review → Done. The agent moves Todo → In
+  progress when it starts. GitHub's built-in project workflows move the rest, and these must be
+  on (project → Workflows): **Item closed** → Done, **Pull request merged** → Done, **Pull
+  request linked to issue** → In review, **Auto-add to project** (`is:issue`). The Ralph loop
+  refuses to start while any is off, and moves closed issues the board missed to Done.
 - **Next issue**: the lowest-numbered open Todo issue in the current milestone whose blockers are
   closed. Each issue lists its tests to write first; "go" means the next unchecked test in the
   current issue (Beck's `plan.md` loop, one file per issue instead of one per repo).
