@@ -13,11 +13,13 @@ from ralph import (
     TODO,
     GitHubError,
     Issue,
+    Live,
     Outcome,
     PullRequest,
     main,
     run,
 )
+from ralph_token import TokenError
 
 
 class FakeGitHub:
@@ -289,8 +291,12 @@ def test_closed_issues_left_off_done_are_moved_to_done_and_named_in_the_stop_mes
     )
 
 
+def no_sessions():
+    raise AssertionError("a dry run must not start a session")
+
+
 def dry_run(github, *args):
-    return main(["--dry-run", "--milestone", "2", *args], connect=lambda: github)
+    return main(["--dry-run", "--milestone", "2", *args], connect=lambda: github, live=no_sessions)
 
 
 def test_dry_run_prints_the_next_issue_and_any_workflows_off_without_moving_a_card(capsys):
@@ -333,14 +339,32 @@ def test_a_failing_github_call_stops_with_the_command_and_its_error(capsys):
     )
 
 
-def test_without_dry_run_the_loop_refuses_to_start_until_sessions_exist(capsys):
-    github = FakeGitHub([Issue(7, TODO)])
+def test_without_dry_run_the_loop_works_the_milestone_and_sends_its_stop_message(capsys):
+    github = FakeGitHub([Issue(7, TODO), Issue(8, TODO)], blocked_by={8: (7,)})
+    session = FakeSession(github, {7: merged_run(50), 8: merged_run(51)})
+    notes, clock = [], Clock()
 
-    code = main(["--milestone", "2"], connect=lambda: github)
+    code = main(
+        ["--milestone", "2", "--max-iterations", "1"],
+        connect=lambda: github,
+        live=lambda: Live(session, notes.append, clock, clock.sleep),
+    )
 
-    assert code == 2
-    assert capsys.readouterr().err == "Only --dry-run is implemented so far (#39 adds sessions).\n"
-    assert github.moves == []
+    assert code == 0
+    assert session.worked == [7]
+    assert notes == ["Ralph loop stopped: iteration cap (1) reached.\nOpen:\n- #8 Todo"]
+    assert capsys.readouterr().out == notes[0] + "\n"
+
+
+def test_a_loop_that_cannot_start_says_why_and_starts_no_session(capsys):
+    def live():
+        raise TokenError("Ralph loop can't start: missing installation_id in .ralph/config")
+
+    code = main(["--milestone", "2"], connect=lambda: FakeGitHub([]), live=live)
+
+    assert code == 1
+    message = "Ralph loop can't start: missing installation_id in .ralph/config"
+    assert capsys.readouterr().err == message + "\n"
 
 
 def test_the_script_stops_cleanly_when_gh_fails(tmp_path):
