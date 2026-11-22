@@ -20,6 +20,9 @@ What to do:
    `gh pr merge <n> --auto --squash`. Don't merge it yourself, and never push to `main`.
 6. Wait for CI and the Claude review (`gh pr checks <n> --watch`). Fix what they report with new
    commits, never force pushes. After three failed rounds of either, stop.
+   `main` won't merge a PR with an unresolved review thread. For each inline finding you fix, reply
+   on its thread saying what changed and where, then resolve it (GraphQL `resolveReviewThread`).
+   If you disagree with a finding, leave its thread open and stop with NEEDS_HUMAN.
 7. Before you finish, post a PR comment headed `## Retro notes` with a few lines: what slowed you
    down, what the review caught, what you had to guess, and any check or doc that would have
    prevented it.
