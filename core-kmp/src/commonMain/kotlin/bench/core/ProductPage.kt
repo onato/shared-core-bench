@@ -51,9 +51,11 @@ private fun decodeProducts(products: JsonArray): PageDecoding.Products {
 private fun productOrNull(item: JsonElement): ProductRow? {
     val fields = item as? JsonObject
     val id = number(fields?.get("id"))?.longOrNull
-    val title = fields?.get("title") as? JsonPrimitive
+    val title = text(fields?.get("title"))
     val price = number(fields?.get("price"))?.doubleOrNull
-    return if (id != null && title != null && price != null) ProductRow(id, title.content, price) else null
+    return if (id != null && title != null && price != null) ProductRow(id, title, price) else null
 }
 
 private fun number(field: JsonElement?): JsonPrimitive? = (field as? JsonPrimitive)?.takeUnless { it.isString }
+
+private fun text(field: JsonElement?): String? = (field as? JsonPrimitive)?.takeIf { it.isString }?.content

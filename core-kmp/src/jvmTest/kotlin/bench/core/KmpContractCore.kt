@@ -28,6 +28,10 @@ class KmpContractCore(
             IngestResult.NotAProductPage -> {
                 errorResult("not-a-product-page")
             }
+
+            IngestResult.StorageFailed -> {
+                errorResult("storage-failed")
+            }
         }
     }
 
