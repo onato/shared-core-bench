@@ -10,5 +10,7 @@ interface ContractCore {
 
     fun nextFetch(args: JsonObject): JsonElement
 
+    fun detail(args: JsonObject): JsonElement
+
     fun stats(args: JsonObject): JsonElement
 }

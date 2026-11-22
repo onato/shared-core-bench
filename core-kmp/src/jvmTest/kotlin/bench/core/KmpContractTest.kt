@@ -10,6 +10,6 @@ class KmpContractTest {
     fun contractCases(): List<DynamicTest> {
         val dir = File(System.getProperty("contract.cases"))
         check(dir.isDirectory) { "no contract cases at $dir" }
-        return ContractRunner.cases(dir) { KmpContractCore(Core.create(CoreConfig(dbPath = ":memory:"))) }
+        return ContractRunner.cases(dir) { KmpContractCore(Core.create(CoreConfig(dbPath = ":memory:"), JdbcDrivers)) }
     }
 }

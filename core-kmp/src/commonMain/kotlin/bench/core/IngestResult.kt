@@ -9,4 +9,6 @@ sealed interface IngestResult {
     data object InvalidJson : IngestResult
 
     data object NotAProductPage : IngestResult
+
+    data object StorageFailed : IngestResult
 }
