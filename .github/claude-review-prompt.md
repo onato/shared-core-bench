@@ -9,6 +9,10 @@ directory. Review only; never edit files, commit or push.
 3. Read `CODING_STANDARDS.md`, `CLAUDE.md` and `SPEC.md`, and any file you need to understand
    the diff.
 
+If any of steps 1–2 fails — a command is denied or errors, or the diff comes back empty — stop
+reviewing. Do not judge a change you have not read: return `REQUEST_CHANGES` with a summary
+naming the command that failed and its error.
+
 ## Pass 1: Standards
 
 Check the diff against `CODING_STANDARDS.md` (including its test anti-patterns and code smells)
@@ -42,4 +46,4 @@ but must say why.
   `## Standards`, `## Spec` and `## Evidence`, each listing its findings or "No findings". Keep
   the passes separate: never merge or re-rank findings across them.
 - Return the structured output: `verdict` is `REQUEST_CHANGES` if any pass has a hard finding,
-  otherwise `APPROVE`; `summary` is a few lines naming each hard finding, or why it is approved.
+  otherwise `APPROVE`. Only approve after reading the full diff and the linked issue. `summary` is a few lines naming each hard finding, or why it is approved.
