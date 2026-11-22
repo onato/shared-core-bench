@@ -15,8 +15,10 @@ class KmpContractCore(
     private val core: Core,
 ) : ContractCore {
     override fun ingest(args: JsonObject): JsonElement {
+        val requestId = args.getValue("requestId").jsonPrimitive.long
+        val status = args.getValue("status").jsonPrimitive.int
         val body = args.getValue("body").jsonPrimitive.content
-        return when (val result = core.ingest(body.encodeToByteArray())) {
+        return when (val result = core.ingest(requestId, status, body.encodeToByteArray())) {
             is IngestResult.Decoded -> {
                 JsonObject(
                     mapOf(
@@ -24,6 +26,14 @@ class KmpContractCore(
                         "rejected" to JsonPrimitive(result.rejected),
                     ),
                 )
+            }
+
+            IngestResult.UnknownRequest -> {
+                errorResult("unknown-request")
+            }
+
+            is IngestResult.HttpStatus -> {
+                JsonObject(mapOf("error" to JsonPrimitive("http-status"), "status" to JsonPrimitive(result.status)))
             }
 
             IngestResult.InvalidJson -> {
@@ -60,7 +70,10 @@ class KmpContractCore(
         }
     }
 
-    override fun nextFetch(args: JsonObject): JsonElement = notInContractYet("nextFetch")
+    override fun nextFetch(args: JsonObject): JsonElement {
+        val request = core.nextFetch() ?: return JsonNull
+        return JsonObject(mapOf("requestId" to JsonPrimitive(request.requestId), "url" to JsonPrimitive(request.url)))
+    }
 
     override fun detail(args: JsonObject): JsonElement {
         val product = core.detail(args.getValue("id").jsonPrimitive.long) ?: return JsonNull
@@ -80,6 +93,4 @@ class KmpContractCore(
         val stats = core.stats()
         return JsonObject(mapOf("productCount" to JsonPrimitive(stats.productCount)))
     }
-
-    private fun notInContractYet(step: String): Nothing = error("$step is not implemented by the KMP core yet")
 }

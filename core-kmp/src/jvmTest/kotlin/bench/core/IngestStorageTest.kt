@@ -16,7 +16,10 @@ class IngestStorageTest {
 
         val result =
             core.ingest(
-                """
+                requestId = 1,
+                status = 200,
+                body =
+                    """
                 {"products": [
                   {"id": 1, "title": "Essence Mascara", "price": 9.99},
                   {"id": 2, "title": "Eyeshadow Palette", "price": 19},

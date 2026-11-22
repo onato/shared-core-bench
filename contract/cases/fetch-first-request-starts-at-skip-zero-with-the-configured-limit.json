@@ -1,0 +1,8 @@
+{
+  "steps": [
+    {
+      "step": "nextFetch",
+      "expect": { "requestId": 1, "url": "https://dummyjson.com/products?limit=20&skip=0" }
+    }
+  ]
+}
