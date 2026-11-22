@@ -69,6 +69,10 @@ class FakeSession:
         self.runs = runs
         self.worked = []
         self.status_at_start = []
+        self.usage = None
+
+    def weekly_usage(self):
+        return self.usage
 
     def work(self, issue):
         self.worked.append(issue.number)
@@ -202,6 +206,20 @@ def test_stops_at_the_iteration_cap():
 
     assert session.worked == [7]
     assert stop.startswith("Ralph loop stopped: iteration cap (1) reached.\n")
+
+
+@pytest.mark.parametrize(("usage", "worked"), [(None, [7]), (0.19, [7]), (0.20, []), (0.21, [])])
+def test_stops_before_touching_the_board_once_weekly_usage_reaches_twenty_percent(usage, worked):
+    github = FakeGitHub([Issue(7, TODO)])
+    session = FakeSession(github, {7: merged_run(40)})
+    session.usage = usage
+
+    stop = loop(github, session)
+
+    assert session.worked == worked
+    if not worked:
+        assert github.moves == []
+        assert stop.startswith(f"Ralph loop stopped: weekly usage {usage:.0%} ≥ 20%.\n")
 
 
 def test_waits_for_a_pending_auto_merge_then_takes_the_issue_it_unblocks():
