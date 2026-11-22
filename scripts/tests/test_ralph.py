@@ -56,6 +56,7 @@ class FakeGitHub:
 
     def comment(self, issue, body):
         self.comments.append((issue, body))
+        return f"https://github.com/onato/shared-core-bench/issues/{issue}#issuecomment-1"
 
     def update_branch(self, pr):
         self.updates.append(pr)
@@ -165,6 +166,21 @@ def test_a_stuck_issue_goes_to_in_review_with_its_reason_and_the_loop_goes_on(ou
     assert session.worked == [7, 8]
     assert github.moves[:2] == [(7, IN_PROGRESS), (7, IN_REVIEW)]
     assert github.comments == [(7, f"Moved to In review by the Ralph loop: {reason}.")]
+
+
+def test_the_owner_is_messaged_as_soon_as_an_issue_needs_them():
+    github = FakeGitHub([Issue(7, TODO), Issue(8, TODO)])
+    stuck = (Outcome(pr=None, needs_human="choose a database"), None, True)
+    session = FakeSession(github, {7: stuck, 8: merged_run(41)})
+    notes = []
+
+    stop = loop(github, session, notes)
+
+    assert notes == [
+        "Ralph loop: #7 needs you (moved to In review): needs a human: choose a database.\n"
+        "https://github.com/onato/shared-core-bench/issues/7#issuecomment-1",
+        stop,
+    ]
 
 
 def test_stops_with_milestone_complete_when_no_issues_are_open():
@@ -302,7 +318,7 @@ def test_the_stop_message_lists_stuck_issues_and_prs_without_retro_notes():
 
     stop = loop(github, session, notes)
 
-    assert notes == [stop]
+    assert notes[-1] == stop
     assert stop == (
         "Ralph loop stopped: nothing left to take.\n"
         "Open:\n"

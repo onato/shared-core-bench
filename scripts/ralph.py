@@ -61,7 +61,7 @@ class GitHub(ReadsBoard, Protocol):
     def pull_request(self, number: int) -> PullRequest: ...
     def set_status(self, issue: int, status: str) -> None: ...
     def update_branch(self, number: int) -> None: ...
-    def comment(self, issue: int, body: str) -> None: ...
+    def comment(self, issue: int, body: str) -> str: ...  # the comment's URL
 
 
 class Session(Protocol):
@@ -95,7 +95,7 @@ def run(
     sleep: Callable[[float], None],
     max_iterations: int,
 ) -> str:
-    message = _Loop(milestone, github, session, clock, sleep, max_iterations).run()
+    message = _Loop(milestone, github, session, notify, clock, sleep, max_iterations).run()
     notify(message)
     return message
 
@@ -112,6 +112,7 @@ class _Loop:
     milestone: int
     github: GitHub
     session: Session
+    notify: Callable[[str], None]
     clock: Callable[[], float]
     sleep: Callable[[float], None]
     max_iterations: int
@@ -192,7 +193,12 @@ class _Loop:
         if reason:
             self.stuck[issue.number] = reason
             self.github.set_status(issue.number, IN_REVIEW)
-            self.github.comment(issue.number, f"Moved to In review by the Ralph loop: {reason}.")
+            url = self.github.comment(
+                issue.number, f"Moved to In review by the Ralph loop: {reason}."
+            )
+            self.notify(
+                f"Ralph loop: #{issue.number} needs you (moved to In review): {reason}.\n{url}"
+            )
         elif pr is not None and not pr.merged:
             self.pending.append(pr.number)
 
