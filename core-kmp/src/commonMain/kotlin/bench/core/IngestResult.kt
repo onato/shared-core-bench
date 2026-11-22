@@ -6,6 +6,12 @@ sealed interface IngestResult {
         val rejected: Int,
     ) : IngestResult
 
+    data object UnknownRequest : IngestResult
+
+    data class HttpStatus(
+        val status: Int,
+    ) : IngestResult
+
     data object InvalidJson : IngestResult
 
     data object NotAProductPage : IngestResult

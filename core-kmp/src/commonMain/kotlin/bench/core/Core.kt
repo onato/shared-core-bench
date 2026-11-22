@@ -6,7 +6,22 @@ class Core private constructor(
     val config: CoreConfig,
     private val database: ProductDatabase,
 ) {
-    fun ingest(body: ByteArray): IngestResult =
+    private val paging = RemotePaging(config.baseUrl, config.pageSize)
+
+    fun nextFetch(): FetchRequest? = paging.next()
+
+    fun ingest(
+        requestId: Long,
+        status: Int,
+        body: ByteArray,
+    ): IngestResult =
+        when {
+            !paging.isPending(requestId) -> IngestResult.UnknownRequest
+            status !in SUCCESS -> IngestResult.HttpStatus(status)
+            else -> decodeAndStore(body)
+        }
+
+    private fun decodeAndStore(body: ByteArray): IngestResult =
         when (val page = decodePage(body)) {
             is PageDecoding.Unreadable -> page.error
             is PageDecoding.Products -> store(page)
@@ -35,12 +50,15 @@ class Core private constructor(
             database.productQueries.transaction {
                 page.rows.forEach { database.productQueries.upsert(it.id, it.title, it.price) }
             }
+            paging.advance(page.total)
             IngestResult.Decoded(accepted = page.rows.size, rejected = page.rejected)
         } catch (_: Exception) {
             IngestResult.StorageFailed
         }
 
     companion object {
+        private val SUCCESS = 200..299
+
         fun create(
             config: CoreConfig,
             drivers: DriverFactory,

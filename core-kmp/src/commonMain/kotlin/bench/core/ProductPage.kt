@@ -19,6 +19,7 @@ internal sealed interface PageDecoding {
     data class Products(
         val rows: List<Product>,
         val rejected: Int,
+        val total: Long?,
     ) : PageDecoding
 
     data class Unreadable(
@@ -32,7 +33,7 @@ internal fun decodePage(body: ByteArray): PageDecoding {
     return when {
         page == null -> PageDecoding.Unreadable(IngestResult.InvalidJson)
         products == null -> PageDecoding.Unreadable(IngestResult.NotAProductPage)
-        else -> decodeProducts(products)
+        else -> decodeProducts(products, total = number(page["total"])?.longOrNull)
     }
 }
 
@@ -43,9 +44,12 @@ private fun parseOrNull(body: ByteArray): JsonElement? =
         null
     }
 
-private fun decodeProducts(products: JsonArray): PageDecoding.Products {
+private fun decodeProducts(
+    products: JsonArray,
+    total: Long?,
+): PageDecoding.Products {
     val rows = products.mapNotNull(::productOrNull)
-    return PageDecoding.Products(rows = rows, rejected = products.size - rows.size)
+    return PageDecoding.Products(rows = rows, rejected = products.size - rows.size, total = total)
 }
 
 private fun productOrNull(item: JsonElement): Product? {

@@ -1,0 +1,27 @@
+{
+  "steps": [
+    {
+      "step": "ingest",
+      "args": {
+        "requestId": 1,
+        "status": 200,
+        "body": "{\"products\": [{\"id\": 1, \"title\": \"Essence Mascara\", \"price\": 9.99}], \"total\": 40, \"skip\": 0, \"limit\": 20}"
+      },
+      "expect": { "accepted": 1, "rejected": 0 }
+    },
+    {
+      "step": "nextFetch",
+      "expect": { "requestId": 2, "url": "https://dummyjson.com/products?limit=20&skip=20" }
+    },
+    {
+      "step": "ingest",
+      "args": {
+        "requestId": 2,
+        "status": 200,
+        "body": "{\"products\": [{\"id\": 21, \"title\": \"Red Lipstick\", \"price\": 12.99}], \"total\": 40, \"skip\": 20, \"limit\": 20}"
+      },
+      "expect": { "accepted": 1, "rejected": 0 }
+    },
+    { "step": "nextFetch", "expect": null }
+  ]
+}

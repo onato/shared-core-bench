@@ -23,7 +23,8 @@ with the issues that implement the feature.
 }
 ```
 
-Every case starts from a fresh core with an empty database. Steps run in order against that core.
+Every case starts from a fresh core with an empty database, configured with the base URL
+`https://dummyjson.com/products` and a page size of 20. Steps run in order against that core.
 
 | Field | Meaning |
 |---|---|
@@ -38,7 +39,8 @@ adds its first fixture.
 
 | Step | Result |
 |---|---|
-| `ingest` | `{"accepted": n, "rejected": m}` — a product that isn't an object, has no integer `id`, no string `title`, or a `price` that isn't a JSON number, is rejected and counted; unknown fields are ignored. Accepted products are upserted by `id` in one transaction. `{"error": "invalid-json"}` when the body isn't JSON; `{"error": "not-a-product-page"}` when it is JSON but not an object with a `products` array. `requestId` and `status` are passed but not used yet. |
+| `ingest` | `{"accepted": n, "rejected": m}` — a product that isn't an object, has no integer `id`, no string `title`, or a `price` that isn't a JSON number, is rejected and counted; unknown fields are ignored. Accepted products are upserted by `id` in one transaction. `{"error": "invalid-json"}` when the body isn't JSON; `{"error": "not-a-product-page"}` when it is JSON but not an object with a `products` array. `{"error": "unknown-request"}` when `requestId` isn't the pending request's id; `{"error": "http-status", "status": n}` when `status` isn't 2xx. Only a stored page completes the pending request; after any error it stays pending. |
+| `nextFetch` | `{"requestId": n, "url": s}` — the pending request: `<baseUrl>?limit=<page size>&skip=<skip>`, starting at id 1 and skip 0. Each stored page moves to the next id and `skip` + page size. `null` once that reaches the `total` the API last reported (a page without `total` leaves it unknown). |
 | `page` | `{"items": [{"id": n, "title": s, "price": x}, …], "nextCursor": n}` — up to `args.size` stored products in ascending `id` order, starting after `args.cursor` (from the first product when it is `null`). `nextCursor` is the last item's `id` when more products follow, `null` otherwise. `{"error": "invalid-page-size"}` when `size` ≤ 0. |
 | `detail` | `{"id": n, "title": s, "price": x}` for the stored product with `args.id`; `null` when there is none. |
 | `stats` | `{"productCount": n}` — the number of distinct products stored. |
