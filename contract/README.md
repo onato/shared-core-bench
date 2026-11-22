@@ -34,6 +34,12 @@ Every case starts from a fresh core with an empty database. Steps run in order a
 The result shapes in the example are illustrative: each step's result is fixed by the issue that
 adds its first fixture.
 
+## Step results
+
+| Step | Result |
+|---|---|
+| `ingest` | `{"accepted": n, "rejected": m}` — a product without a numeric `price` is rejected and counted, unknown fields are ignored. `{"error": "invalid-json"}` when the body isn't JSON. `requestId` and `status` are passed but not used yet. |
+
 ## Runners
 
 A core's runner turns each case file into its own test, sends every step to the core and compares
@@ -45,4 +51,4 @@ the result with `expect` as JSON values, so key order and whitespace don't matte
 
 | Core | Runner |
 |---|---|
-| KMP (JVM) | `core-kmp/src/jvmTest/kotlin/bench/contract/ContractRunner.kt`, given a `ContractCore` adapter |
+| KMP (JVM) | `core-kmp/src/jvmTest/kotlin/bench/contract/ContractRunner.kt`, run over `contract/cases` by `bench/core/KmpContractTest.kt` |
