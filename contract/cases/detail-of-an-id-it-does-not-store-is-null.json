@@ -1,0 +1,5 @@
+{
+  "steps": [
+    { "step": "detail", "args": { "id": 1 }, "expect": null }
+  ]
+}

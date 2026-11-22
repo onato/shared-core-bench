@@ -25,6 +25,12 @@ android {
     }
     testOptions {
         unitTests.isIncludeAndroidResources = true
+        unitTests.all { test ->
+            test.useJUnitPlatform()
+            val contractCases = rootDir.resolve("../contract/cases").canonicalFile
+            test.inputs.dir(contractCases).withPropertyName("contractCases")
+            test.systemProperty("contract.cases", contractCases.path)
+        }
     }
 }
 
@@ -43,6 +49,10 @@ dependencies {
     testImplementation(platform(libs.compose.bom))
     testImplementation(libs.compose.ui.test.junit4)
     testImplementation(libs.junit)
+    testImplementation("bench:contract-runner")
+    testImplementation(libs.sqldelight.jvm.driver)
+    testRuntimeOnly(libs.junit.vintage.engine)
+    testRuntimeOnly(libs.junit.platform.launcher)
     testImplementation(libs.robolectric)
     testImplementation(libs.mockwebserver)
     debugImplementation(libs.compose.ui.test.manifest)
