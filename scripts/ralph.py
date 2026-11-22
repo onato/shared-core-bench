@@ -83,6 +83,13 @@ def run(
     return message
 
 
+@dataclass(frozen=True)
+class Stop:
+    """Why the loop stops; no headline means it ran out of issues it can take."""
+
+    headline: str | None = None
+
+
 @dataclass
 class _Loop:
     milestone: int
@@ -107,35 +114,37 @@ class _Loop:
                 "Turn them on in the project's Workflows settings."
             )
         while True:
-            issue = next_issue(self.repair_board(self.github.milestone_issues(self.milestone)))
-            if issue is None:
-                headline, done = self.wait_for_merges()
-            elif self.iterations == self.max_iterations:
-                headline, done = f"iteration cap ({self.max_iterations}) reached", True
-            else:
-                headline, done = None, False
-                self.work(issue)
-            if done:
-                return self.stop_message(headline)
+            issues = self.github.milestone_issues(self.milestone)
+            self.move_closed_to_done(issues)
+            stop = self.step(next_issue(issues))
+            if stop is not None:
+                return self.stop_message(stop.headline)
 
-    def repair_board(self, issues: list[Issue]) -> list[Issue]:
+    def step(self, issue: Issue | None) -> Stop | None:
+        if issue is None:
+            return self.wait_for_merges()
+        if self.iterations == self.max_iterations:
+            return Stop(f"iteration cap ({self.max_iterations}) reached")
+        self.work(issue)
+        return None
+
+    def move_closed_to_done(self, issues: list[Issue]) -> None:
         for closed in [i for i in issues if not i.is_open and i.status != DONE]:
             self.github.set_status(closed.number, DONE)
             self.fixed.append(closed.number)
-        return issues
 
-    def wait_for_merges(self) -> tuple[str | None, bool]:
+    def wait_for_merges(self) -> Stop | None:
         """Nothing to take: stop, unless a PR from this run may still merge and unblock one."""
         self.pending = [n for n in self.pending if not self.github.pull_request(n).merged]
         if not self.pending:
-            return None, True
+            return Stop()
         if self.waiting_since is None:
             self.waiting_since = self.clock()
         if self.clock() - self.waiting_since >= MERGE_TIMEOUT:
             prs = ", ".join(f"PR #{n}" for n in self.pending)
-            return f"auto-merge still pending after {MERGE_TIMEOUT // 60} minutes: {prs}", True
+            return Stop(f"auto-merge still pending after {MERGE_TIMEOUT // 60} minutes: {prs}")
         self.sleep(POLL_SECONDS)
-        return None, False
+        return None
 
     def work(self, issue: Issue) -> None:
         self.waiting_since = None
