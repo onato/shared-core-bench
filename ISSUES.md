@@ -69,6 +69,19 @@ At the end of M1 there is a running app, a passing contract suite, the coverage 
 
 ---
 
+## Retros
+
+Each Ralph iteration leaves a `## Retro notes` comment on its PR; the checkpoint retro reads them
+with the review threads and proposes fixes, and the human picks which become issues.
+
+- **Default: fix at the checkpoint**, from patterns across the milestone.
+- **Fix immediately** when a gate let something bad reach `main`, or the same problem shows up
+  twice in a milestone — stop the loop and fix it first.
+- **Don't fix** one-off friction or style preferences; leave them in the notes.
+- A fix is its own small PR, filed as an issue in the current milestone that blocks the next task.
+
+---
+
 ## Later milestones (tasks written at each checkpoint)
 
 - **M2 — Android + KMP complete**: full product model, derived fields, search and filters, detail
