@@ -1,0 +1,33 @@
+[project]
+name = "shared-core-bench-scripts"
+version = "0.1.0"
+description = "Repo tooling: PR size check, review verdict, bench collection"
+requires-python = ">=3.12"
+
+[dependency-groups]
+dev = ["pytest>=8.3", "pytest-cov>=6.0", "ruff>=0.8"]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+testpaths = ["scripts/tests"]
+pythonpath = ["scripts"]
+
+[tool.coverage.run]
+branch = true
+source = ["scripts"]
+omit = ["scripts/tests/*"]
+
+[tool.coverage.report]
+fail_under = 100
+show_missing = true
+# Process entry points only, per CODING_STANDARDS.md → Coverage.
+exclude_also = ['if __name__ == "__main__":']
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM"]

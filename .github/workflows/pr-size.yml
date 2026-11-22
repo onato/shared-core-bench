@@ -1,0 +1,12 @@
+name: pr-size
+on:
+  pull_request:
+jobs:
+  pr-size:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Count changed lines
+        run: git diff --numstat "origin/${{ github.base_ref }}...HEAD" | python3 scripts/pr_size.py
