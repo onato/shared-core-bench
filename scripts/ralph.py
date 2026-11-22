@@ -39,6 +39,7 @@ class PullRequest:
     changes_requested: int = 0
     ci_failure_streak: int = 0
     has_retro_notes: bool = True
+    behind: bool = False
 
 
 @dataclass(frozen=True)
@@ -59,6 +60,7 @@ class ReadsBoard(Protocol):
 class GitHub(ReadsBoard, Protocol):
     def pull_request(self, number: int) -> PullRequest: ...
     def set_status(self, issue: int, status: str) -> None: ...
+    def update_branch(self, number: int) -> None: ...
     def comment(self, issue: int, body: str) -> None: ...
 
 
@@ -136,26 +138,40 @@ class _Loop:
                 return self.stop_message(stop.headline)
 
     def step(self, issue: Issue | None) -> Stop | None:
+        self.refresh_pending()
         if issue is None:
-            return self.wait_for_merges()
-        if self.iterations == self.max_iterations:
-            return Stop(f"iteration cap ({self.max_iterations}) reached")
-        used = self.session.weekly_usage()
-        if used is not None and used >= WEEKLY_LIMIT:
-            return Stop(f"weekly usage {used:.0%} ≥ {WEEKLY_LIMIT:.0%}")
+            return self.wait_for_merges(Stop())
+        if halt := self.halt():
+            # No more sessions, but the open PRs still need merging: a strict `main` leaves
+            # them behind whenever another merges, and auto-merge won't update them itself.
+            return self.wait_for_merges(Stop(halt))
         self.work(issue)
         return None
+
+    def halt(self) -> str | None:
+        if self.iterations == self.max_iterations:
+            return f"iteration cap ({self.max_iterations}) reached"
+        used = self.session.weekly_usage()
+        if used is not None and used >= WEEKLY_LIMIT:
+            return f"weekly usage {used:.0%} ≥ {WEEKLY_LIMIT:.0%}"
+        return None
+
+    def refresh_pending(self) -> None:
+        prs = [self.github.pull_request(n) for n in self.pending]
+        self.pending = [pr.number for pr in prs if not pr.merged]
+        for pr in prs:
+            if not pr.merged and pr.behind:
+                self.github.update_branch(pr.number)
 
     def move_closed_to_done(self, issues: list[Issue]) -> None:
         for closed in [i for i in issues if not i.is_open and i.status != DONE]:
             self.github.set_status(closed.number, DONE)
             self.fixed.append(closed.number)
 
-    def wait_for_merges(self) -> Stop | None:
-        """Nothing to take: stop, unless a PR from this run may still merge and unblock one."""
-        self.pending = [n for n in self.pending if not self.github.pull_request(n).merged]
+    def wait_for_merges(self, stop: Stop) -> Stop | None:
+        """`stop` once this run's PRs have merged; until then wait, as one may unblock an issue."""
         if not self.pending:
-            return Stop()
+            return stop
         if self.waiting_since is None:
             self.waiting_since = self.clock()
         if self.clock() - self.waiting_since >= MERGE_TIMEOUT:

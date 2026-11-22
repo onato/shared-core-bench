@@ -169,11 +169,12 @@ def commit(**checks):
     return {"commit": {"statusCheckRollup": {"contexts": {"nodes": [*runs, {}]}}}}
 
 
-def pr_reply(merged=False, comments=(), commits=()):
+def pr_reply(merged=False, comments=(), commits=(), merge_state="CLEAN"):
     return {
         "repository": {
             "pullRequest": {
                 "merged": merged,
+                "mergeStateStatus": merge_state,
                 "comments": {"nodes": [{"body": body} for body in comments]},
                 "commits": {"nodes": list(commits)},
             }
@@ -209,6 +210,26 @@ def test_pull_request_reports_merged_and_a_retro_notes_comment():
     )
 
     assert adapter(gh).pull_request(44) == PullRequest(44, merged=True, has_retro_notes=True)
+
+
+@pytest.mark.parametrize(
+    ("state", "behind"), [("BEHIND", True), ("CLEAN", False), ("BLOCKED", False)]
+)
+def test_pull_request_says_whether_it_is_behind_main(state, behind):
+    gh = FakeGh(pr_reply(merge_state=state, commits=[commit()]))
+
+    assert adapter(gh).pull_request(54).behind is behind
+    assert "mergeStateStatus" in sent_query(gh.calls[0])
+
+
+def test_update_branch_brings_the_pr_up_to_date_with_a_merge_through_gh():
+    gh = FakeGh("{}")
+
+    adapter(gh).update_branch(54)
+
+    assert gh.calls == [
+        (["api", "-X", "PUT", "repos/onato/shared-core-bench/pulls/54/update-branch"], None)
+    ]
 
 
 def test_comment_posts_the_body_on_the_issue_under_the_agent_marker():
