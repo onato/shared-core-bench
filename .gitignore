@@ -1,0 +1,12 @@
+.DS_Store
+.idea/
+*.iml
+.gradle/
+build/
+local.properties
+target/
+DerivedData/
+xcuserdata/
+*.xcframework
+.claude/settings.local.json
+report/results/
