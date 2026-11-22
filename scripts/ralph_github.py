@@ -1,12 +1,14 @@
-"""The Ralph loop's GitHub, through `gh`: milestone issues and the board's workflows."""
+"""The Ralph loop's GitHub, through `gh`: issues, board status, PRs and comments."""
 
 import json
 import subprocess
 from collections.abc import Callable
 
-from ralph import GitHubError, Issue
+from ralph import GitHubError, Issue, PullRequest
 
 Run = Callable[[list[str], str | None], str]
+FAILURE = "FAILURE"
+AGENT_MARKER = "> 🤖 Agent comment — written by Claude Code"
 
 
 def gh_runner(subprocess_run: Callable[..., subprocess.CompletedProcess]) -> Run:
@@ -53,6 +55,58 @@ query($owner: String!, $project: Int!) {
 """
 
 
+STATUS_LOOKUP_QUERY = """
+query($owner: String!, $repo: String!, $number: Int!, $project: Int!) {
+  user(login: $owner) {
+    projectV2(number: $project) {
+      id
+      field(name: "Status") { ... on ProjectV2SingleSelectField { id options { id name } } }
+    }
+  }
+  repository(owner: $owner, name: $repo) {
+    issue(number: $number) { id projectItems(first: 20) { nodes { id project { number } } } }
+  }
+}
+"""
+
+SET_STATUS_MUTATION = """
+mutation($project: ID!, $item: ID!, $field: ID!, $option: String!) {
+  updateProjectV2ItemFieldValue(input: {
+    projectId: $project, itemId: $item, fieldId: $field,
+    value: { singleSelectOptionId: $option }
+  }) { projectV2Item { id } }
+}
+"""
+
+
+ADD_ITEM_MUTATION = """
+mutation($project: ID!, $content: ID!) {
+  addProjectV2ItemById(input: { projectId: $project, contentId: $content }) { item { id } }
+}
+"""
+
+
+PULL_REQUEST_QUERY = """
+query($owner: String!, $repo: String!, $number: Int!) {
+  repository(owner: $owner, name: $repo) {
+    pullRequest(number: $number) {
+      merged
+      comments(last: 100) { nodes { body } }
+      commits(last: 100) {
+        nodes {
+          commit {
+            statusCheckRollup {
+              contexts(first: 50) { nodes { ... on CheckRun { name conclusion } } }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+"""
+
+
 class GitHubAdapter:
     def __init__(self, owner: str, repo: str, project_number: int, run: Run):
         self.owner = owner
@@ -85,8 +139,64 @@ class GitHubAdapter:
                 return item["fieldValueByName"]["name"]
         return "No status"
 
+    def pull_request(self, number: int) -> PullRequest:
+        data = self._graphql(PULL_REQUEST_QUERY, owner=self.owner, repo=self.repo, number=number)
+        pr = data["repository"]["pullRequest"]
+        commits = [check_runs(node["commit"]) for node in pr["commits"]["nodes"]]
+        return PullRequest(
+            number=number,
+            merged=pr["merged"],
+            changes_requested=sum(runs.get("claude-review") == FAILURE for runs in commits),
+            ci_failure_streak=trailing_failures([runs["ci"] for runs in commits if "ci" in runs]),
+            has_retro_notes=any("## Retro notes" in c["body"] for c in pr["comments"]["nodes"]),
+        )
+
+    def set_status(self, issue: int, status: str) -> None:
+        data = self._graphql(
+            STATUS_LOOKUP_QUERY,
+            owner=self.owner,
+            repo=self.repo,
+            number=issue,
+            project=self.project_number,
+        )
+        board = data["user"]["projectV2"]
+        field = board["field"]
+        option = next((o["id"] for o in field["options"] if o["name"] == status), None)
+        if option is None:
+            raise GitHubError(f"project {self.project_number} has no Status option {status!r}")
+        content = data["repository"]["issue"]
+        items = content["projectItems"]["nodes"]
+        item = next((i["id"] for i in items if i["project"]["number"] == self.project_number), None)
+        if item is None:
+            added = self._graphql(ADD_ITEM_MUTATION, project=board["id"], content=content["id"])
+            item = added["addProjectV2ItemById"]["item"]["id"]
+        self._graphql(
+            SET_STATUS_MUTATION, project=board["id"], item=item, field=field["id"], option=option
+        )
+
+    def comment(self, issue: int, body: str) -> None:
+        repo = f"{self.owner}/{self.repo}"
+        args = ["issue", "comment", str(issue), "-R", repo, "--body-file", "-"]
+        self.run(args, f"{AGENT_MARKER}\n\n{body}")
+
     def _graphql(self, query: str, **variables: object) -> dict:
         args = ["api", "graphql", "-f", f"query={query}"]
         for name, value in variables.items():
             args += ["-F", f"{name}={value}"]
         return json.loads(self.run(args, None))["data"]
+
+
+def check_runs(commit: dict) -> dict[str, str]:
+    """Conclusion by check name; a commit pushed with others may have no runs (a null rollup)."""
+    rollup = commit["statusCheckRollup"]
+    nodes = rollup["contexts"]["nodes"] if rollup else []
+    return {run["name"]: run["conclusion"] for run in nodes if "name" in run}
+
+
+def trailing_failures(conclusions: list[str]) -> int:
+    streak = 0
+    for conclusion in reversed(conclusions):
+        if conclusion != FAILURE:
+            break
+        streak += 1
+    return streak
