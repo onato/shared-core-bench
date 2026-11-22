@@ -31,6 +31,7 @@ class FakeGitHub:
         self.prs = {}
         self.moves = []
         self.comments = []
+        self.updates = []
         self.workflows = {name: True for name in REQUIRED_WORKFLOWS}
 
     def board_workflows(self):
@@ -55,6 +56,10 @@ class FakeGitHub:
 
     def comment(self, issue, body):
         self.comments.append((issue, body))
+
+    def update_branch(self, pr):
+        self.updates.append(pr)
+        self.prs[pr] = replace(self.prs[pr], behind=False)
 
     def merge(self, issue, pr):
         self.issues[issue] = replace(self.issues[issue], is_open=False, status="Done")
@@ -235,6 +240,38 @@ def test_waits_for_a_pending_auto_merge_then_takes_the_issue_it_unblocks():
     assert session.worked == [7, 8]
     assert clock.sleeps == [60]
     assert stop == "Ralph loop stopped: milestone complete."
+
+
+def pending_run(pr, behind=False):
+    return Outcome(pr=pr), PullRequest(number=pr, behind=behind), True
+
+
+def test_pending_prs_left_behind_main_are_brought_up_to_date_while_the_loop_works():
+    github = FakeGitHub([Issue(7, TODO), Issue(8, TODO), Issue(9, TODO)])
+    session = FakeSession(
+        github, {7: pending_run(40), 8: pending_run(41, behind=True), 9: merged_run(42)}
+    )
+    clock = Clock()
+    clock.on_sleep = lambda: [github.merge(7, 40), github.merge(8, 41)]
+
+    loop(github, session, clock=clock)
+
+    assert session.worked == [7, 8, 9]
+    assert github.updates == [41]
+
+
+def test_at_the_iteration_cap_the_loop_waits_for_its_open_prs_before_stopping():
+    github = FakeGitHub([Issue(7, TODO), Issue(8, TODO)])
+    session = FakeSession(github, {7: pending_run(40, behind=True), 8: merged_run(41)})
+    clock = Clock()
+    clock.on_sleep = lambda: github.merge(7, 40)
+
+    stop = loop(github, session, clock=clock, max_iterations=1)
+
+    assert session.worked == [7]
+    assert github.updates == [40]
+    assert clock.sleeps == [60]
+    assert stop.startswith("Ralph loop stopped: iteration cap (1) reached.\n")
 
 
 def test_gives_up_waiting_for_auto_merge_after_an_hour():
