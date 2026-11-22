@@ -7,14 +7,32 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.doubleOrNull
+import kotlinx.serialization.json.longOrNull
 
-internal fun decodePage(body: ByteArray): IngestResult {
+internal data class ProductRow(
+    val id: Long,
+    val title: String,
+    val price: Double,
+)
+
+internal sealed interface PageDecoding {
+    data class Products(
+        val rows: List<ProductRow>,
+        val rejected: Int,
+    ) : PageDecoding
+
+    data class Unreadable(
+        val error: IngestResult,
+    ) : PageDecoding
+}
+
+internal fun decodePage(body: ByteArray): PageDecoding {
     val page = parseOrNull(body)
     val products = (page as? JsonObject)?.get("products") as? JsonArray
     return when {
-        page == null -> IngestResult.InvalidJson
-        products == null -> IngestResult.NotAProductPage
-        else -> countValid(products)
+        page == null -> PageDecoding.Unreadable(IngestResult.InvalidJson)
+        products == null -> PageDecoding.Unreadable(IngestResult.NotAProductPage)
+        else -> decodeProducts(products)
     }
 }
 
@@ -25,12 +43,17 @@ private fun parseOrNull(body: ByteArray): JsonElement? =
         null
     }
 
-private fun countValid(products: JsonArray): IngestResult.Decoded {
-    val accepted = products.count(::isValidProduct)
-    return IngestResult.Decoded(accepted = accepted, rejected = products.size - accepted)
+private fun decodeProducts(products: JsonArray): PageDecoding.Products {
+    val rows = products.mapNotNull(::productOrNull)
+    return PageDecoding.Products(rows = rows, rejected = products.size - rows.size)
 }
 
-private fun isValidProduct(item: JsonElement): Boolean {
-    val price = (item as? JsonObject)?.get("price") as? JsonPrimitive ?: return false
-    return !price.isString && price.doubleOrNull != null
+private fun productOrNull(item: JsonElement): ProductRow? {
+    val fields = item as? JsonObject
+    val id = number(fields?.get("id"))?.longOrNull
+    val title = fields?.get("title") as? JsonPrimitive
+    val price = number(fields?.get("price"))?.doubleOrNull
+    return if (id != null && title != null && price != null) ProductRow(id, title.content, price) else null
 }
+
+private fun number(field: JsonElement?): JsonPrimitive? = (field as? JsonPrimitive)?.takeUnless { it.isString }

@@ -37,7 +37,10 @@ class KmpContractCore(
 
     override fun nextFetch(args: JsonObject): JsonElement = notInContractYet("nextFetch")
 
-    override fun stats(args: JsonObject): JsonElement = notInContractYet("stats")
+    override fun stats(args: JsonObject): JsonElement {
+        val stats = core.stats()
+        return JsonObject(mapOf("productCount" to JsonPrimitive(stats.productCount)))
+    }
 
     private fun notInContractYet(step: String): Nothing = error("$step is not implemented by the KMP core yet")
 }

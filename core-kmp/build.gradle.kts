@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.kover)
     alias(libs.plugins.ktlint)
     alias(libs.plugins.detekt)
+    alias(libs.plugins.sqldelight)
 }
 
 kotlin {
@@ -34,6 +35,12 @@ kotlin {
         commonMain.dependencies {
             implementation(libs.kotlinx.serialization.json)
         }
+        jvmMain.dependencies {
+            implementation(libs.sqldelight.jvm.driver)
+        }
+        androidMain.dependencies {
+            implementation(libs.sqldelight.android.driver)
+        }
         commonTest.dependencies {
             implementation(kotlin("test"))
         }
@@ -42,11 +49,32 @@ kotlin {
             implementation(libs.junit.jupiter)
             runtimeOnly(libs.junit.platform.launcher)
         }
+        getByName("androidHostTest").dependencies {
+            implementation(libs.robolectric)
+        }
+    }
+}
+
+sqldelight {
+    databases {
+        create("ProductDatabase") {
+            packageName.set("bench.core.db")
+        }
     }
 }
 
 kover {
     reports {
+        filters {
+            excludes {
+                classes(
+                    file("coverage-exclusions")
+                        .readLines()
+                        .map { it.substringBefore("#").trim() }
+                        .filter { it.isNotEmpty() },
+                )
+            }
+        }
         verify {
             rule {
                 bound {
@@ -64,6 +92,9 @@ kover {
 
 ktlint {
     version = libs.versions.ktlint.get()
+    filter {
+        exclude { it.file.path.contains("/build/generated/") }
+    }
 }
 
 detekt {

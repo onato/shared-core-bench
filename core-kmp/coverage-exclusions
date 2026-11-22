@@ -1,0 +1,2 @@
+# One class pattern per line, with the reason after '#'.
+bench.core.db.* # SQLDelight output
