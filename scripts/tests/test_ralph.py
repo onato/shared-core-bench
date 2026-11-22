@@ -1,7 +1,17 @@
 from dataclasses import replace
 
 import pytest
-from ralph import IN_PROGRESS, IN_REVIEW, TODO, Issue, Outcome, PullRequest, run
+from ralph import (
+    DONE,
+    IN_PROGRESS,
+    IN_REVIEW,
+    REQUIRED_WORKFLOWS,
+    TODO,
+    Issue,
+    Outcome,
+    PullRequest,
+    run,
+)
 
 
 class FakeGitHub:
@@ -13,6 +23,10 @@ class FakeGitHub:
         self.prs = {}
         self.moves = []
         self.comments = []
+        self.workflows = {name: True for name in REQUIRED_WORKFLOWS}
+
+    def board_workflows(self):
+        return self.workflows
 
     def milestone_issues(self, milestone):
         assert milestone == 2
@@ -235,4 +249,35 @@ def test_the_stop_message_lists_stuck_issues_and_prs_without_retro_notes():
         "- #7: PR #40: CI failed on 3 runs in a row\n"
         "- #8: needs a human: a secret: the API key\n"
         "Missing retro notes: PR #42"
+    )
+
+
+def test_stops_before_any_session_when_a_required_board_workflow_is_off():
+    github = FakeGitHub([Issue(7, TODO)])
+    github.workflows["Item closed"] = False
+    del github.workflows["Pull request merged"]
+    session = FakeSession(github, {7: merged_run(40)})
+    notes = []
+
+    stop = loop(github, session, notes)
+
+    assert session.worked == []
+    assert github.moves == []
+    assert notes == [stop]
+    assert stop == (
+        "Ralph loop stopped: board workflows are off: Item closed, Pull request merged. "
+        "Turn them on in the project's Workflows settings."
+    )
+
+
+def test_closed_issues_left_off_done_are_moved_to_done_and_named_in_the_stop_message():
+    github = FakeGitHub([Issue(6, IN_PROGRESS, is_open=False), Issue(7, TODO)])
+    session = FakeSession(github, {7: merged_run(40)})
+
+    stop = loop(github, session)
+
+    assert github.moves[:2] == [(6, DONE), (7, IN_PROGRESS)]
+    assert stop == (
+        "Ralph loop stopped: milestone complete.\n"
+        "Moved to Done (closed, but the board had not moved them): #6"
     )

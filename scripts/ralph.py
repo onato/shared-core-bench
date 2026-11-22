@@ -4,10 +4,17 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Protocol
 
-TODO, IN_PROGRESS, IN_REVIEW = "Todo", "In progress", "In review"
+TODO, IN_PROGRESS, IN_REVIEW, DONE = "Todo", "In progress", "In review", "Done"
 STUCK_AFTER = 3
 POLL_SECONDS = 60
 MERGE_TIMEOUT = 3600
+# The board only stays true while these GitHub Projects built-in workflows move the cards.
+REQUIRED_WORKFLOWS = (
+    "Item closed",
+    "Pull request merged",
+    "Pull request linked to issue",
+    "Auto-add to project",
+)
 
 
 @dataclass(frozen=True)
@@ -34,6 +41,7 @@ class Outcome:
 
 
 class GitHub(Protocol):
+    def board_workflows(self) -> dict[str, bool]: ...
     def milestone_issues(self, milestone: int) -> list[Issue]: ...
     def pull_request(self, number: int) -> PullRequest: ...
     def set_status(self, issue: int, status: str) -> None: ...
@@ -87,11 +95,19 @@ class _Loop:
     opened: list[int] = field(default_factory=list)
     pending: list[int] = field(default_factory=list)
     stuck: dict[int, str] = field(default_factory=dict)
+    fixed: list[int] = field(default_factory=list)
     waiting_since: float | None = None
 
     def run(self) -> str:
+        workflows = self.github.board_workflows()
+        off = [name for name in REQUIRED_WORKFLOWS if not workflows.get(name)]
+        if off:
+            return (
+                f"Ralph loop stopped: board workflows are off: {', '.join(off)}. "
+                "Turn them on in the project's Workflows settings."
+            )
         while True:
-            issue = next_issue(self.github.milestone_issues(self.milestone))
+            issue = next_issue(self.repair_board(self.github.milestone_issues(self.milestone)))
             if issue is None:
                 headline, done = self.wait_for_merges()
             elif self.iterations == self.max_iterations:
@@ -101,6 +117,12 @@ class _Loop:
                 self.work(issue)
             if done:
                 return self.stop_message(headline)
+
+    def repair_board(self, issues: list[Issue]) -> list[Issue]:
+        for closed in [i for i in issues if not i.is_open and i.status != DONE]:
+            self.github.set_status(closed.number, DONE)
+            self.fixed.append(closed.number)
+        return issues
 
     def wait_for_merges(self) -> tuple[str | None, bool]:
         """Nothing to take: stop, unless a PR from this run may still merge and unblock one."""
@@ -143,6 +165,9 @@ class _Loop:
         no_notes = [n for n in self.opened if not self.github.pull_request(n).has_retro_notes]
         if no_notes:
             lines.append("Missing retro notes: " + ", ".join(f"PR #{n}" for n in no_notes))
+        if self.fixed:
+            moved = ", ".join(f"#{n}" for n in self.fixed)
+            lines.append(f"Moved to Done (closed, but the board had not moved them): {moved}")
         return "\n".join(lines)
 
 
