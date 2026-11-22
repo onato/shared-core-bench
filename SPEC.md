@@ -177,14 +177,18 @@ shared-core-bench/
   Makefile             # test, lint, coverage, bench, bench-report
   scripts/             # coverage-gate, bench-collect, report builder
   contract/            # the API above, golden fixtures, expected outputs
-  core-kmp/            # Kotlin Multiplatform library
+  core-kmp/            # Kotlin Multiplatform library; its own Gradle build with its own wrapper
   core-rust/           # Rust crate + uniffi.toml
   core-lua/            # Lua sources + C/JNI/Swift bridge
   fixtures/            # deterministic data generator + local fixture server
   ios/                 # SwiftUI app, backend picker, benchmark screen
-  android/             # Compose app, backend picker, benchmark screen
+  android/             # Compose app, backend picker, benchmark screen; its own Gradle build
   report/              # CSV results + generated report
 ```
+
+Each core and app builds from its own directory, so the root holds only docs, the Makefile and
+`scripts/`. The Android build pulls in the KMP core as a composite build
+(`includeBuild("../core-kmp")`) rather than sharing one root Gradle build.
 
 The apps pick a core at runtime from a settings toggle, so every core is benchmarked inside the same
 host app on the same device.

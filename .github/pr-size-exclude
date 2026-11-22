@@ -3,5 +3,5 @@ uv.lock
 *.lock
 gradlew
 gradlew.bat
-/gradle/wrapper/
+gradle/wrapper/
 **/generated/**
