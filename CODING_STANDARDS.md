@@ -68,7 +68,7 @@ green.
 
 ## Code smells
 
-The review also flags these as judgement calls (Fowler, *Refactoring*, ch. 3, via Matt Pocock's
-`code-review` skill); a rule above wins where they disagree: Mysterious Name, Duplicated Code,
+The review also flags these as judgement calls (Fowler, *Refactoring*, ch. 3); a rule above wins
+where they disagree: Mysterious Name, Duplicated Code,
 Feature Envy, Data Clumps, Primitive Obsession, Repeated Switches, Shotgun Surgery, Divergent
 Change, Speculative Generality, Message Chains, Middle Man, Refused Bequest.

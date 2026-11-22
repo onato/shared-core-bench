@@ -43,7 +43,8 @@ Parts of the agent instructions are adapted from MIT-licensed work. The notices 
 
 - **`CLAUDE.md`, "TDD and Tidy First":** from Kent Beck's `CLAUDE.md` for
   [BPlusTree3](https://github.com/KentBeck/BPlusTree3) (commit 8c494da).
-- **`CODING_STANDARDS.md`, "Anti-patterns":** from Matt Pocock's `tdd` skill
+- **`CODING_STANDARDS.md`:** "Anti-patterns" is from Matt Pocock's `tdd` skill, and the list of
+  "Code smells" (Fowler, *Refactoring*, ch. 3) is from his `code-review` skill
   ([mattpocock/skills](https://github.com/mattpocock/skills)).
 - **`.claude/skills/pr`:** from Matt Pocock's `pr` skill (`skills/engineering/pr`), whose menu of
   Summary visuals comes from Dex Horthy's `show-me` skill
