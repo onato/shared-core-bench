@@ -5,3 +5,6 @@
 
 # Structural: give core-kmp its own Gradle build (#33)
 f51b2ce9f963ceebe6d880b7ab6c78029663492b
+
+# Structural: clearer step results and naming in the Ralph loop (#44)
+c6a70c6e87f21d8af8ea3e2771d44898a634d075

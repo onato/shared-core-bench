@@ -1,5 +1,8 @@
 """Ralph loop: works through a milestone's issues, one fresh session per issue."""
 
+import argparse
+import subprocess
+import sys
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Protocol
@@ -38,6 +41,10 @@ class PullRequest:
 class Outcome:
     pr: int | None
     needs_human: str | None = None
+
+
+class GitHubError(Exception):
+    """A GitHub call failed; the message names the command and its error."""
 
 
 class GitHub(Protocol):
@@ -183,3 +190,50 @@ class _Loop:
 def describe(issue: Issue) -> str:
     blocked = ", ".join(f"#{b}" for b in issue.open_blockers)
     return f"- #{issue.number} {issue.status}" + (f", blocked by {blocked}" if blocked else "")
+
+
+def main(argv: list[str], connect: Callable[[], GitHub]) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--milestone", type=int, required=True, help="the parent issue")
+    parser.add_argument("--dry-run", action="store_true", help="print the next issue and stop")
+    args = parser.parse_args(argv)
+    if not args.dry_run:
+        print("Only --dry-run is implemented so far (#39 adds sessions).", file=sys.stderr)
+        return 2
+    try:
+        print(dry_run(args.milestone, connect()))
+    except GitHubError as error:
+        print(f"Ralph loop stopped: {error}", file=sys.stderr)
+        return 1
+    return 0
+
+
+def dry_run(milestone: int, github: GitHub) -> str:
+    """What the loop would take next, read from GitHub without changing anything."""
+    workflows = github.board_workflows()
+    off = [name for name in REQUIRED_WORKFLOWS if not workflows.get(name)]
+    lines = []
+    if off:
+        lines.append(
+            f"Board workflows are off: {', '.join(off)}. "
+            "Turn them on in the project's Workflows settings."
+        )
+    issues = github.milestone_issues(milestone)
+    issue = next_issue(issues)
+    if issue is None:
+        lines += ["Nothing to take. Open:", *map(describe, [i for i in issues if i.is_open])]
+    else:
+        lines.append(f"Next: #{issue.number}")
+    return "\n".join(lines)
+
+
+if __name__ == "__main__":
+    # Run as a script this module is __main__, and ralph_github imports a second copy as
+    # `ralph`; go through that copy so its GitHubError is the one main catches.
+    import ralph
+    from ralph_github import GitHubAdapter, gh_runner
+
+    def connect() -> GitHub:
+        return GitHubAdapter("onato", "shared-core-bench", 2, gh_runner(subprocess.run))
+
+    sys.exit(ralph.main(sys.argv[1:], connect))
