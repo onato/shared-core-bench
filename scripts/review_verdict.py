@@ -3,6 +3,8 @@ import sys
 from pathlib import Path
 
 VERDICTS = ("APPROVE", "REQUEST_CHANGES")
+REQUIRED_TOOLS = {"mcp__github_inline_comment__create_inline_comment"}
+REQUIRED_COMMANDS = ("gh pr view", "gh pr diff", "gh issue view")
 
 
 def run_result(path: Path) -> dict | None:
@@ -12,6 +14,14 @@ def run_result(path: Path) -> dict | None:
         return None
     results = [m for m in messages if isinstance(m, dict) and m.get("type") == "result"]
     return results[-1] if results else None
+
+
+def is_required(denial: dict) -> bool:
+    if denial.get("tool_name") in REQUIRED_TOOLS:
+        return True
+    command = (denial.get("tool_input") or {}).get("command") or ""
+    # Anywhere in the command: a chain that includes the diff still means the diff was refused.
+    return any(required in command for required in REQUIRED_COMMANDS)
 
 
 def describe(denial: dict) -> str:
@@ -28,12 +38,16 @@ def main(argv: list[str]) -> int:
         return 1
     denials = result.get("permission_denials") or []
     count = max(len(denials), result.get("permission_denials_count") or 0)
+    # Unlisted denials can't be told apart, so they count as required.
+    fatal = count > len(denials) or any(map(is_required, denials))
     if count:
-        # A review that was refused a tool may not have read the diff or posted its findings,
-        # whatever verdict it returned.
-        print(f"{count} tool calls were denied during the review:")
+        kind = "" if fatal else "optional "
+        print(f"{count} {kind}tool calls were denied during the review:")
         for denial in denials:
             print(f"  {describe(denial)}")
+    if fatal:
+        # Refused a gather or report tool, the review may not have read the diff or left its
+        # inline findings, whatever verdict it returned.
         return 1
     if not path.exists():
         print(f"no verdict: {path} was not written")
