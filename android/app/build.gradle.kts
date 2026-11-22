@@ -47,6 +47,7 @@ dependencies {
     implementation(libs.activity.compose)
     implementation(libs.okhttp)
     implementation(libs.paging.common)
+    implementation(libs.paging.compose)
     testImplementation(platform(libs.compose.bom))
     testImplementation(libs.compose.ui.test.junit4)
     testImplementation(libs.junit)
