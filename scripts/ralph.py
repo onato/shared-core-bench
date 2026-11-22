@@ -13,6 +13,8 @@ TODO, IN_PROGRESS, IN_REVIEW, DONE = "Todo", "In progress", "In review", "Done"
 STUCK_AFTER = 3
 POLL_SECONDS = 60
 MERGE_TIMEOUT = 3600
+# The owner's budget for unattended runs: the share of the weekly usage limit used.
+WEEKLY_LIMIT = 0.20
 # The board only stays true while these GitHub Projects built-in workflows move the cards.
 REQUIRED_WORKFLOWS = (
     "Item closed",
@@ -62,6 +64,7 @@ class GitHub(ReadsBoard, Protocol):
 
 class Session(Protocol):
     def work(self, issue: Issue) -> Outcome: ...
+    def weekly_usage(self) -> float | None: ...
 
 
 def next_issue(issues: list[Issue]) -> Issue | None:
@@ -137,6 +140,9 @@ class _Loop:
             return self.wait_for_merges()
         if self.iterations == self.max_iterations:
             return Stop(f"iteration cap ({self.max_iterations}) reached")
+        used = self.session.weekly_usage()
+        if used is not None and used >= WEEKLY_LIMIT:
+            return Stop(f"weekly usage {used:.0%} ≥ {WEEKLY_LIMIT:.0%}")
         self.work(issue)
         return None
 
