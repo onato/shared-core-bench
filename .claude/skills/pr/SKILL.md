@@ -3,7 +3,9 @@ name: pr
 description: "Use when writing a PR body for this repo."
 ---
 
-Write the PR body with this template. Skip preambles and keep prose brief.
+PRs are squash-merged with the PR title and body as the commit on `main`, so both are written to
+be read in `git log`: an imperative title under 72 characters, prefixed `Structural:` when the PR
+only rearranges code. Write the body with this template. Skip preambles and keep prose brief.
 
 ```markdown
 Closes #<issue>

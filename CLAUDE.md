@@ -32,8 +32,11 @@ Adapted from Kent Beck's CLAUDE.md for BPlusTree3 (github.com/KentBeck/BPlusTree
 - Implement only enough to pass. Refactor only when green, in named steps (Extract Function,
   Inline Variable, …), running the tests after each.
 - One test at a time. Run all tests (except benchmarks) each time.
-- Structural changes (rename, extract, move) and behavioural changes never share a commit;
-  structural first. Each commit message says which it is.
+- Structural changes (rename, extract, move) and behavioural changes never share a PR. PRs are
+  squash-merged, so a PR is the unit of history: when an issue needs a structural change first,
+  open it as its own small PR (title starts `Structural:`), merge it, then branch the behavioural
+  PR from the updated `main`. Within a branch, commits are free-form; the PR title and description
+  become the commit on `main`.
 - Commit only when `make test`, `make lint` and `make coverage` pass with zero warnings.
 
 # Devices

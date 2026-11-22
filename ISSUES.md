@@ -9,6 +9,9 @@ learned.
 
 - **One issue = one PR = one worktree.** PRs stay under **400 changed lines** (generated code,
   lockfiles and fixture data excluded). An issue that won't fit is split before work starts.
+- **Squash merge only, linear history.** The PR title and description become the commit on
+  `main`, so `main` has one green commit per PR. Structural changes an issue needs go in their own
+  `Structural:` PR first.
 - **Every PR goes through** CI (lint, tests, coverage gate), the PR-size check and the Claude
   review. `main` takes no direct pushes, no force pushes, and nobody can bypass the rules.
 - **Board** (GitHub Projects): Todo → In progress → In review → Done. GitHub's built-in project
