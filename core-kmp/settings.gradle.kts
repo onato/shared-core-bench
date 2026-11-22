@@ -1,4 +1,4 @@
-rootProject.name = "shared-core-bench"
+rootProject.name = "core-kmp"
 
 pluginManagement {
     repositories {
@@ -14,5 +14,3 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
-
-include(":core-kmp")

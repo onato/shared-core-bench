@@ -1,7 +1,7 @@
 .PHONY: help bootstrap test lint coverage test-core test-scripts lint-scripts coverage-scripts \
 	test-kmp lint-kmp coverage-kmp bench bench-report
 
-GRADLE := ./gradlew --console=plain
+GRADLE := core-kmp/gradlew --project-dir core-kmp --console=plain
 
 help: ## List targets
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-18s %s\n", $$1, $$2}'
@@ -31,13 +31,13 @@ coverage-scripts:
 	uv run pytest -q --cov
 
 test-kmp:
-	$(GRADLE) :core-kmp:jvmTest :core-kmp:testAndroidHostTest
+	$(GRADLE) jvmTest testAndroidHostTest
 
 lint-kmp:
-	$(GRADLE) :core-kmp:ktlintCheck :core-kmp:detekt
+	$(GRADLE) ktlintCheck detekt
 
 coverage-kmp:
-	$(GRADLE) :core-kmp:koverVerify :core-kmp:koverLog
+	$(GRADLE) koverVerify koverLog
 
 bench bench-report: ## Not implemented yet
 	@echo "$@: not implemented" >&2; exit 1
