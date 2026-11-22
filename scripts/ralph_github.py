@@ -91,6 +91,7 @@ query($owner: String!, $repo: String!, $number: Int!) {
   repository(owner: $owner, name: $repo) {
     pullRequest(number: $number) {
       merged
+      mergeStateStatus
       comments(last: 100) { nodes { body } }
       commits(last: 100) {
         nodes {
@@ -149,6 +150,14 @@ class GitHubAdapter:
             changes_requested=sum(runs.get("claude-review") == FAILURE for runs in commits),
             ci_failure_streak=trailing_failures([runs["ci"] for runs in commits if "ci" in runs]),
             has_retro_notes=any("## Retro notes" in c["body"] for c in pr["comments"]["nodes"]),
+            behind=pr["mergeStateStatus"] == "BEHIND",
+        )
+
+    def update_branch(self, number: int) -> None:
+        """Merge main into the PR's branch: `main` only merges up-to-date branches."""
+        self.run(
+            ["api", "-X", "PUT", f"repos/{self.owner}/{self.repo}/pulls/{number}/update-branch"],
+            None,
         )
 
     def set_status(self, issue: int, status: str) -> None:
