@@ -12,6 +12,17 @@ class Core private constructor(
             is PageDecoding.Products -> store(page)
         }
 
+    fun page(
+        cursor: Long?,
+        size: Int,
+    ): PageResult {
+        if (size <= 0) return PageResult.InvalidSize
+        // One row past the page tells whether another page follows.
+        val rows = database.productQueries.pageAfter(cursor ?: Long.MIN_VALUE, size + 1L, ::Product).executeAsList()
+        val items = rows.take(size)
+        return PageResult.Page(items, nextCursor = if (rows.size > size) items.last().id else null)
+    }
+
     fun detail(id: Long): Product? = database.productQueries.byId(id, ::Product).executeAsOneOrNull()
 
     fun stats(): CoreStats = CoreStats(productCount = database.productQueries.count().executeAsOne())

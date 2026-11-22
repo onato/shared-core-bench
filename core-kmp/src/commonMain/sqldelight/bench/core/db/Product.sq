@@ -12,3 +12,6 @@ SELECT count(*) FROM product;
 
 byId:
 SELECT id, title, price FROM product WHERE id = ?;
+
+pageAfter:
+SELECT id, title, price FROM product WHERE id > ? ORDER BY id LIMIT ?;

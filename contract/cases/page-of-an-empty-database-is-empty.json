@@ -1,0 +1,9 @@
+{
+  "steps": [
+    {
+      "step": "page",
+      "args": { "cursor": null, "size": 20 },
+      "expect": { "items": [], "nextCursor": null }
+    }
+  ]
+}
