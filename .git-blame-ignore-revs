@@ -1,0 +1,4 @@
+# Squash commits of `Structural:` PRs (moves and renames only), skipped by blame.
+# GitHub's blame view reads this file; locally: git config blame.ignoreRevsFile .git-blame-ignore-revs
+# Each entry is added by the next PR after the structural one merges (see the pr skill).
+# Format: a comment with the commit title, then the full SHA.
