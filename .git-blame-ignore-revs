@@ -2,3 +2,6 @@
 # GitHub's blame view reads this file; locally: git config blame.ignoreRevsFile .git-blame-ignore-revs
 # Each entry is added by the next PR after the structural one merges (see the pr skill).
 # Format: a comment with the commit title, then the full SHA.
+
+# Structural: give core-kmp its own Gradle build (#33)
+f51b2ce9f963ceebe6d880b7ab6c78029663492b
