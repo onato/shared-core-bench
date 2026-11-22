@@ -1,0 +1,5 @@
+config:
+  warningsAsErrors: true
+naming:
+  FunctionNaming:
+    ignoreAnnotated: ['Composable']
