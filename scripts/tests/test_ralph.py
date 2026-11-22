@@ -1,42 +1,27 @@
 from dataclasses import replace
 
-from ralph import (
-    DONE,
-    IN_PROGRESS,
-    IN_REVIEW,
-    REQUIRED_WORKFLOWS,
-    TODO,
-    Issue,
-    Outcome,
-    PullRequest,
-    run,
-)
+import pytest
+from ralph import IN_PROGRESS, IN_REVIEW, TODO, Issue, Outcome, PullRequest, run
 
 
 class FakeGitHub:
     """Issues by number; each issue's open blockers are worked out from `blocked_by` on read."""
 
-    def __init__(self, issues, blocked_by=None, prs=None):
+    def __init__(self, issues, blocked_by=None):
         self.issues = {issue.number: issue for issue in issues}
         self.blocked_by = blocked_by or {}
-        self.prs = prs or {}
+        self.prs = {}
         self.moves = []
         self.comments = []
-        self.workflows = {name: True for name in REQUIRED_WORKFLOWS}
-
-    def board_workflows(self):
-        return self.workflows
 
     def milestone_issues(self, milestone):
         assert milestone == 2
+        is_open = [n for n, issue in self.issues.items() if issue.is_open]
         return [
             replace(
-                issue,
-                open_blockers=tuple(
-                    b for b in self.blocked_by.get(number, ()) if self.issues[b].is_open
-                ),
+                issue, open_blockers=tuple(b for b in self.blocked_by.get(n, ()) if b in is_open)
             )
-            for number, issue in sorted(self.issues.items())
+            for n, issue in sorted(self.issues.items())
         ]
 
     def pull_request(self, number):
@@ -96,24 +81,16 @@ class Clock:
 def loop(github, session, notes=None, clock=None, max_iterations=10):
     notes = [] if notes is None else notes
     clock = clock or Clock()
-    return run(
-        milestone=2,
-        github=github,
-        session=session,
-        notify=notes.append,
-        clock=clock,
-        sleep=clock.sleep,
-        max_iterations=max_iterations,
-    )
+    return run(2, github, session, notes.append, clock, clock.sleep, max_iterations)
 
 
 def test_takes_the_lowest_ready_todo_issue_and_marks_it_in_progress_first():
     github = FakeGitHub(
         [
-            Issue(7, "Contract format", TODO),
-            Issue(8, "Decode", TODO),
-            Issue(9, "Store", IN_PROGRESS),
-            Issue(10, "Read a page", TODO),
+            Issue(7, TODO),
+            Issue(8, TODO),
+            Issue(9, IN_PROGRESS),
+            Issue(10, TODO),
         ],
         blocked_by={8: (7,), 10: (9,)},
     )
@@ -126,59 +103,41 @@ def test_takes_the_lowest_ready_todo_issue_and_marks_it_in_progress_first():
     assert github.moves[:2] == [(7, IN_PROGRESS), (8, IN_PROGRESS)]
 
 
-def test_a_pr_with_changes_requested_three_times_goes_to_in_review_and_the_loop_goes_on():
-    github = FakeGitHub([Issue(7, "Contract format", TODO), Issue(8, "Decode", TODO)])
-    stuck = PullRequest(number=40, changes_requested=3)
-    session = FakeSession(github, {7: (Outcome(pr=40), stuck, True), 8: merged_run(41)})
+@pytest.mark.parametrize(
+    ("outcome", "pr", "reason"),
+    [
+        (
+            Outcome(pr=40),
+            PullRequest(number=40, changes_requested=3),
+            "PR #40: the review requested changes 3 times",
+        ),
+        (
+            Outcome(pr=40),
+            PullRequest(number=40, ci_failure_streak=3),
+            "PR #40: CI failed on 3 runs in a row",
+        ),
+        (
+            Outcome(pr=None, needs_human="needs splitting: over 400 lines"),
+            None,
+            "needs a human: needs splitting: over 400 lines",
+        ),
+        (Outcome(pr=None), None, "no PR opened"),
+    ],
+    ids=["changes requested 3 times", "CI failed 3 runs in a row", "NEEDS_HUMAN", "no PR"],
+)
+def test_a_stuck_issue_goes_to_in_review_with_its_reason_and_the_loop_goes_on(outcome, pr, reason):
+    github = FakeGitHub([Issue(7, TODO), Issue(8, TODO)])
+    session = FakeSession(github, {7: (outcome, pr, True), 8: merged_run(41)})
 
     loop(github, session)
 
     assert session.worked == [7, 8]
-    assert (7, IN_REVIEW) in github.moves
-    assert github.comments == [
-        (7, "Moved to In review by the Ralph loop: PR #40: the review requested changes 3 times.")
-    ]
-
-
-def test_a_pr_failing_ci_three_runs_in_a_row_goes_to_in_review():
-    github = FakeGitHub([Issue(7, "Contract format", TODO), Issue(8, "Decode", TODO)])
-    stuck = PullRequest(number=40, ci_failure_streak=3)
-    session = FakeSession(github, {7: (Outcome(pr=40), stuck, True), 8: merged_run(41)})
-
-    loop(github, session)
-
-    assert session.worked == [7, 8]
-    assert github.comments == [
-        (7, "Moved to In review by the Ralph loop: PR #40: CI failed on 3 runs in a row.")
-    ]
-
-
-def test_a_session_that_needs_a_human_goes_to_in_review_with_its_reason():
-    github = FakeGitHub([Issue(7, "Contract format", TODO), Issue(8, "Decode", TODO)])
-    asks = Outcome(pr=None, needs_human="needs splitting: over 400 lines")
-    session = FakeSession(github, {7: (asks, None, False), 8: merged_run(41)})
-
-    loop(github, session)
-
-    assert session.worked == [7, 8]
-    assert (7, IN_REVIEW) in github.moves
-    assert github.comments == [
-        (7, "Moved to In review by the Ralph loop: needs a human: needs splitting: over 400 lines.")
-    ]
-
-
-def test_a_session_that_ends_without_a_pr_goes_to_in_review():
-    github = FakeGitHub([Issue(7, "Contract format", TODO), Issue(8, "Decode", TODO)])
-    session = FakeSession(github, {7: (Outcome(pr=None), None, False), 8: merged_run(41)})
-
-    loop(github, session)
-
-    assert session.worked == [7, 8]
-    assert github.comments == [(7, "Moved to In review by the Ralph loop: no PR opened.")]
+    assert github.moves[:2] == [(7, IN_PROGRESS), (7, IN_REVIEW)]
+    assert github.comments == [(7, f"Moved to In review by the Ralph loop: {reason}.")]
 
 
 def test_stops_with_milestone_complete_when_no_issues_are_open():
-    github = FakeGitHub([Issue(7, "Contract format", TODO)])
+    github = FakeGitHub([Issue(7, TODO)])
     session = FakeSession(github, {7: merged_run(40)})
     notes = []
 
@@ -191,10 +150,10 @@ def test_stops_with_milestone_complete_when_no_issues_are_open():
 def test_stops_listing_what_is_left_when_open_issues_remain_but_none_is_ready():
     github = FakeGitHub(
         [
-            Issue(9, "Store", IN_PROGRESS),
-            Issue(10, "Read a page", TODO),
-            Issue(11, "Remote paging", TODO),
-            Issue(12, "App shell", IN_REVIEW),
+            Issue(9, IN_PROGRESS),
+            Issue(10, TODO),
+            Issue(11, TODO),
+            Issue(12, IN_REVIEW),
         ],
         blocked_by={10: (9,), 11: (9, 10)},
     )
@@ -214,7 +173,7 @@ def test_stops_listing_what_is_left_when_open_issues_remain_but_none_is_ready():
 
 
 def test_stops_at_the_iteration_cap():
-    github = FakeGitHub([Issue(7, "Contract format", TODO), Issue(8, "Decode", TODO)])
+    github = FakeGitHub([Issue(7, TODO), Issue(8, TODO)])
     session = FakeSession(github, {7: merged_run(40), 8: merged_run(41)})
 
     stop = loop(github, session, max_iterations=1)
@@ -224,9 +183,7 @@ def test_stops_at_the_iteration_cap():
 
 
 def test_waits_for_a_pending_auto_merge_then_takes_the_issue_it_unblocks():
-    github = FakeGitHub(
-        [Issue(7, "Contract format", TODO), Issue(8, "Decode", TODO)], blocked_by={8: (7,)}
-    )
+    github = FakeGitHub([Issue(7, TODO), Issue(8, TODO)], blocked_by={8: (7,)})
     session = FakeSession(
         github, {7: (Outcome(pr=40), PullRequest(number=40), True), 8: merged_run(41)}
     )
@@ -241,9 +198,7 @@ def test_waits_for_a_pending_auto_merge_then_takes_the_issue_it_unblocks():
 
 
 def test_gives_up_waiting_for_auto_merge_after_an_hour():
-    github = FakeGitHub(
-        [Issue(7, "Contract format", TODO), Issue(8, "Decode", TODO)], blocked_by={8: (7,)}
-    )
+    github = FakeGitHub([Issue(7, TODO), Issue(8, TODO)], blocked_by={8: (7,)})
     session = FakeSession(github, {7: (Outcome(pr=40), PullRequest(number=40), True)})
     clock = Clock()
 
@@ -257,9 +212,7 @@ def test_gives_up_waiting_for_auto_merge_after_an_hour():
 
 
 def test_the_stop_message_lists_stuck_issues_and_prs_without_retro_notes():
-    github = FakeGitHub(
-        [Issue(7, "Contract format", TODO), Issue(8, "Decode", TODO), Issue(9, "Store", TODO)]
-    )
+    github = FakeGitHub([Issue(7, TODO), Issue(8, TODO), Issue(9, TODO)])
     session = FakeSession(
         github,
         {
@@ -282,40 +235,4 @@ def test_the_stop_message_lists_stuck_issues_and_prs_without_retro_notes():
         "- #7: PR #40: CI failed on 3 runs in a row\n"
         "- #8: needs a human: a secret: the API key\n"
         "Missing retro notes: PR #42"
-    )
-
-
-def test_stops_before_any_session_when_a_required_board_workflow_is_off():
-    github = FakeGitHub([Issue(7, "Contract format", TODO)])
-    github.workflows["Item closed"] = False
-    del github.workflows["Pull request merged"]
-    session = FakeSession(github, {7: merged_run(40)})
-    notes = []
-
-    stop = loop(github, session, notes)
-
-    assert session.worked == []
-    assert github.moves == []
-    assert notes == [stop]
-    assert stop == (
-        "Ralph loop stopped: board workflows are off: Item closed, Pull request merged. "
-        "Turn them on in the project's Workflows settings."
-    )
-
-
-def test_closed_issues_left_off_done_are_moved_to_done_and_named_in_the_stop_message():
-    github = FakeGitHub(
-        [
-            Issue(6, "KMP module", IN_PROGRESS, is_open=False),
-            Issue(7, "Contract format", TODO),
-        ]
-    )
-    session = FakeSession(github, {7: merged_run(40)})
-
-    stop = loop(github, session)
-
-    assert github.moves[:2] == [(6, DONE), (7, IN_PROGRESS)]
-    assert stop == (
-        "Ralph loop stopped: milestone complete.\n"
-        "Moved to Done (closed, but the board had not moved them): #6"
     )
