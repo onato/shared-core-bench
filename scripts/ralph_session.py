@@ -4,7 +4,7 @@ import json
 import re
 import subprocess
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Protocol
@@ -41,25 +41,19 @@ class ClaudeSession:
     run: Callable[..., subprocess.CompletedProcess]
     environ: dict[str, str]
     now: Callable[[], datetime]
+    _weekly: float | None = field(default=None, init=False)
 
     def work(self, issue: Issue) -> Outcome:
         branch = f"swilliams/{issue.number}-ralph"
         worktree = self.repo.parent / f"shared-core-bench-{issue.number}"
-        self.run(["git", "-C", str(self.repo), "fetch", "origin"], check=True)
-        self.run(
-            [
-                "git",
-                "-C",
-                str(self.repo),
-                "worktree",
-                "add",
-                str(worktree),
-                "-b",
-                branch,
-                "origin/main",
-            ],
-            check=True,
-        )
+        for step in (
+            ["fetch", "origin"],
+            ["worktree", "add", str(worktree), "-b", branch, "origin/main"],
+        ):
+            done = self.run(["git", "-C", str(self.repo), *step], capture_output=True, text=True)
+            if done.returncode != 0:
+                failed = f"git {' '.join(step[:2])} failed: {done.stderr.strip()}"
+                return Outcome(pr=None, needs_human=failed)
         prompt = (self.repo / ".ralph" / "PROMPT.md").read_text()
         prompt = prompt.replace("{issue}", str(issue.number)).replace("{branch}", branch)
         logs = self.repo / ".ralph" / "logs"
@@ -83,10 +77,26 @@ class ClaudeSession:
                 stderr=subprocess.STDOUT,
                 text=True,
             )
+        self._weekly = weekly_usage(log, self._weekly)
         text = final_result(log)
         if text is None:
             return Outcome(pr=None, needs_human=f"the session ended without a result; see {log}")
         return outcome(text)
+
+    def weekly_usage(self) -> float | None:
+        """The weekly limit used, 0–1, as the last session saw it; None before any has run."""
+        return self._weekly
+
+
+def weekly_usage(log: Path, previous: float | None) -> float | None:
+    for event in reversed(events(log)):
+        if event.get("type") == "rate_limit_event":
+            return event["rate_limit_info"]["unifiedWindows"]["seven_day"]["utilization"]
+    return previous
+
+
+def events(log: Path) -> list[dict]:
+    return [json.loads(line) for line in log.read_text().splitlines() if line.startswith("{")]
 
 
 def own_environ(environ: dict[str, str]) -> dict[str, str]:
@@ -95,8 +105,7 @@ def own_environ(environ: dict[str, str]) -> dict[str, str]:
 
 
 def final_result(log: Path) -> str | None:
-    events = [json.loads(line) for line in log.read_text().splitlines() if line.startswith("{")]
-    return next((e["result"] for e in reversed(events) if e.get("type") == "result"), None)
+    return next((e["result"] for e in reversed(events(log)) if e.get("type") == "result"), None)
 
 
 def outcome(text: str) -> Outcome:

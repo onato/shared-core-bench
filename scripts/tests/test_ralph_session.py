@@ -18,9 +18,12 @@ class FakeProcesses:
         self.events = events
         self.exit = exit
         self.calls = []
+        self.fails = {}  # git subcommand → the CompletedProcess it fails with
 
     def __call__(self, args, **kwargs):
         self.calls.append((args, kwargs))
+        if args[0] == "git" and args[3] in self.fails:
+            return self.fails[args[3]]
         if args[0] == "claude":
             for event in self.events:
                 kwargs["stdout"].write(json.dumps(event) + "\n")
@@ -32,6 +35,31 @@ class FakeProcesses:
 
 def result(text):
     return {"type": "result", "result": text}
+
+
+def usage(weekly):
+    """A rate_limit_event as `claude -p --output-format stream-json` emits it."""
+    windows = {"five_hour": {"utilization": 0.5}, "seven_day": {"utilization": weekly}}
+    return {"type": "rate_limit_event", "rate_limit_info": {"unifiedWindows": windows}}
+
+
+def test_the_session_reports_the_latest_weekly_usage_its_log_shows(tmp_path):
+    _, claude = session(tmp_path, FakeProcesses(usage(0.04), usage(0.06), result("PR: #52")))
+    before = claude.weekly_usage()
+
+    claude.work(Issue(7, "In progress"))
+
+    assert (before, claude.weekly_usage()) == (None, 0.06)
+
+
+def test_a_log_without_usage_keeps_the_last_reading(tmp_path):
+    _, claude = session(tmp_path, FakeProcesses(usage(0.05), result("PR: #52")))
+    claude.work(Issue(7, "In progress"))
+    claude.run = FakeProcesses(result("PR: #53"))
+
+    claude.work(Issue(8, "In progress"))
+
+    assert claude.weekly_usage() == 0.05
 
 
 def session(tmp_path, processes):
@@ -122,6 +150,22 @@ def test_each_session_starts_fresh_even_when_the_loop_runs_inside_claude_code(tm
     env = processes.claude()[1]["env"]
     assert [k for k in env if k.startswith("CLAUDE")] == []
     assert env["PATH"] == "/usr/bin"
+
+
+def test_a_worktree_that_cannot_be_made_needs_a_human_and_starts_no_claude(tmp_path):
+    processes = FakeProcesses(result("PR: #52"))
+    error = "fatal: a branch named 'swilliams/7-ralph' already exists\n"
+    processes.fails = {"worktree": subprocess.CompletedProcess([], 128, "", error)}
+    _, claude = session(tmp_path, processes)
+
+    outcome = claude.work(Issue(7, "In progress"))
+
+    assert outcome == Outcome(
+        pr=None,
+        needs_human="git worktree add failed: fatal: a branch named 'swilliams/7-ralph' "
+        "already exists",
+    )
+    assert [args[0] for args, _ in processes.calls] == ["git", "git"]
 
 
 def test_a_needs_human_marker_is_reported_to_the_loop_as_its_reason(tmp_path):
