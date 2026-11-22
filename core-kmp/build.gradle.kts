@@ -11,7 +11,9 @@ kotlin {
     jvm {
         testRuns["test"].executionTask.configure {
             useJUnitPlatform()
-            systemProperty("contract.cases", rootDir.resolve("../contract/cases").canonicalPath)
+            val contractCases = rootDir.resolve("../contract/cases").canonicalFile
+            inputs.dir(contractCases).withPropertyName("contractCases")
+            systemProperty("contract.cases", contractCases.path)
         }
     }
     android {

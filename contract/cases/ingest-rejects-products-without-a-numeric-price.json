@@ -1,0 +1,13 @@
+{
+  "steps": [
+    {
+      "step": "ingest",
+      "args": {
+        "requestId": 1,
+        "status": 200,
+        "body": "{\"products\": [{\"id\": 1, \"title\": \"Essence Mascara\", \"price\": 9.99}, {\"id\": 2, \"title\": \"Eyeshadow Palette\"}, {\"id\": 3, \"title\": \"Powder Canister\", \"price\": \"cheap\"}, {\"id\": 4, \"title\": \"Red Lipstick\", \"price\": 12.99}], \"total\": 194, \"skip\": 0, \"limit\": 4}"
+      },
+      "expect": { "accepted": 2, "rejected": 2 }
+    }
+  ]
+}
