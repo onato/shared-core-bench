@@ -58,19 +58,16 @@ def test_an_app_jwt_signed_with_the_key_is_exchanged_for_an_installation_token()
     assert unb64(signature) == f"signed:{header}.{payload}".encode()
 
 
-def test_a_token_is_reused_until_it_is_within_ten_minutes_of_expiring():
-    expires = "2026-11-23T12:00:00Z"  # 1_795_435_200
-    github = FakeGitHubApps(("ghs_first", expires), ("ghs_second", "2026-11-23T13:00:00Z"))
-    now = [1_795_435_200.0 - 601]
-    source = Tokens("5872314", "184603282", lambda data: b"", github, clock=lambda: now[0])
+def test_each_session_gets_a_newly_minted_token_even_while_the_last_is_valid():
+    github = FakeGitHubApps(
+        ("ghs_first", "2026-11-23T12:00:00Z"), ("ghs_second", "2026-11-23T12:20:00Z")
+    )
+    source = tokens(github, now=1_795_435_200.0 - 2400)
 
-    first = source.current()
-    again = source.current()
-    now[0] += 2
-    refreshed = source.current()
+    first = source.session_env({})["GH_TOKEN"]
+    second = source.session_env({})["GH_TOKEN"]
 
-    assert (first, again, refreshed) == ("ghs_first", "ghs_first", "ghs_second")
-    assert len(github.requests) == 2
+    assert (first, second) == ("ghs_first", "ghs_second")
 
 
 def test_the_session_gets_the_token_as_gh_token_and_it_never_appears_when_printed():

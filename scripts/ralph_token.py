@@ -7,12 +7,10 @@ import subprocess
 import urllib.request
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from datetime import datetime
 from typing import IO
 
 Sign = Callable[[bytes], bytes]
 Post = Callable[[str, str], dict]
-REFRESH_WITHIN = 600
 
 
 class TokenError(Exception):
@@ -103,16 +101,12 @@ class Tokens:
         self.sign = sign
         self.post = post
         self.clock = clock
-        self._token: str | None = None
-        self._expires_at = 0.0
 
     def current(self) -> str:
-        if self._token is None or self._expires_at - self.clock() < REFRESH_WITHIN:
-            path = f"/app/installations/{self.installation_id}/access_tokens"
-            reply = self.post(path, self._jwt())
-            self._token = reply["token"]
-            self._expires_at = datetime.fromisoformat(reply["expires_at"]).timestamp()
-        return self._token
+        # Minted every time: a session keeps the token it starts with, so a reused one could
+        # expire partway through (installation tokens last an hour).
+        path = f"/app/installations/{self.installation_id}/access_tokens"
+        return self.post(path, self._jwt())["token"]
 
     def session_env(self, environ: dict[str, str]) -> dict[str, str]:
         """The session's environment: the token replaces any owner GH_TOKEN, in memory only."""
