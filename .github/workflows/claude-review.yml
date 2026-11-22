@@ -55,6 +55,5 @@ jobs:
           OUTPUT: ${{ steps.review.outputs.structured_output }}
           EXECUTION_FILE: ${{ steps.review.outputs.execution_file }}
         run: |
-          jq '[.[] | select(.type == "result")] | last | .permission_denials' "$EXECUTION_FILE" || true
           printf '%s' "$OUTPUT" | jq -r '.verdict, .summary' > "$RUNNER_TEMP/verdict.md" || true
           python3 "$RUNNER_TEMP/review_verdict.py" "$RUNNER_TEMP/verdict.md" "$EXECUTION_FILE"
