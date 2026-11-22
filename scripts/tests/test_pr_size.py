@@ -1,6 +1,50 @@
 import io
+import json
 
 from pr_size import check, main
+
+
+def label_events(tmp_path, *events):
+    path = tmp_path / "events.json"
+    path.write_text(
+        json.dumps(
+            [{"event": e, "label": {"name": n}, "actor": {"login": a}} for e, n, a in events]
+        )
+    )
+    return str(path)
+
+
+def test_over_the_limit_passes_when_the_owner_added_the_size_approved_label(tmp_path, capsys):
+    events = label_events(
+        tmp_path, ("labeled", "bug", "onato-agent[bot]"), ("labeled", "size-approved", "onato")
+    )
+    numstat = io.StringIO("424\t0\tsrc/a.kt\n")
+
+    code = main(["--approver", "onato", "--label-events", events], stdin=numstat)
+
+    assert code == 0
+    out = capsys.readouterr().out
+    assert "424 changed lines, limit 400: approved by onato (size-approved)" in out
+
+
+def test_a_size_approved_label_added_by_anyone_but_the_owner_does_not_approve(tmp_path):
+    events = label_events(tmp_path, ("labeled", "size-approved", "onato-agent[bot]"))
+    numstat = io.StringIO("424\t0\tsrc/a.kt\n")
+
+    code = main(["--approver", "onato", "--label-events", events], stdin=numstat)
+
+    assert code == 1
+
+
+def test_a_size_approved_label_the_owner_later_removed_does_not_approve(tmp_path):
+    events = label_events(
+        tmp_path, ("labeled", "size-approved", "onato"), ("unlabeled", "size-approved", "onato")
+    )
+    numstat = io.StringIO("424\t0\tsrc/a.kt\n")
+
+    code = main(["--approver", "onato", "--label-events", events], stdin=numstat)
+
+    assert code == 1
 
 
 def test_total_under_the_limit_passes():

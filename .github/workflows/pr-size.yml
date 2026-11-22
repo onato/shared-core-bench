@@ -1,6 +1,11 @@
 name: pr-size
 on:
   pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+permissions:
+  contents: read
+  issues: read
+  pull-requests: read
 jobs:
   pr-size:
     runs-on: ubuntu-latest
@@ -8,5 +13,14 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
+      - name: Read the PR's label events
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >
+          gh api --paginate "repos/${{ github.repository }}/issues/${{ github.event.number }}/events"
+          --jq '.[]' | jq -s . > "$RUNNER_TEMP/label-events.json"
       - name: Count changed lines
-        run: git diff --numstat "origin/${{ github.base_ref }}...HEAD" | python3 scripts/pr_size.py
+        run: >
+          git diff --numstat "origin/${{ github.base_ref }}...HEAD"
+          | python3 scripts/pr_size.py --approver "${{ github.repository_owner }}"
+          --label-events "$RUNNER_TEMP/label-events.json"

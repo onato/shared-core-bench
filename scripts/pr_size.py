@@ -1,9 +1,12 @@
 import argparse
+import json
 import sys
 from dataclasses import dataclass
 from fnmatch import fnmatchcase
 from pathlib import Path
 from typing import TextIO
+
+APPROVAL_LABEL = "size-approved"
 
 
 @dataclass
@@ -41,6 +44,19 @@ def check(numstat: str, excludes: list[str], limit: int) -> Result:
     return Result(passed=total <= limit, total=total, largest=largest)
 
 
+def approved_by(events: list[dict], approver: str | None) -> bool:
+    """Whether the latest change to the approval label was the approver adding it."""
+    changes = [
+        event
+        for event in events
+        if event["event"] in ("labeled", "unlabeled") and event["label"]["name"] == APPROVAL_LABEL
+    ]
+    if not changes:
+        return False
+    latest = changes[-1]
+    return latest["event"] == "labeled" and latest["actor"]["login"] == approver
+
+
 def load_excludes(text: str) -> list[str]:
     lines = (line.strip() for line in text.splitlines())
     return [line for line in lines if line and not line.startswith("#")]
@@ -50,15 +66,20 @@ def main(argv: list[str], stdin: TextIO = sys.stdin) -> int:
     parser = argparse.ArgumentParser(description="Fail when a PR changes too many lines.")
     parser.add_argument("--limit", type=int, default=400)
     parser.add_argument("--exclude-file", type=Path, default=Path(".github/pr-size-exclude"))
+    parser.add_argument("--approver", help="the only login whose size-approved label counts")
+    parser.add_argument("--label-events", type=Path, help="the PR's issue events, as JSON")
     args = parser.parse_args(argv)
 
     excludes = load_excludes(args.exclude_file.read_text()) if args.exclude_file.exists() else []
     result = check(stdin.read(), excludes=excludes, limit=args.limit)
+    events = json.loads(args.label_events.read_text()) if args.label_events else []
+    approved = not result.passed and approved_by(events, args.approver)
 
-    print(f"{result.total} changed lines, limit {args.limit}")
+    approval = f": approved by {args.approver} ({APPROVAL_LABEL})" if approved else ""
+    print(f"{result.total} changed lines, limit {args.limit}{approval}")
     for path, size in result.largest[:10]:
         print(f"  {size:6d}  {path}")
-    return 0 if result.passed else 1
+    return 0 if result.passed or approved else 1
 
 
 if __name__ == "__main__":
