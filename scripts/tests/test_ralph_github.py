@@ -235,8 +235,9 @@ def test_update_branch_brings_the_pr_up_to_date_with_a_merge_through_gh():
 def test_comment_posts_the_body_on_the_issue_under_the_agent_marker():
     gh = FakeGh("https://github.com/onato/shared-core-bench/issues/7#issuecomment-1\n")
 
-    adapter(gh).comment(7, "Moved to In review by the Ralph loop: no PR opened.")
+    url = adapter(gh).comment(7, "Moved to In review by the Ralph loop: no PR opened.")
 
+    assert url == "https://github.com/onato/shared-core-bench/issues/7#issuecomment-1"
     assert gh.calls == [
         (
             ["issue", "comment", "7", "-R", "onato/shared-core-bench", "--body-file", "-"],

@@ -183,10 +183,10 @@ class GitHubAdapter:
             SET_STATUS_MUTATION, project=board["id"], item=item, field=field["id"], option=option
         )
 
-    def comment(self, issue: int, body: str) -> None:
+    def comment(self, issue: int, body: str) -> str:
         repo = f"{self.owner}/{self.repo}"
         args = ["issue", "comment", str(issue), "-R", repo, "--body-file", "-"]
-        self.run(args, f"{AGENT_MARKER}\n\n{body}")
+        return self.run(args, f"{AGENT_MARKER}\n\n{body}").strip()
 
     def _graphql(self, query: str, **variables: object) -> dict:
         args = ["api", "graphql", "-f", f"query={query}"]
