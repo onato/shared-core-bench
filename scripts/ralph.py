@@ -7,6 +7,8 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Protocol
 
+from ralph_token import TokenError
+
 TODO, IN_PROGRESS, IN_REVIEW, DONE = "Todo", "In progress", "In review", "Done"
 STUCK_AFTER = 3
 POLL_SECONDS = 60
@@ -195,18 +197,43 @@ def describe(issue: Issue) -> str:
     return f"- #{issue.number} {issue.status}" + (f", blocked by {blocked}" if blocked else "")
 
 
-def main(argv: list[str], connect: Callable[[], ReadsBoard]) -> int:
+@dataclass(frozen=True)
+class Live:
+    """What a real run needs beyond GitHub: sessions, where the stop message goes, and time."""
+
+    session: Session
+    notify: Callable[[str], None]
+    clock: Callable[[], float]
+    sleep: Callable[[float], None]
+
+
+def main(argv: list[str], connect: Callable[[], GitHub], live: Callable[[], Live]) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--milestone", type=int, required=True, help="the parent issue")
     parser.add_argument("--dry-run", action="store_true", help="print the next issue and stop")
+    parser.add_argument("--max-iterations", type=int, default=3, help="sessions to start at most")
     args = parser.parse_args(argv)
-    if not args.dry_run:
-        print("Only --dry-run is implemented so far (#39 adds sessions).", file=sys.stderr)
-        return 2
     try:
-        print(dry_run(args.milestone, connect()))
+        if args.dry_run:
+            print(dry_run(args.milestone, connect()))
+            return 0
+        github, real = connect(), live()
+        print(
+            run(
+                args.milestone,
+                github,
+                real.session,
+                real.notify,
+                real.clock,
+                real.sleep,
+                args.max_iterations,
+            )
+        )
     except GitHubError as error:
         print(f"Ralph loop stopped: {error}", file=sys.stderr)
+        return 1
+    except TokenError as error:
+        print(error, file=sys.stderr)
         return 1
     return 0
 
@@ -233,10 +260,39 @@ def dry_run(milestone: int, github: ReadsBoard) -> str:
 if __name__ == "__main__":
     # Run as a script this module is __main__, and ralph_github imports a second copy as
     # `ralph`; go through that copy so its GitHubError is the one main catches.
+    import os
+    import time
+    import urllib.request
+    from datetime import datetime
+    from pathlib import Path
+
     import ralph
     from ralph_github import GitHubAdapter, gh_runner
+    from ralph_session import ClaudeSession
+    from ralph_token import Tokens, github_post, keychain_key, load_app, openssl_signer
 
-    def connect() -> ReadsBoard:
+    repo = Path(__file__).resolve().parents[1]
+
+    def connect() -> GitHub:
+        # The owner's gh login: GitHub Apps can't move cards on a user-owned project.
         return GitHubAdapter("onato", "shared-core-bench", 2, gh_runner(subprocess.run))
 
-    sys.exit(ralph.main(sys.argv[1:], connect))
+    def live() -> Live:
+        config = repo / ".ralph" / "config"
+        app = load_app(
+            config.read_text() if config.exists() else None,
+            lambda: keychain_key(subprocess.run),
+        )
+        sign = openssl_signer(app.key, subprocess.run)
+        tokens = Tokens(
+            app.app_id, app.installation_id, sign, github_post(urllib.request.urlopen), time.time
+        )
+        session = ClaudeSession(repo, tokens, subprocess.run, dict(os.environ), datetime.now)
+        telegram = Path.home() / ".claude" / "skills" / "telegram" / "send.sh"
+
+        def notify(message: str) -> None:
+            subprocess.run([str(telegram), message], check=False)
+
+        return Live(session, notify, time.time, time.sleep)
+
+    sys.exit(ralph.main(sys.argv[1:], connect, live))

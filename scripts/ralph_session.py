@@ -1,0 +1,108 @@
+"""One Ralph loop iteration: a fresh `claude -p` on an issue, in that issue's own worktree."""
+
+import json
+import re
+import subprocess
+from collections.abc import Callable
+from dataclasses import dataclass
+from datetime import datetime
+from pathlib import Path
+from typing import Protocol
+
+from ralph import Issue, Outcome
+
+BOT = "onato-agent[bot]"
+BOT_EMAIL = "359795497+onato-agent[bot]@users.noreply.github.com"  # the bot's GitHub user id
+BOT_GIT = {
+    "GIT_AUTHOR_NAME": BOT,
+    "GIT_AUTHOR_EMAIL": BOT_EMAIL,
+    "GIT_COMMITTER_NAME": BOT,
+    "GIT_COMMITTER_EMAIL": BOT_EMAIL,
+    # The remote is SSH, which would push with the owner's key: go over HTTPS with GH_TOKEN,
+    # emptying the helper list first so the keychain's owner credentials aren't offered.
+    "GIT_CONFIG_COUNT": "3",
+    "GIT_CONFIG_KEY_0": "url.https://github.com/.insteadOf",
+    "GIT_CONFIG_VALUE_0": "git@github.com:",
+    "GIT_CONFIG_KEY_1": "credential.https://github.com.helper",
+    "GIT_CONFIG_VALUE_1": "",
+    "GIT_CONFIG_KEY_2": "credential.https://github.com.helper",
+    "GIT_CONFIG_VALUE_2": "!gh auth git-credential",
+}
+
+
+class SessionTokens(Protocol):
+    def session_env(self, environ: dict[str, str]) -> dict[str, str]: ...
+
+
+@dataclass
+class ClaudeSession:
+    repo: Path
+    tokens: SessionTokens
+    run: Callable[..., subprocess.CompletedProcess]
+    environ: dict[str, str]
+    now: Callable[[], datetime]
+
+    def work(self, issue: Issue) -> Outcome:
+        branch = f"swilliams/{issue.number}-ralph"
+        worktree = self.repo.parent / f"shared-core-bench-{issue.number}"
+        self.run(["git", "-C", str(self.repo), "fetch", "origin"], check=True)
+        self.run(
+            [
+                "git",
+                "-C",
+                str(self.repo),
+                "worktree",
+                "add",
+                str(worktree),
+                "-b",
+                branch,
+                "origin/main",
+            ],
+            check=True,
+        )
+        prompt = (self.repo / ".ralph" / "PROMPT.md").read_text()
+        prompt = prompt.replace("{issue}", str(issue.number)).replace("{branch}", branch)
+        logs = self.repo / ".ralph" / "logs"
+        logs.mkdir(exist_ok=True)
+        log = logs / f"{self.now():%Y%m%d-%H%M%S}-{issue.number}.log"
+        with log.open("w") as out:
+            self.run(
+                [
+                    "claude",
+                    "-p",
+                    prompt,
+                    "--permission-mode",
+                    "auto",
+                    "--output-format",
+                    "stream-json",
+                    "--verbose",
+                ],
+                cwd=worktree,
+                env=self.tokens.session_env({**own_environ(self.environ), **BOT_GIT}),
+                stdout=out,
+                stderr=subprocess.STDOUT,
+                text=True,
+            )
+        text = final_result(log)
+        if text is None:
+            return Outcome(pr=None, needs_human=f"the session ended without a result; see {log}")
+        return outcome(text)
+
+
+def own_environ(environ: dict[str, str]) -> dict[str, str]:
+    """Without the CLAUDE* variables a Claude Code parent sets, which make `claude` a child."""
+    return {k: v for k, v in environ.items() if not k.startswith("CLAUDE")}
+
+
+def final_result(log: Path) -> str | None:
+    events = [json.loads(line) for line in log.read_text().splitlines() if line.startswith("{")]
+    return next((e["result"] for e in reversed(events) if e.get("type") == "result"), None)
+
+
+def outcome(text: str) -> Outcome:
+    pr = re.search(r"^PR: #(\d+)\s*$", text, re.MULTILINE)
+    human = re.search(r"^NEEDS_HUMAN: (.+?)\s*$", text, re.MULTILINE)
+    return Outcome(
+        pr=int(pr.group(1)) if pr else None,
+        needs_human=human.group(1) if human else None,
+    )
