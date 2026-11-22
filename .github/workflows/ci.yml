@@ -15,3 +15,6 @@ jobs:
           java-version: 21
           cache: gradle
       - run: make lint test coverage
+      - name: Coverage summary
+        if: ${{ !cancelled() }}
+        run: python3 scripts/coverage_summary.py scripts=coverage.xml kmp=core-kmp/build/reports/kover/report.xml
