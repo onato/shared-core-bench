@@ -17,8 +17,15 @@ code to make that test pass. Tick it only when it passes along with every other 
   blockers. Move it to In progress on the project board when starting.
 - One issue = one branch = one worktree (`swilliams/<issue#>-<slug>` from `origin/main`) = one PR
   whose body says `Closes #<n>`. Write the PR body with the `pr` skill.
-- Keep PRs under 400 changed lines, excluding paths in `.github/pr-size-exclude`. If an issue
-  won't fit, stop and split it into new issues before writing code.
+- Keep PRs under 400 changed lines, tests included; only the generated or vendored paths in
+  `.github/pr-size-exclude` are left out. Reviews lose effectiveness past 200–400 lines (the
+  Cisco/SmartBear study), and test code already gets less review than production code.
+- If an issue won't fit, split it before writing code. Make each part a sub-issue of the same
+  parent that merges on its own and has its own tests to write first, and link them with
+  `Blocked by`. Doing less in a PR is almost always possible.
+- An oversized PR is the exception, for work that can't be divided, usually because it is mostly
+  boilerplate. Give a breakdown in the PR's Size section (tests, production code, build/config), and
+  wait for the owner. `pr-size` passes it only once the owner adds the `size-approved` label.
 - `main` is protected: never push to it; every change merges through a PR that passes CI, the size
   check and the Claude review. Address review comments with new commits, not force pushes.
 

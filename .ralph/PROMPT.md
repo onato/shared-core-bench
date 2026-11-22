@@ -14,8 +14,13 @@ What to do:
    fail for the expected reason, write only enough code to pass, run every non-benchmark test.
    Tick each item in the issue body once it passes.
 3. Before each commit: `make test`, `make lint` and `make coverage` pass with zero warnings.
-4. Keep the PR under 400 changed lines. If the issue can't fit, stop with NEEDS_HUMAN (below)
-   instead of splitting it yourself.
+4. Keep the PR under 400 changed lines, tests included. If the issue won't fit, split it the way
+   `CLAUDE.md` describes. Make each part a sub-issue of the issue's parent, with its own tests to
+   write first, and set `Blocked by` between them. Then cut this issue down to the first part and
+   carry on with it; the loop takes the rest later. Doing less is almost always possible. Only when
+   the work can't be divided, usually because it is mostly boilerplate, open the PR anyway. Give it
+   the lines breakdown in its Size section, and stop with NEEDS_HUMAN so the owner can decide on
+   the `size-approved` label.
 5. Push, open the PR with the `pr` skill (body says `Closes #{issue}`), then turn on auto-merge:
    `gh pr merge <n> --auto --squash`. Don't merge it yourself, and never push to `main`.
 6. Wait for CI and the Claude review (`gh pr checks <n> --watch`). Fix what they report with new
