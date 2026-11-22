@@ -16,9 +16,12 @@ def ratio(covered: int, total: int) -> str:
 def read_report(path: Path) -> tuple[str, str] | None:
     """Line and branch coverage from a Cobertura (coverage.py) or JaCoCo (Kover) XML report."""
     try:
-        root = ET.parse(path).getroot()
-    except (OSError, ET.ParseError):
+        return parse(ET.parse(path).getroot())
+    except (OSError, ET.ParseError, KeyError, TypeError, ValueError):
         return None
+
+
+def parse(root: ET.Element) -> tuple[str, str]:
     if root.tag == "coverage":
         lines = ratio(int(root.get("lines-covered")), int(root.get("lines-valid")))
         branches = ratio(int(root.get("branches-covered")), int(root.get("branches-valid")))

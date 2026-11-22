@@ -68,6 +68,22 @@ def test_a_missing_or_unreadable_report_is_a_warning_not_a_failure(tmp_path, cap
     assert "| scripts | no report | no report |" in summary.read_text()
 
 
+def test_a_well_formed_report_without_counters_is_a_warning(tmp_path, capsys):
+    reports = [
+        write(tmp_path, "cobertura.xml", '<coverage lines-valid="x"></coverage>'),
+        write(tmp_path, "jacoco.xml", '<report><counter type="LINE" covered="1"/></report>'),
+        write(tmp_path, "other.xml", "<html></html>"),
+    ]
+
+    code = main([f"m{i}={path}" for i, path in enumerate(reports)], summary_path=None)
+
+    assert code == 0
+    assert capsys.readouterr().out.splitlines() == [
+        f"::warning title=Coverage m{i}::no coverage report at {path}"
+        for i, path in enumerate(reports)
+    ]
+
+
 def test_an_argument_without_a_name_is_a_usage_error(tmp_path, capsys):
     code = main([str(tmp_path / "coverage.xml")], summary_path=None)
 
