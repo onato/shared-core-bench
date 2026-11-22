@@ -20,6 +20,10 @@ class KmpContractCore(
                     ),
                 )
             }
+
+            IngestResult.InvalidJson -> {
+                JsonObject(mapOf("error" to JsonPrimitive("invalid-json")))
+            }
         }
     }
 

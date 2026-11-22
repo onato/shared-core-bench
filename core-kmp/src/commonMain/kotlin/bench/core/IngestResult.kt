@@ -5,4 +5,6 @@ sealed interface IngestResult {
         val accepted: Int,
         val rejected: Int,
     ) : IngestResult
+
+    data object InvalidJson : IngestResult
 }
