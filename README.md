@@ -22,3 +22,15 @@ The `protect-main` ruleset applies to the default branch, with no bypass actors 
 
 `claude-review` reads its prompt and verdict check from `main`, so a PR that changes them is
 reviewed by the version already merged.
+
+### Changing the review gate
+
+`claude-code-action` refuses to run when the PR changes `.github/workflows/claude-review.yml`
+itself, so such a PR can never pass the required `claude-review` check. The owner merges it by:
+
+1. Opening the PR on its own, with nothing else in it; `ci` and `pr-size` must pass.
+2. Removing `claude-review` from the ruleset's required checks.
+3. Squash-merging the PR.
+4. Restoring `claude-review` immediately and checking the ruleset lists all three checks.
+
+Say in the PR that it uses this procedure.
