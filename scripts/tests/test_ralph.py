@@ -1,4 +1,8 @@
+import os
+import subprocess
+import sys
 from dataclasses import replace
+from pathlib import Path
 
 import pytest
 from ralph import (
@@ -7,9 +11,11 @@ from ralph import (
     IN_REVIEW,
     REQUIRED_WORKFLOWS,
     TODO,
+    GitHubError,
     Issue,
     Outcome,
     PullRequest,
+    main,
     run,
 )
 
@@ -280,4 +286,78 @@ def test_closed_issues_left_off_done_are_moved_to_done_and_named_in_the_stop_mes
     assert stop == (
         "Ralph loop stopped: milestone complete.\n"
         "Moved to Done (closed, but the board had not moved them): #6"
+    )
+
+
+def dry_run(github, *args):
+    return main(["--dry-run", "--milestone", "2", *args], connect=lambda: github)
+
+
+def test_dry_run_prints_the_next_issue_and_any_workflows_off_without_moving_a_card(capsys):
+    github = FakeGitHub([Issue(6, IN_PROGRESS, is_open=False), Issue(7, TODO), Issue(8, TODO)])
+    github.workflows["Item closed"] = False
+
+    code = dry_run(github)
+
+    assert code == 0
+    assert capsys.readouterr().out == (
+        "Board workflows are off: Item closed. Turn them on in the project's Workflows settings.\n"
+        "Next: #7\n"
+    )
+    assert github.moves == []
+    assert github.comments == []
+
+
+def test_dry_run_with_nothing_ready_prints_why_and_what_is_open(capsys):
+    github = FakeGitHub([Issue(7, IN_REVIEW), Issue(8, TODO)], blocked_by={8: (7,)})
+
+    code = dry_run(github)
+
+    assert code == 0
+    assert capsys.readouterr().out == (
+        "Nothing to take. Open:\n- #7 In review\n- #8 Todo, blocked by #7\n"
+    )
+
+
+class FailingGitHub(FakeGitHub):
+    def milestone_issues(self, milestone):
+        raise GitHubError("gh api graphql: HTTP 401: Bad credentials")
+
+
+def test_a_failing_github_call_stops_with_the_command_and_its_error(capsys):
+    code = dry_run(FailingGitHub([]))
+
+    assert code == 1
+    assert capsys.readouterr().err == (
+        "Ralph loop stopped: gh api graphql: HTTP 401: Bad credentials\n"
+    )
+
+
+def test_without_dry_run_the_loop_refuses_to_start_until_sessions_exist(capsys):
+    github = FakeGitHub([Issue(7, TODO)])
+
+    code = main(["--milestone", "2"], connect=lambda: github)
+
+    assert code == 2
+    assert capsys.readouterr().err == "Only --dry-run is implemented so far (#39 adds sessions).\n"
+    assert github.moves == []
+
+
+def test_the_script_stops_cleanly_when_gh_fails(tmp_path):
+    fake_gh = tmp_path / "gh"
+    fake_gh.write_text("#!/bin/sh\necho 'HTTP 401: Bad credentials' >&2\nexit 1\n")
+    fake_gh.chmod(0o755)
+    script = Path(__file__).parents[1] / "ralph.py"
+
+    result = subprocess.run(
+        [sys.executable, str(script), "--dry-run", "--milestone", "2"],
+        capture_output=True,
+        text=True,
+        env={**os.environ, "PATH": f"{tmp_path}{os.pathsep}{os.environ['PATH']}"},
+    )
+
+    assert (result.returncode, result.stderr.splitlines()[-1]) == (
+        1,
+        "Ralph loop stopped: gh api graphql -f query=… -F owner=onato -F project=2: "
+        "HTTP 401: Bad credentials",
     )
