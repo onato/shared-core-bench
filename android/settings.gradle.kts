@@ -18,6 +18,7 @@ dependencyResolutionManagement {
 includeBuild("../core-kmp") {
     dependencySubstitution {
         substitute(module("bench:core-kmp")).using(project(":"))
+        substitute(module("bench:contract-runner")).using(project(":contract-runner"))
     }
 }
 
