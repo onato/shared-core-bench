@@ -17,4 +17,4 @@ jobs:
       - run: make lint test coverage
       - name: Coverage summary
         if: ${{ !cancelled() }}
-        run: python3 scripts/coverage_summary.py scripts=coverage.xml kmp=core-kmp/build/reports/kover/report.xml
+        run: python3 scripts/coverage_summary.py scripts=coverage.xml kmp=core-kmp/build/reports/kover/report.xml android=android/app/build/reports/kover/reportApp.xml

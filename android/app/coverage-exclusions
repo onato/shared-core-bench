@@ -1,0 +1,2 @@
+# One class pattern per line, with the reason after '#'.
+bench.android.MainActivity # process entry point
