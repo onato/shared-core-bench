@@ -30,6 +30,16 @@ The benchmark must be able to prove each of these wrong.
 A small offline-first **product catalogue**: a paged list, a detail screen, pull-to-refresh, and a
 search/filter box. Native UI (SwiftUI, Jetpack Compose); everything below the UI lives in the core.
 
+### Display
+
+Both apps show the same text, so their UI work is comparable. Money is US dollars with two decimals
+(`$9.27`), formatted the same way whatever the device's locale.
+
+| Where | Shows |
+|---|---|
+| List cell | The title. Below it, `discountedPrice`, then `price` struck through when the two differ. At the trailing edge, `rating` with one decimal (`4.9`). |
+| Detail | The title, description, `Brand: <brand>` (left out when there is none), `Category: <category>`, `<discountedPrice>, was <price>`, `Rating: <bucket>` (`Excellent`, `Good`, `Fair` or `Poor`), the stock label (`In stock`, `Low stock` or `Out of stock`) and `Tags: <tags>` joined by `, `. |
+
 ### Data source
 
 Default: **`https://dummyjson.com/products?limit=&skip=`** — real offset paging, ~190 records with
