@@ -11,3 +11,9 @@ c6a70c6e87f21d8af8ea3e2771d44898a634d075
 
 # Structural: move the contract runner into its own JVM module (#63)
 1505eee37f17e1bcae43b13d096d13f33d8c4f27
+
+# Structural: gates.py for the size and protected-paths checks (#87)
+edab63c142cc66464150440033ae6dc757927015
+
+# Structural: extract the worktree and claude steps of a loop session (#91)
+be156a7a7aff6dd29d6d6093d058c616ba7ccb69
