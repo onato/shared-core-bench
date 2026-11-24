@@ -6,6 +6,7 @@ import bench.android.core.FetchRequest
 import bench.android.core.IngestResult
 import bench.android.core.PageResult
 import bench.android.core.ProductSummary
+import bench.android.core.Query
 import bench.android.core.SharedCore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -14,6 +15,7 @@ import kotlinx.coroutines.withContext
 class ProductPagingSource(
     private val core: SharedCore,
     private val fetch: (FetchRequest) -> FetchResult,
+    private val query: Query,
 ) : PagingSource<Long, ProductSummary>() {
     override suspend fun load(params: LoadParams<Long>): LoadResult<Long, ProductSummary> =
         withContext(Dispatchers.IO) { load(params.key, params.loadSize) }
@@ -23,7 +25,7 @@ class ProductPagingSource(
         size: Int,
     ): LoadResult<Long, ProductSummary> {
         // Paging rejects a non-positive page size in PagingConfig, so InvalidSize cannot come back.
-        val page = core.page(cursor, size) as PageResult.Page
+        val page = core.page(cursor, size, query) as PageResult.Page
         val request = if (page.nextCursor == null) core.nextFetch() else null
         if (request == null) return page.toLoadResult()
         val failure = fetchAndIngest(request)
