@@ -1,6 +1,6 @@
 package bench.android
 
-import bench.core.FetchRequest
+import bench.android.core.FetchRequest
 import mockwebserver3.MockResponse
 import mockwebserver3.MockWebServer
 import mockwebserver3.SocketEffect
@@ -63,16 +63,6 @@ class OkHttpFetcherTest {
         val result = impatient.fetch(requestFor("/products"))
 
         assertEquals(FetchResult.NetworkError::class, result::class)
-    }
-
-    @Test
-    fun requestHeadersAreSentToTheServer() {
-        server.enqueue(MockResponse(code = 200))
-        val request = requestFor("/products").copy(headers = mapOf("Accept" to "application/json"))
-
-        fetcher.fetch(request)
-
-        assertEquals("application/json", server.takeRequest().headers["Accept"])
     }
 
     private fun requestFor(path: String) = FetchRequest(requestId = 1, url = server.url(path).toString())

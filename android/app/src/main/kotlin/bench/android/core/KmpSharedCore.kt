@@ -1,6 +1,9 @@
 package bench.android.core
 
+import android.content.Context
+import bench.core.AndroidDrivers
 import bench.core.Core
+import bench.core.CoreConfig
 import bench.core.IngestResult as CoreIngestResult
 import bench.core.PageResult as CorePageResult
 import bench.core.Product as CoreProduct
@@ -38,4 +41,11 @@ class KmpSharedCore(
     override fun stats(): CoreStats = CoreStats(core.stats().productCount)
 
     private fun product(product: CoreProduct) = Product(product.id, product.title, product.price)
+
+    companion object {
+        fun create(
+            context: Context,
+            dbPath: String,
+        ) = KmpSharedCore(Core.create(CoreConfig(dbPath), AndroidDrivers(context)))
+    }
 }
