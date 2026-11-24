@@ -183,6 +183,19 @@ class ProductListTest {
         awaitGone("Essence Mascara")
     }
 
+    @Test
+    fun aProductTheServerNoLongerReturnsIsGoneAfterARefresh() {
+        val core = FakeSharedCore(remotePages = listOf(listOf(mascara, palette)))
+        show(core) { FetchResult.Response(200, ByteArray(0)) }
+        awaitText("Eyeshadow Palette")
+
+        core.remotePages = listOf(listOf(mascara))
+        pullDown()
+
+        awaitGone("Eyeshadow Palette")
+        awaitText("Essence Mascara")
+    }
+
     private fun pullDown() = compose.onNode(hasScrollAction()).performTouchInput { swipeDown() }
 
     private fun cell(

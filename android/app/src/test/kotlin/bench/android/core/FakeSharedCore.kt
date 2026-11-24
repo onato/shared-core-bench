@@ -1,6 +1,9 @@
 package bench.android.core
 
-/** An in-memory [SharedCore] for app tests. */
+/**
+ * An in-memory [SharedCore] for app tests. [remotePages] is the server's catalogue; a walk started by [refresh]
+ * soft-deletes, once it ends, every product it did not see.
+ */
 class FakeSharedCore(
     stored: List<ProductSummary> = emptyList(),
     var remotePages: List<List<ProductSummary>> = emptyList(),
@@ -9,6 +12,8 @@ class FakeSharedCore(
     private val products = stored.associateBy { it.id }.toSortedMap()
     private val details = details.associateBy { it.id }
     private var fetched = 0
+    private var seenSinceRefresh: MutableSet<Long>? = null
+    private val deleted = mutableSetOf<Long>()
 
     override fun nextFetch(): FetchRequest? {
         if (fetched == remotePages.size) return null
@@ -30,6 +35,11 @@ class FakeSharedCore(
     private fun storeNextRemotePage(): IngestResult {
         val page = remotePages[fetched++]
         page.forEach { products[it.id] = it }
+        deleted -= page.map { it.id }.toSet()
+        seenSinceRefresh?.let { seen ->
+            seen += page.map { it.id }
+            if (fetched == remotePages.size) deleted += products.keys - seen
+        }
         return IngestResult.Ingested(accepted = page.size, rejected = 0)
     }
 
@@ -38,7 +48,7 @@ class FakeSharedCore(
         size: Int,
         query: Query,
     ): PageResult {
-        val matching = products.values.filter { it.title.contains(query.text, ignoreCase = true) }
+        val matching = products.values.filter { it.id !in deleted && it.title.contains(query.text, ignoreCase = true) }
         val after = matching.filter { cursor == null || it.id > cursor }
         val items = after.take(size)
         return PageResult.Page(items, nextCursor = if (after.size > size) items.last().id else null)
@@ -46,10 +56,12 @@ class FakeSharedCore(
 
     override fun detail(id: Long): ProductDetail? = details[id]
 
-    override fun stats(): CoreStats = CoreStats(productCount = products.size.toLong(), deletedCount = 0)
+    override fun stats(): CoreStats =
+        CoreStats(productCount = products.size.toLong(), deletedCount = deleted.size.toLong())
 
     override fun refresh() {
         fetched = 0
+        seenSinceRefresh = mutableSetOf()
     }
 
     private companion object {
