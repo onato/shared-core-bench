@@ -60,7 +60,7 @@ reaches well past the new fixture. Count these into the issue's size before star
 - **A new required input field:** every product body in `contract/cases`, the core's tests that
   ingest products (`IngestStorageTest`, `AndroidDriversTest`), the app's adapter tests
   (`KmpSharedCore*Test`, `FakeSharedCoreTest`, `Summaries.kt`) and the benchmark's
-  `android/benchmark/src/main/kotlin/bench/benchmark/ProductFixtures.kt`.
+  `android/fixtures/src/main/kotlin/bench/fixtures/ProductFixtures.kt`.
 - **A new argument to a step** (a `page` query field, say): the core's own type for it in
   `core-kmp/src/commonMain/kotlin/bench/core/` (`Query.kt`), both contract adapters, and the app's
   `SharedCore.kt` with `KmpSharedCore.kt` and the test `FakeSharedCore.kt`, because the app runs
