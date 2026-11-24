@@ -48,6 +48,15 @@ class Outcome:
     needs_human: str | None = None
 
 
+@dataclass(frozen=True)
+class Improvement:
+    """What an improver session did: fix PRs it opened, and what it left to the owner."""
+
+    prs: tuple[int, ...] = ()
+    proposals: tuple[int, ...] = ()
+    needs_human: str | None = None
+
+
 class GitHubError(Exception):
     """A GitHub call failed; the message names the command and its error."""
 
