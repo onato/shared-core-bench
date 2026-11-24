@@ -68,6 +68,11 @@ reaches well past the new fixture. Count these into the issue's size before star
   every case too. Both adapters read an optional argument with `args["name"]` and a default, never
   `getValue`: existing cases omit it, and `getValue` fails them with `Key … is missing` before the
   core runs.
+- **A new step:** the `step` row's list of calls and a row in the step table above, and the
+  call in `SPEC.md`'s "Shared core contract" block, which the `step` row points to. The KMP
+  runner's `ContractCore` interface and its dispatch in `ContractRunner.kt` (with the runner's
+  `FakeCore`), both contract adapters, the core's `Core.kt`, and the app's `SharedCore.kt` with
+  `KmpSharedCore.kt` and the test `FakeSharedCore.kt`.
 
 ## Runners
 
