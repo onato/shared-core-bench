@@ -34,6 +34,16 @@ class FakeGitHub:
         self.comments = []
         self.updates = []
         self.workflows = {name: True for name in REQUIRED_WORKFLOWS}
+        self.approved = False  # the owner's plan-approved label on the milestone's parent
+        self.undrafted = []
+
+    def plan_approved(self, parent):
+        assert parent == 2
+        return self.approved
+
+    def undraft(self, issue):
+        self.undrafted.append(issue)
+        self.issues[issue] = replace(self.issues[issue], draft=False)
 
     def board_workflows(self):
         return self.workflows
@@ -392,6 +402,41 @@ def test_an_improver_that_needs_the_owner_messages_them_and_the_loop_goes_on():
 
     assert notes[0] == "Ralph loop: the improver needs you: git fetch origin failed: offline."
     assert stop.endswith("\nImprover needs you: git fetch origin failed: offline")
+
+
+def test_the_loop_does_not_take_a_draft_issue():
+    github = FakeGitHub([Issue(7, TODO, draft=True)])
+    session = FakeSession(github, {})
+
+    loop(github, session)
+
+    assert session.worked == []
+
+
+def test_once_the_owner_approves_the_plan_the_drafts_move_to_todo_and_are_taken():
+    github = FakeGitHub([Issue(7, "No status", draft=True), Issue(8, TODO, draft=True)])
+    github.approved = True
+    session = FakeSession(github, {7: merged_run(40), 8: merged_run(41)})
+
+    loop(github, session)
+
+    assert github.undrafted == [7, 8]
+    assert github.moves[:2] == [(7, TODO), (8, TODO)]
+    assert session.worked == [7, 8]
+
+
+def test_with_only_drafts_left_the_stop_message_asks_for_plan_approved_on_the_parent():
+    github = FakeGitHub([Issue(7, TODO, draft=True), Issue(8, TODO, draft=True)])
+    session = FakeSession(github, {})
+
+    stop = loop(github, session)
+
+    assert stop == (
+        "Ralph loop stopped: drafts wait for the owner's plan-approved label on #2.\n"
+        "Open:\n"
+        "- #7 Todo, draft\n"
+        "- #8 Todo, draft"
+    )
 
 
 def test_stops_before_any_session_when_a_required_board_workflow_is_off():

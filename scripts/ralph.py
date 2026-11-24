@@ -32,6 +32,7 @@ class Issue:
     status: str
     is_open: bool = True
     open_blockers: tuple[int, ...] = ()
+    draft: bool = False  # proposed for the milestone; waits for the owner's plan-approved
 
 
 @dataclass(frozen=True)
@@ -73,6 +74,8 @@ class GitHub(ReadsBoard, Protocol):
     def set_status(self, issue: int, status: str) -> None: ...
     def update_branch(self, number: int) -> None: ...
     def comment(self, issue: int, body: str) -> str: ...  # the comment's URL
+    def plan_approved(self, parent: int) -> bool: ...  # the owner added plan-approved last
+    def undraft(self, issue: int) -> None: ...
 
 
 class Session(Protocol):
@@ -82,7 +85,9 @@ class Session(Protocol):
 
 
 def next_issue(issues: list[Issue]) -> Issue | None:
-    ready = [i for i in issues if i.is_open and i.status == TODO and not i.open_blockers]
+    ready = [
+        i for i in issues if i.is_open and i.status == TODO and not i.open_blockers and not i.draft
+    ]
     return min(ready, key=lambda i: i.number, default=None)
 
 
@@ -145,12 +150,21 @@ class _Loop:
                 f"Ralph loop stopped: board workflows are off: {', '.join(off)}. "
                 "Turn them on in the project's Workflows settings."
             )
+        self.approve_drafts()
         while True:
             issues = self.github.milestone_issues(self.milestone)
             self.move_closed_to_done(issues)
             stop = self.step(next_issue(issues))
             if stop is not None:
                 return self.stop_message(stop.headline)
+
+    def approve_drafts(self) -> None:
+        drafts = [i for i in self.github.milestone_issues(self.milestone) if i.draft and i.is_open]
+        if not drafts or not self.github.plan_approved(self.milestone):
+            return
+        for draft in drafts:
+            self.github.undraft(draft.number)
+            self.github.set_status(draft.number, TODO)
 
     def step(self, issue: Issue | None) -> Stop | None:
         self.refresh_pending()
@@ -238,7 +252,9 @@ class _Loop:
 
     def stop_message(self, headline: str | None) -> str:
         still_open = [i for i in self.github.milestone_issues(self.milestone) if i.is_open]
-        if headline is None:
+        if headline is None and still_open and all(i.draft for i in still_open):
+            headline = f"drafts wait for the owner's plan-approved label on #{self.milestone}"
+        elif headline is None:
             headline = "nothing left to take" if still_open else "milestone complete"
         lines = [f"Ralph loop stopped: {headline}."]
         if still_open:
@@ -267,7 +283,10 @@ class _Loop:
 
 def describe(issue: Issue) -> str:
     blocked = ", ".join(f"#{b}" for b in issue.open_blockers)
-    return f"- #{issue.number} {issue.status}" + (f", blocked by {blocked}" if blocked else "")
+    draft = ", draft" if issue.draft else ""
+    return f"- #{issue.number} {issue.status}{draft}" + (
+        f", blocked by {blocked}" if blocked else ""
+    )
 
 
 @dataclass(frozen=True)

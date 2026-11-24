@@ -4,11 +4,13 @@ import json
 import subprocess
 from collections.abc import Callable
 
+from gates import approved_by
 from ralph import GitHubError, Issue, PullRequest
 
 Run = Callable[[list[str], str | None], str]
 FAILURE = "FAILURE"
 AGENT_MARKER = "> 🤖 Agent comment — written by Claude Code"
+DRAFT, PLAN_APPROVED = "draft", "plan-approved"
 
 
 def gh_runner(subprocess_run: Callable[..., subprocess.CompletedProcess]) -> Run:
@@ -30,6 +32,7 @@ query($owner: String!, $repo: String!, $number: Int!) {
         nodes {
           number
           state
+          labels(first: 20) { nodes { name } }
           blockedBy(first: 20) { nodes { number state } }
           projectItems(first: 5) {
             nodes {
@@ -132,6 +135,7 @@ class GitHubAdapter:
             open_blockers=tuple(
                 b["number"] for b in node["blockedBy"]["nodes"] if b["state"] == "OPEN"
             ),
+            draft=any(label["name"] == DRAFT for label in node["labels"]["nodes"]),
         )
 
     def _status(self, items: list[dict]) -> str:
@@ -187,6 +191,15 @@ class GitHubAdapter:
         repo = f"{self.owner}/{self.repo}"
         args = ["issue", "comment", str(issue), "-R", repo, "--body-file", "-"]
         return self.run(args, f"{AGENT_MARKER}\n\n{body}").strip()
+
+    def plan_approved(self, parent: int) -> bool:
+        path = f"repos/{self.owner}/{self.repo}/issues/{parent}/events"
+        lines = self.run(["api", "--paginate", path, "--jq", ".[]"], None).splitlines()
+        return approved_by([json.loads(line) for line in lines], PLAN_APPROVED, self.owner)
+
+    def undraft(self, issue: int) -> None:
+        repo = f"{self.owner}/{self.repo}"
+        self.run(["issue", "edit", str(issue), "-R", repo, "--remove-label", DRAFT], None)
 
     def _graphql(self, query: str, **variables: object) -> dict:
         args = ["api", "graphql", "-f", f"query={query}"]
