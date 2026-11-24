@@ -15,8 +15,6 @@ POLL_SECONDS = 60
 MERGE_TIMEOUT = 3600
 # An improver session reviews this many merged PRs at a time, and whatever is left at the end.
 IMPROVE_AFTER = 5
-# The owner's budget for unattended runs: the share of the weekly usage limit used.
-WEEKLY_LIMIT = 0.20
 # The board only stays true while these GitHub Projects built-in workflows move the cards.
 REQUIRED_WORKFLOWS = (
     "Item closed",
@@ -81,7 +79,6 @@ class GitHub(ReadsBoard, Protocol):
 class Session(Protocol):
     def work(self, issue: Issue) -> Outcome: ...
     def improve(self, prs: tuple[int, ...]) -> Improvement: ...
-    def weekly_usage(self) -> float | None: ...
 
 
 def next_issue(issues: list[Issue]) -> Issue | None:
@@ -197,9 +194,6 @@ class _Loop:
     def halt(self) -> str | None:
         if self.iterations == self.max_iterations:
             return f"iteration cap ({self.max_iterations}) reached"
-        used = self.session.weekly_usage()
-        if used is not None and used >= WEEKLY_LIMIT:
-            return f"weekly usage {used:.0%} ≥ {WEEKLY_LIMIT:.0%}"
         return None
 
     def refresh_pending(self) -> None:

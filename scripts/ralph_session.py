@@ -4,7 +4,7 @@ import json
 import re
 import subprocess
 from collections.abc import Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Protocol
@@ -41,7 +41,6 @@ class ClaudeSession:
     run: Callable[..., subprocess.CompletedProcess]
     environ: dict[str, str]
     now: Callable[[], datetime]
-    _weekly: float | None = field(default=None, init=False)
 
     def work(self, issue: Issue) -> Outcome:
         branch = f"swilliams/{issue.number}-ralph"
@@ -99,19 +98,7 @@ class ClaudeSession:
                 stderr=subprocess.STDOUT,
                 text=True,
             )
-        self._weekly = weekly_usage(log, self._weekly)
         return final_result(log), log
-
-    def weekly_usage(self) -> float | None:
-        """The weekly limit used, 0–1, as the last session saw it; None before any has run."""
-        return self._weekly
-
-
-def weekly_usage(log: Path, previous: float | None) -> float | None:
-    for event in reversed(events(log)):
-        if event.get("type") == "rate_limit_event":
-            return event["rate_limit_info"]["unifiedWindows"]["seven_day"]["utilization"]
-    return previous
 
 
 def events(log: Path) -> list[dict]:

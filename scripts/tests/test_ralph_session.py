@@ -37,31 +37,6 @@ def result(text):
     return {"type": "result", "result": text}
 
 
-def usage(weekly):
-    """A rate_limit_event as `claude -p --output-format stream-json` emits it."""
-    windows = {"five_hour": {"utilization": 0.5}, "seven_day": {"utilization": weekly}}
-    return {"type": "rate_limit_event", "rate_limit_info": {"unifiedWindows": windows}}
-
-
-def test_the_session_reports_the_latest_weekly_usage_its_log_shows(tmp_path):
-    _, claude = session(tmp_path, FakeProcesses(usage(0.04), usage(0.06), result("PR: #52")))
-    before = claude.weekly_usage()
-
-    claude.work(Issue(7, "In progress"))
-
-    assert (before, claude.weekly_usage()) == (None, 0.06)
-
-
-def test_a_log_without_usage_keeps_the_last_reading(tmp_path):
-    _, claude = session(tmp_path, FakeProcesses(usage(0.05), result("PR: #52")))
-    claude.work(Issue(7, "In progress"))
-    claude.run = FakeProcesses(result("PR: #53"))
-
-    claude.work(Issue(8, "In progress"))
-
-    assert claude.weekly_usage() == 0.05
-
-
 def session(tmp_path, processes):
     repo = tmp_path / "checkout"
     (repo / ".ralph").mkdir(parents=True)
