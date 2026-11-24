@@ -75,6 +75,8 @@ class KmpSharedCore(
 
     override fun refresh() = core.refresh()
 
+    override fun categories() = core.categories()
+
     companion object {
         fun create(
             context: Context,

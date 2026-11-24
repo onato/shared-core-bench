@@ -84,9 +84,12 @@ fun App(
     products: (Query) -> Flow<PagingData<ProductSummary>>,
     detail: (Long) -> ProductDetail?,
     refresh: () -> Unit,
+    categories: () -> List<String>,
 ) {
     var text by rememberSaveable { mutableStateOf("") }
-    val items = remember(text) { products(Query(text)) }.collectAsLazyPagingItems()
+    val filters = rememberFilters()
+    val query = filters.query(text)
+    val items = remember(query) { products(query) }.collectAsLazyPagingItems()
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
     var selected by rememberSaveable { mutableStateOf<Long?>(null) }
@@ -94,6 +97,7 @@ fun App(
         null -> {
             Column {
                 TextField(value = text, onValueChange = { text = it }, label = { Text("Search") }, singleLine = true)
+                FilterControls(filters, categories)
                 PullToRefreshBox(
                     isRefreshing = items.loadState.refresh is LoadState.Loading && items.itemCount > 0,
                     onRefresh = {

@@ -137,6 +137,8 @@ class KmpContractCore(
         return JsonNull
     }
 
+    override fun categories(args: JsonObject): JsonElement = JsonArray(core.categories().map(::JsonPrimitive))
+
     private companion object {
         val SORTS =
             mapOf(

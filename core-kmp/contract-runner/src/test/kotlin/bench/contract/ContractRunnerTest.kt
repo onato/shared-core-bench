@@ -36,7 +36,8 @@ class ContractRunnerTest {
               {"step": "nextFetch", "expect": {"step": "nextFetch", "args": {}}},
               {"step": "detail", "args": {"id": 1}, "expect": {"step": "detail", "args": {"id": 1}}},
               {"step": "stats", "expect": {"step": "stats", "args": {}}},
-              {"step": "refresh", "expect": {"step": "refresh", "args": {}}}
+              {"step": "refresh", "expect": {"step": "refresh", "args": {}}},
+              {"step": "categories", "expect": {"step": "categories", "args": {}}}
             ]}
             """,
         )

@@ -247,13 +247,46 @@ def test_an_improver_that_ends_without_a_result_needs_a_human_and_points_at_its_
 def test_removing_an_issues_worktree_keeps_uncommitted_work_and_deletes_its_branch(tmp_path):
     processes = FakeProcesses()
     repo, claude = session(tmp_path, processes)
+    (tmp_path / "shared-core-bench-7").mkdir()
 
     failed = claude.remove(7)
 
     assert failed is None
     assert [args for args, _ in processes.calls] == [
         ["git", "-C", str(repo), "worktree", "remove", str(tmp_path / "shared-core-bench-7")],
+        ["git", "-C", str(repo), "show-ref", "--verify", "--quiet", "refs/heads/swilliams/7-ralph"],
         ["git", "-C", str(repo), "branch", "-D", "swilliams/7-ralph"],
+    ]
+
+
+def test_a_worktree_with_uncommitted_work_is_kept_with_its_branch_and_the_failure_reported(
+    tmp_path,
+):
+    processes = FakeProcesses()
+    error = "fatal: contains modified or untracked files, use --force to delete it\n"
+    processes.fails = {"worktree remove": subprocess.CompletedProcess([], 128, "", error)}
+    _, claude = session(tmp_path, processes)
+    (tmp_path / "shared-core-bench-7").mkdir()
+
+    failed = claude.remove(7)
+
+    assert failed == (
+        "git worktree remove failed: fatal: contains modified or untracked files, "
+        "use --force to delete it"
+    )
+    assert [args[3] for args, _ in processes.calls] == ["worktree"]
+
+
+def test_removing_an_issue_with_no_worktree_or_branch_left_over_succeeds(tmp_path):
+    processes = FakeProcesses()
+    processes.fails = {"show-ref --verify": subprocess.CompletedProcess([], 1, "", "")}
+    repo, claude = session(tmp_path, processes)
+
+    failed = claude.remove(7)
+
+    assert failed is None
+    assert [args for args, _ in processes.calls] == [
+        ["git", "-C", str(repo), "show-ref", "--verify", "--quiet", "refs/heads/swilliams/7-ralph"],
     ]
 
 

@@ -37,6 +37,7 @@ class FakeGitHub:
         self.workflows = {name: True for name in REQUIRED_WORKFLOWS}
         self.approved = False  # the owner's plan-approved label on the milestone's parent
         self.undrafted = []
+        self.open_prs = set()  # issues an open PR closes or works on
 
     def plan_approved(self, parent):
         assert parent == 2
@@ -61,6 +62,9 @@ class FakeGitHub:
 
     def pull_request(self, number):
         return self.prs[number]
+
+    def has_open_pr(self, issue):
+        return issue in self.open_prs
 
     def set_status(self, issue, status):
         self.moves.append((issue, status))
@@ -237,6 +241,7 @@ def test_stops_listing_what_is_left_when_open_issues_remain_but_none_is_ready():
         ],
         blocked_by={10: (9,), 11: (9, 10)},
     )
+    github.open_prs = {12}
     session = FakeSession(github, {})
 
     stop = loop(github, session)
@@ -404,6 +409,62 @@ def test_a_failed_removal_is_listed_in_the_stop_message_and_the_loop_goes_on():
     stop = loop(github, session)
 
     assert session.worked == [7, 8]
+    assert stop.endswith(
+        "Worktrees left in place:\n- #7: git worktree remove failed: fatal: contains modified files"
+    )
+
+
+def test_an_in_review_issue_nothing_holds_goes_back_to_todo_and_is_taken_in_the_same_run():
+    github = FakeGitHub([Issue(7, IN_REVIEW)])
+    session = FakeSession(github, {7: merged_run(40)})
+
+    loop(github, session)
+
+    assert session.worked == [7]
+    assert github.moves[:2] == [(7, TODO), (7, IN_PROGRESS)]
+    assert github.comments == [
+        (7, "Moved back to Todo by the Ralph loop: nothing holds it any more.")
+    ]
+
+
+def test_an_in_review_issue_whose_pr_is_still_open_stays_in_review():
+    github = FakeGitHub([Issue(7, IN_REVIEW)])
+    github.open_prs = {7}
+    session = FakeSession(github, {})
+
+    loop(github, session)
+
+    assert (session.worked, github.moves, github.comments) == ([], [], [])
+
+
+def test_an_in_review_issue_with_an_open_blocker_stays_in_review():
+    github = FakeGitHub([Issue(7, IN_REVIEW), Issue(8, IN_PROGRESS)], blocked_by={7: (8,)})
+    session = FakeSession(github, {})
+
+    loop(github, session)
+
+    assert (session.worked, github.moves, github.comments) == ([], [], [])
+
+
+def test_a_released_issues_leftover_worktree_and_branch_are_removed_before_its_session():
+    github = FakeGitHub([Issue(7, IN_REVIEW)])
+    session = FakeSession(github, {7: merged_run(40)})
+    removed_by_start = []
+    session.while_running[7] = lambda: removed_by_start.extend(session.removed)
+
+    loop(github, session)
+
+    assert removed_by_start == [7]
+
+
+def test_a_leftover_that_cannot_be_removed_is_reported_and_its_issue_stays_in_review():
+    github = FakeGitHub([Issue(7, IN_REVIEW)])
+    session = FakeSession(github, {})
+    session.removal_fails = {7: "git worktree remove failed: fatal: contains modified files"}
+
+    stop = loop(github, session)
+
+    assert (session.worked, github.moves) == ([], [])
     assert stop.endswith(
         "Worktrees left in place:\n- #7: git worktree remove failed: fatal: contains modified files"
     )

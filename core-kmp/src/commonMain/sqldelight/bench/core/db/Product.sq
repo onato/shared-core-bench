@@ -47,6 +47,9 @@ byId:
 SELECT id, title, description, category, brand, price, discount_percentage, rating, stock, thumbnail
 FROM product WHERE id = ? AND deleted = 0;
 
+categories:
+SELECT DISTINCT category FROM product WHERE deleted = 0 ORDER BY category;
+
 tagsOf:
 SELECT tag FROM product_tag WHERE product_id = ? ORDER BY position;
 

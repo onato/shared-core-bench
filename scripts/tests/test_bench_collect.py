@@ -68,6 +68,45 @@ def test_workload_drops_the_prefix_androidx_adds_for_suppressed_errors():
     assert row["workload"] == "ingest1000Products"
 
 
+def test_a_cold_start_is_an_app_suite_row_of_its_time_to_initial_display_in_ns():
+    startup = {
+        "name": "coldStartFromCache1000Products",
+        "className": "bench.macrobenchmark.StartupBenchmark",
+        "metrics": {
+            "timeToInitialDisplayMs": {"median": 300.5, "runs": [500.0, 100.0, 300.5, 200.0, 400.0]}
+        },
+        "sampledMetrics": {},
+    }
+    [row] = collect(androidx_report(benchmark=startup))
+
+    assert [row[k] for k in ("suite", "workload", "n", "median_ns", "p95_ns", "runs")] == [
+        "app", "coldStartFromCache1000Products timeToInitialDisplayMs", 1000, 300_500_000,
+        500_000_000, 5,
+    ]  # fmt: skip
+
+
+def test_a_scroll_is_one_row_per_frame_timing_with_p50_as_median_and_p95_as_p95():
+    def sampled(p50, p95):
+        return {"P50": p50, "P90": 9.0, "P95": p95, "P99": 30.0, "runs": [[4.0, 5.0], [6.0]]}
+
+    scroll = {
+        "name": "scroll1000Products",
+        "className": "bench.macrobenchmark.ScrollBenchmark",
+        "metrics": {"frameCount": {"median": 240.0, "runs": [238.0, 242.0]}},
+        "sampledMetrics": {
+            "frameDurationCpuMs": sampled(4.5, 12.0),
+            "frameOverrunMs": sampled(-6.0, 2.5),
+        },
+    }
+    rows = collect(androidx_report(benchmark=scroll))
+
+    keys = ("suite", "workload", "n", "median_ns", "p95_ns", "runs")
+    assert [[row[k] for k in keys] for row in rows] == [
+        ["app", "scroll1000Products frameDurationCpuMs", 1000, 4_500_000, 12_000_000, 2],
+        ["app", "scroll1000Products frameOverrunMs", 1000, -6_000_000, 2_500_000, 2],
+    ]
+
+
 def test_table_groups_by_workload_with_cores_as_columns():
     where = {"platform": "android", "storage": "embedded"}
     rows = [

@@ -87,6 +87,8 @@ class SharedCoreContract(
         return JsonNull
     }
 
+    override fun categories(args: JsonObject): JsonElement = JsonArray(core.categories().map(::JsonPrimitive))
+
     private fun summaryJson(summary: ProductSummary) =
         with(summary) {
             json(
