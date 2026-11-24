@@ -15,24 +15,26 @@ data class ProductDetail(
     val thumbnail: String,
     val tags: List<String>,
 ) {
-    /** [price] less [discountPercentage], rounded half up to cents. */
-    val discountedPrice: Double
-        get() {
-            // Whole ten-thousandths, so a binary fraction can't move a half cent across the rounding line.
-            val priceUnits = (price * UNITS).roundToLong()
-            val remainingUnits = ((PERCENT - discountPercentage) * UNITS).roundToLong()
-            val unitsPerCent = UNITS * UNITS
-            val cents = (priceUnits * remainingUnits + unitsPerCent / 2) / unitsPerCent
-            return cents / CENTS
-        }
+    val discountedPrice: Double get() = discountedPrice(price, discountPercentage)
 
     val ratingBucket: RatingBucket get() = RatingBucket.of(rating)
 
     val stockStatus: StockStatus get() = StockStatus.of(stock)
+}
 
-    private companion object {
-        const val UNITS = 10_000L
-        const val PERCENT = 100
-        const val CENTS = 100.0
-    }
+private const val UNITS = 10_000L
+private const val PERCENT = 100
+private const val CENTS = 100.0
+
+/** [price] less [discountPercentage], rounded half up to cents. */
+internal fun discountedPrice(
+    price: Double,
+    discountPercentage: Double,
+): Double {
+    // Whole ten-thousandths, so a binary fraction can't move a half cent across the rounding line.
+    val priceUnits = (price * UNITS).roundToLong()
+    val remainingUnits = ((PERCENT - discountPercentage) * UNITS).roundToLong()
+    val unitsPerCent = UNITS * UNITS
+    val cents = (priceUnits * remainingUnits + unitsPerCent / 2) / unitsPerCent
+    return cents / CENTS
 }
