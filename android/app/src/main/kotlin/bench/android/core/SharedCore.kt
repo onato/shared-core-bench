@@ -34,7 +34,7 @@ data class Query(
 )
 
 /** The order a page lists products in; ties always fall back to ascending id. */
-enum class Sort { Id, PriceAsc }
+enum class Sort { Id, PriceAsc, PriceDesc, RatingDesc }
 
 data class FetchRequest(
     val requestId: Long,

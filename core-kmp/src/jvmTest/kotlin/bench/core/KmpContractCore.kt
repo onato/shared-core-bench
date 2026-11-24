@@ -128,7 +128,13 @@ class KmpContractCore(
     }
 
     private companion object {
-        val SORTS = mapOf("id" to Sort.Id, "price-asc" to Sort.PriceAsc)
+        val SORTS =
+            mapOf(
+                "id" to Sort.Id,
+                "price-asc" to Sort.PriceAsc,
+                "price-desc" to Sort.PriceDesc,
+                "rating-desc" to Sort.RatingDesc,
+            )
         val RATING_BUCKETS =
             mapOf(
                 RatingBucket.Excellent to "excellent",

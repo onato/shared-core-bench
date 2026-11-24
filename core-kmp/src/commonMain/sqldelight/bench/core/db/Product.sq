@@ -47,5 +47,10 @@ WHERE id > :cursor
   AND (:category IS NULL OR category = :category)
   AND (:minPrice IS NULL OR discounted_price >= :minPrice)
   AND (:maxPrice IS NULL OR discounted_price <= :maxPrice)
-ORDER BY CASE :sort WHEN 'price-asc' THEN discounted_price ELSE id END, id
+ORDER BY CASE :sort
+    WHEN 'price-asc' THEN discounted_price
+    WHEN 'price-desc' THEN -discounted_price
+    WHEN 'rating-desc' THEN -rating
+    ELSE id
+  END, id
 LIMIT :limit;

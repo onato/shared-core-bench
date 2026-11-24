@@ -47,6 +47,8 @@ class KmpSharedCore(
         when (sort) {
             Sort.Id -> CoreSort.Id
             Sort.PriceAsc -> CoreSort.PriceAsc
+            Sort.PriceDesc -> CoreSort.PriceDesc
+            Sort.RatingDesc -> CoreSort.RatingDesc
         }
 
     override fun detail(id: Long): ProductDetail? =

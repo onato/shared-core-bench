@@ -18,4 +18,6 @@ enum class Sort(
 ) {
     Id("id"),
     PriceAsc("price-asc"),
+    PriceDesc("price-desc"),
+    RatingDesc("rating-desc"),
 }
