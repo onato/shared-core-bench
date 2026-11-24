@@ -37,7 +37,7 @@ class ProductListTest {
         core: FakeSharedCore,
         fetch: (FetchRequest) -> FetchResult = ::noNetwork,
     ) {
-        compose.setContent { App(productPages(core, fetch, pageSize = 2)) }
+        compose.setContent { App(productPages(core, fetch, pageSize = 2), core::detail) }
     }
 
     @Test
