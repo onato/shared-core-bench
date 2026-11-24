@@ -1,7 +1,6 @@
 package bench.android
 
-import bench.core.FetchRequest
-import okhttp3.Headers.Companion.toHeaders
+import bench.android.core.FetchRequest
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.IOException
@@ -34,5 +33,4 @@ private fun FetchRequest.toOkHttp(): Request =
     Request
         .Builder()
         .url(url)
-        .headers(headers.toHeaders())
         .build()

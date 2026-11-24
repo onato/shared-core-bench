@@ -3,3 +3,11 @@ config:
 naming:
   FunctionNaming:
     ignoreAnnotated: ['Composable']
+style:
+  ForbiddenImport:
+    active: true
+    imports:
+      - value: 'bench.core.*'
+        reason: 'The app knows cores only through SharedCore; core types stay in the adapter.'
+    # The adapter wraps the core; the benchmark module measures the core without the app.
+    excludes: ['**/bench/android/core/**', '**/bench/benchmark/**']
