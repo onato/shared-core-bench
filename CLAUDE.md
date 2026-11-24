@@ -43,7 +43,9 @@ code to make that test pass. Tick it only when it passes along with every other 
   expected reason before writing production code. A test that passes on first run proves
   nothing — fix the test.
 - Implement only enough to pass. Refactor only when green, in named steps (Extract Function,
-  Inline Variable, …), running the tests after each.
+  Inline Variable, …), running the tests after each. The refactor step reshapes only code this
+  branch added. Extracting from, renaming or moving code already on `main` is a structural change:
+  stop and open it as a `Structural:` PR first (next bullet), or leave the new code inline.
 - One test at a time. Run all tests (except benchmarks) each time.
 - Structural changes (rename, extract, move) and behavioural changes never share a PR. PRs are
   squash-merged, so a PR is the unit of history: when an issue needs a structural change first,
