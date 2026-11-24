@@ -53,14 +53,19 @@ coverage-android:
 	$(ANDROID_GRADLE) :app:koverXmlReportApp :app:koverVerifyApp :app:koverLogApp
 
 BENCH_UNSUPPORTED = $(strip $(filter-out all android,$(PLATFORM)) $(filter-out all kmp,$(CORE)) \
-	$(filter-out all embedded,$(STORAGE)) $(filter-out all core,$(SUITE)))
+	$(filter-out all embedded,$(STORAGE)) $(filter-out all core boundary,$(SUITE)))
 
-bench: ## Run benchmarks on ANDROID_SERIAL and print the table (android, kmp, embedded, core so far)
+BOUNDARY_BENCHMARK = bench.benchmark.BoundaryBenchmark
+BENCH_SUITE_core = -Pandroid.testInstrumentationRunnerArguments.notClass=$(BOUNDARY_BENCHMARK)
+BENCH_SUITE_boundary = -Pandroid.testInstrumentationRunnerArguments.class=$(BOUNDARY_BENCHMARK)
+
+bench: ## Run benchmarks on ANDROID_SERIAL and print the table (android, kmp, embedded, core|boundary so far)
 	@test -z "$(BENCH_UNSUPPORTED)" || { echo "bench: not implemented: $(BENCH_UNSUPPORTED)" >&2; exit 1; }
 	@test -n "$(ANDROID_SERIAL)" || { echo "bench: set ANDROID_SERIAL to a simpool lease" >&2; exit 1; }
 	rm -rf android/benchmark/build/outputs/connected_android_test_additional_output
 	ANDROID_SERIAL=$(ANDROID_SERIAL) $(ANDROID_GRADLE) :benchmark:connectedReleaseAndroidTest \
-		-Pandroid.testInstrumentationRunnerArguments.androidx.benchmark.suppressErrors=EMULATOR
+		-Pandroid.testInstrumentationRunnerArguments.androidx.benchmark.suppressErrors=EMULATOR \
+		$(BENCH_SUITE_$(SUITE))
 	uv run python scripts/bench_collect.py --core kmp --storage embedded --build-type release \
 		--git-sha $$(git rev-parse --short HEAD) --out report/results/$$(date +%Y%m%dT%H%M%S) \
 		android/benchmark/build/outputs/connected_android_test_additional_output
