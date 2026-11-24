@@ -12,6 +12,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeDown
 import androidx.compose.ui.test.swipeUp
 import androidx.compose.ui.text.style.TextDecoration
 import bench.android.core.FakeSharedCore
@@ -42,7 +43,7 @@ class ProductListTest {
         core: FakeSharedCore,
         fetch: (FetchRequest) -> FetchResult = ::noNetwork,
     ) {
-        compose.setContent { App({ productPages(core, fetch, pageSize = 2, it) }, core::detail) }
+        compose.setContent { App({ productPages(core, fetch, pageSize = 2, it) }, core::detail, core::refresh) }
     }
 
     @Test
@@ -168,6 +169,47 @@ class ProductListTest {
 
         awaitText("No products match")
     }
+
+    @Test
+    fun pullingDownRefreshesAndAProductRenamedOnTheServerShowsItsNewTitle() {
+        val core = FakeSharedCore(remotePages = listOf(listOf(mascara)))
+        show(core) { FetchResult.Response(200, ByteArray(0)) }
+        awaitText("Essence Mascara")
+
+        core.remotePages = listOf(listOf(mascara.copy(title = "Lash Princess Mascara")))
+        pullDown()
+
+        awaitText("Lash Princess Mascara")
+        awaitGone("Essence Mascara")
+    }
+
+    @Test
+    fun aProductTheServerNoLongerReturnsIsGoneAfterARefresh() {
+        val core = FakeSharedCore(remotePages = listOf(listOf(mascara, palette)))
+        show(core) { FetchResult.Response(200, ByteArray(0)) }
+        awaitText("Eyeshadow Palette")
+
+        core.remotePages = listOf(listOf(mascara))
+        pullDown()
+
+        awaitGone("Eyeshadow Palette")
+        awaitText("Essence Mascara")
+    }
+
+    @Test
+    fun aFailedRefreshShowsTheErrorWithRetryAndKeepsTheProductsShown() {
+        val responses = ArrayDeque(listOf(FetchResult.Response(200, ByteArray(0)), FetchResult.NetworkError("offline")))
+        show(FakeSharedCore(remotePages = listOf(listOf(mascara))), fetch = { responses.removeFirst() })
+        awaitText("Essence Mascara")
+
+        pullDown()
+
+        awaitText("Network error: offline")
+        compose.onNodeWithText("Retry").assertIsDisplayed()
+        compose.onNodeWithText("Essence Mascara").assertIsDisplayed()
+    }
+
+    private fun pullDown() = compose.onNode(hasScrollAction()).performTouchInput { swipeDown() }
 
     private fun cell(
         price: Double = 19.0,

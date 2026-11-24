@@ -22,7 +22,7 @@ class IngestStorageTest {
             )
 
         assertEquals(IngestResult.StorageFailed, result)
-        assertEquals(CoreStats(productCount = 0), core.stats())
+        assertEquals(CoreStats(productCount = 0, deletedCount = 0), core.stats())
     }
 
     private fun product(id: Int) =

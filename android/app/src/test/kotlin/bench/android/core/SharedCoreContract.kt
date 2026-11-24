@@ -78,7 +78,13 @@ class SharedCoreContract(
         }
     }
 
-    override fun stats(args: JsonObject): JsonElement = json("productCount" to core.stats().productCount)
+    override fun stats(args: JsonObject): JsonElement =
+        with(core.stats()) { json("productCount" to productCount, "deletedCount" to deletedCount) }
+
+    override fun refresh(args: JsonObject): JsonElement {
+        core.refresh()
+        return JsonNull
+    }
 
     private fun summaryJson(summary: ProductSummary) =
         with(summary) {
