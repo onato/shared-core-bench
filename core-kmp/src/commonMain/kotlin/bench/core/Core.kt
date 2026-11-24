@@ -4,7 +4,7 @@ import bench.core.db.ProductDatabase
 
 class Core private constructor(
     val config: CoreConfig,
-    private val storage: EmbeddedStorage,
+    private val storage: StoragePort,
 ) {
     private val paging = RemotePaging(config.baseUrl, config.pageSize)
 
@@ -68,6 +68,11 @@ class Core private constructor(
         fun create(
             config: CoreConfig,
             drivers: DriverFactory,
-        ): Core = Core(config, EmbeddedStorage(ProductDatabase(drivers.open(config.dbPath))))
+        ): Core = create(config, EmbeddedStorage(ProductDatabase(drivers.open(config.dbPath))))
+
+        fun create(
+            config: CoreConfig,
+            port: StoragePort,
+        ): Core = Core(config, port)
     }
 }

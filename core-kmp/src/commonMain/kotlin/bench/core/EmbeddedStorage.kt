@@ -4,12 +4,12 @@ import bench.core.db.ProductDatabase
 
 internal class EmbeddedStorage(
     database: ProductDatabase,
-) {
+) : StoragePort {
     private val queries = database.productQueries
 
-    fun transaction(block: () -> Unit) = queries.transaction { block() }
+    override fun transaction(block: () -> Unit) = queries.transaction { block() }
 
-    fun upsert(
+    override fun upsert(
         items: List<ProductDetail>,
         generation: Long,
     ) = items.forEach { upsert(it, generation) }
@@ -36,9 +36,11 @@ internal class EmbeddedStorage(
         tags.forEachIndexed { position, tag -> queries.insertTag(id, position.toLong(), tag) }
     }
 
-    fun markMissingDeleted(generation: Long) = queries.softDeleteUnseenBefore(generation)
+    override fun markMissingDeleted(generation: Long) {
+        queries.softDeleteUnseenBefore(generation)
+    }
 
-    fun query(
+    override fun query(
         query: Query,
         cursor: Long?,
         size: Int,
@@ -56,7 +58,7 @@ internal class EmbeddedStorage(
                 ProductSummary(id, title, price, discountedPrice, rating, thumbnail)
             }.executeAsList()
 
-    fun get(id: Long): ProductDetail? {
+    override fun get(id: Long): ProductDetail? {
         val tags = queries.tagsOf(id).executeAsList()
         return queries
             .byId(id) { id, title, description, category, brand, price, discount, rating, stock, thumbnail ->
@@ -64,9 +66,9 @@ internal class EmbeddedStorage(
             }.executeAsOneOrNull()
     }
 
-    fun categories(): List<String> = queries.categories().executeAsList()
+    override fun categories(): List<String> = queries.categories().executeAsList()
 
-    fun stats(): CoreStats =
+    override fun stats(): CoreStats =
         with(queries) {
             CoreStats(productCount = count().executeAsOne(), deletedCount = deletedCount().executeAsOne())
         }
