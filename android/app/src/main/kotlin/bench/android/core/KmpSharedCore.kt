@@ -7,6 +7,7 @@ import bench.core.CoreConfig
 import bench.core.IngestResult as CoreIngestResult
 import bench.core.PageResult as CorePageResult
 import bench.core.Product as CoreProduct
+import bench.core.RatingBucket as CoreRatingBucket
 
 class KmpSharedCore(
     private val core: Core,
@@ -48,6 +49,7 @@ class KmpSharedCore(
                 discountPercentage,
                 discountedPrice,
                 rating,
+                ratingBucket(ratingBucket),
                 stock,
                 thumbnail,
                 tags,
@@ -55,6 +57,14 @@ class KmpSharedCore(
         }
 
     override fun stats(): CoreStats = CoreStats(core.stats().productCount)
+
+    private fun ratingBucket(bucket: CoreRatingBucket) =
+        when (bucket) {
+            CoreRatingBucket.Excellent -> RatingBucket.Excellent
+            CoreRatingBucket.Good -> RatingBucket.Good
+            CoreRatingBucket.Fair -> RatingBucket.Fair
+            CoreRatingBucket.Poor -> RatingBucket.Poor
+        }
 
     private fun product(product: CoreProduct) = Product(product.id, product.title, product.price)
 

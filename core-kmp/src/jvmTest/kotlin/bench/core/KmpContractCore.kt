@@ -88,6 +88,7 @@ class KmpContractCore(
                 "discountPercentage" to JsonPrimitive(product.discountPercentage),
                 "discountedPrice" to JsonPrimitive(product.discountedPrice),
                 "rating" to JsonPrimitive(product.rating),
+                "ratingBucket" to JsonPrimitive(RATING_BUCKETS.getValue(product.ratingBucket)),
                 "stock" to JsonPrimitive(product.stock),
                 "thumbnail" to JsonPrimitive(product.thumbnail),
                 "tags" to JsonArray(product.tags.map(::JsonPrimitive)),
@@ -107,5 +108,15 @@ class KmpContractCore(
     override fun stats(args: JsonObject): JsonElement {
         val stats = core.stats()
         return JsonObject(mapOf("productCount" to JsonPrimitive(stats.productCount)))
+    }
+
+    private companion object {
+        val RATING_BUCKETS =
+            mapOf(
+                RatingBucket.Excellent to "excellent",
+                RatingBucket.Good to "good",
+                RatingBucket.Fair to "fair",
+                RatingBucket.Poor to "poor",
+            )
     }
 }

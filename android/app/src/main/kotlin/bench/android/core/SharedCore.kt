@@ -41,10 +41,13 @@ data class ProductDetail(
     val discountPercentage: Double,
     val discountedPrice: Double,
     val rating: Double,
+    val ratingBucket: RatingBucket,
     val stock: Long,
     val thumbnail: String,
     val tags: List<String>,
 )
+
+enum class RatingBucket { Excellent, Good, Fair, Poor }
 
 data class CoreStats(
     val productCount: Long,

@@ -15,7 +15,7 @@
       "expect": {
         "id": 1, "title": "Essence Mascara Lash Princess",
         "description": "A popular mascara known for its volumizing effects.", "category": "beauty", "brand": "Essence",
-        "price": 9.99, "discountPercentage": 7.17, "discountedPrice": 9.27, "rating": 4.94, "stock": 5,
+        "price": 9.99, "discountPercentage": 7.17, "discountedPrice": 9.27, "rating": 4.94, "ratingBucket": "excellent", "stock": 5,
         "thumbnail": "https://cdn.dummyjson.com/products/images/beauty/thumbnail.png", "tags": ["beauty", "mascara"]
       }
     }

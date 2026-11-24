@@ -26,6 +26,8 @@ data class ProductDetail(
             return cents / CENTS
         }
 
+    val ratingBucket: RatingBucket get() = RatingBucket.of(rating)
+
     private companion object {
         const val UNITS = 10_000L
         const val PERCENT = 100

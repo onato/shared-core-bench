@@ -57,6 +57,7 @@ class SharedCoreContract(
                 "discountPercentage" to discountPercentage,
                 "discountedPrice" to discountedPrice,
                 "rating" to rating,
+                "ratingBucket" to RATING_BUCKETS.getValue(ratingBucket),
                 "stock" to stock,
                 "thumbnail" to thumbnail,
                 "tags" to JsonArray(tags.map(::JsonPrimitive)),
@@ -88,6 +89,13 @@ class SharedCoreContract(
                 IngestFailure.InvalidJson to "invalid-json",
                 IngestFailure.NotAProductPage to "not-a-product-page",
                 IngestFailure.StorageFailed to "storage-failed",
+            )
+        val RATING_BUCKETS =
+            mapOf(
+                RatingBucket.Excellent to "excellent",
+                RatingBucket.Good to "good",
+                RatingBucket.Fair to "fair",
+                RatingBucket.Poor to "poor",
             )
     }
 }
