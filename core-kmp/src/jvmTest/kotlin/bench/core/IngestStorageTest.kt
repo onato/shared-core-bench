@@ -18,19 +18,19 @@ class IngestStorageTest {
             core.ingest(
                 requestId = 1,
                 status = 200,
-                body =
-                    """
-                {"products": [
-                  {"id": 1, "title": "Essence Mascara", "price": 9.99},
-                  {"id": 2, "title": "Eyeshadow Palette", "price": 19},
-                  {"id": 3, "title": "Powder Canister", "price": 14.99}
-                ]}
-                """.encodeToByteArray(),
+                body = """{"products": [${product(1)}, ${product(2)}, ${product(3)}]}""".encodeToByteArray(),
             )
 
         assertEquals(IngestResult.StorageFailed, result)
         assertEquals(CoreStats(productCount = 0), core.stats())
     }
+
+    private fun product(id: Int) =
+        """
+        {"id": $id, "title": "Essence Mascara", "description": "Lash mascara", "category": "beauty",
+         "brand": "Essence", "price": 9.99, "discountPercentage": 7.5, "rating": 4.5, "stock": 5,
+         "thumbnail": "https://cdn.dummyjson.com/1.png", "tags": ["beauty"]}
+        """
 
     private fun failInsertsOf(id: Int) =
         DriverManager.getConnection("jdbc:sqlite:$dbPath").use { connection ->

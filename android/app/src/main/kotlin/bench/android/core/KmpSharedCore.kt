@@ -36,7 +36,22 @@ class KmpSharedCore(
             CorePageResult.InvalidSize -> PageResult.InvalidSize
         }
 
-    override fun detail(id: Long): Product? = core.detail(id)?.let(::product)
+    override fun detail(id: Long): ProductDetail? =
+        core.detail(id)?.run {
+            ProductDetail(
+                id,
+                title,
+                description,
+                category,
+                brand,
+                price,
+                discountPercentage,
+                rating,
+                stock,
+                thumbnail,
+                tags,
+            )
+        }
 
     override fun stats(): CoreStats = CoreStats(core.stats().productCount)
 

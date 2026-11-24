@@ -77,7 +77,21 @@ class KmpContractCore(
 
     override fun detail(args: JsonObject): JsonElement {
         val product = core.detail(args.getValue("id").jsonPrimitive.long) ?: return JsonNull
-        return productJson(product)
+        return JsonObject(
+            mapOf(
+                "id" to JsonPrimitive(product.id),
+                "title" to JsonPrimitive(product.title),
+                "description" to JsonPrimitive(product.description),
+                "category" to JsonPrimitive(product.category),
+                "brand" to JsonPrimitive(product.brand),
+                "price" to JsonPrimitive(product.price),
+                "discountPercentage" to JsonPrimitive(product.discountPercentage),
+                "rating" to JsonPrimitive(product.rating),
+                "stock" to JsonPrimitive(product.stock),
+                "thumbnail" to JsonPrimitive(product.thumbnail),
+                "tags" to JsonArray(product.tags.map(::JsonPrimitive)),
+            ),
+        )
     }
 
     private fun productJson(product: Product) =

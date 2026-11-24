@@ -20,7 +20,12 @@ class KmpSharedCoreTest {
             )
         }
 
-        val body = """{"products": [{"id": 1, "title": "Mascara", "price": 9.99}]}"""
+        val body =
+            """
+            {"products": [{"id": 1, "title": "Mascara", "description": "Lash mascara", "category": "beauty",
+              "brand": "Essence", "price": 9.99, "discountPercentage": 7.5, "rating": 4.5, "stock": 5,
+              "thumbnail": "https://cdn.dummyjson.com/1.png", "tags": ["beauty"]}]}
+            """
         val result = core.ingest(requestId = 1, status = 200, body = body.encodeToByteArray())
 
         assertEquals(IngestResult.Failed(IngestFailure.StorageFailed), result)

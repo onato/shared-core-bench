@@ -4,8 +4,10 @@ package bench.android.core
 class FakeSharedCore(
     stored: List<Product> = emptyList(),
     private val remotePages: List<List<Product>> = emptyList(),
+    details: List<ProductDetail> = emptyList(),
 ) : SharedCore {
     private val products = stored.associateBy { it.id }.toSortedMap()
+    private val details = details.associateBy { it.id }
     private var fetched = 0
 
     override fun nextFetch(): FetchRequest? {
@@ -40,7 +42,7 @@ class FakeSharedCore(
         return PageResult.Page(items, nextCursor = if (after.size > size) items.last().id else null)
     }
 
-    override fun detail(id: Long): Product? = products[id]
+    override fun detail(id: Long): ProductDetail? = details[id]
 
     override fun stats(): CoreStats = CoreStats(productCount = products.size.toLong())
 
