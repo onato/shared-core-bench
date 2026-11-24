@@ -45,6 +45,7 @@ def test_the_repo_list_protects_the_gates_with_gitignore_rules(capsys):
         "android/app/coverage-exclusions\n"
         "core-kmp/build.gradle.kts\n"
         "scripts/pr_size.py\n"
+        "scripts/protected_paths.py\n"
         "docs/.github/notes.md\n"
         "core-kmp/feed/build.gradle.kts\n"
         "scripts/ralph.py\n"
@@ -60,6 +61,7 @@ def test_the_repo_list_protects_the_gates_with_gitignore_rules(capsys):
         "  android/app/coverage-exclusions",
         "  core-kmp/build.gradle.kts",
         "  scripts/pr_size.py",
+        "  scripts/protected_paths.py",
     ]
 
 

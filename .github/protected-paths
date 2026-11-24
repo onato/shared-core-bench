@@ -18,7 +18,8 @@ coverage-exclusions
 /core-kmp/build.gradle.kts
 /android/app/build.gradle.kts
 
-# Scripts the checks run from the PR's own checkout
+# Scripts the checks run
 /scripts/gates.py
 /scripts/pr_size.py
+/scripts/protected_paths.py
 /scripts/review_verdict.py
