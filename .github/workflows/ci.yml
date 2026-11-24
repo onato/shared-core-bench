@@ -8,6 +8,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # test_blame_ignore_revs reads the history
       - uses: astral-sh/setup-uv@v10.3.3
       - uses: actions/setup-java@v6
         with:
