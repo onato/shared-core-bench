@@ -1,0 +1,26 @@
+{
+  "steps": [
+    {
+      "step": "ingest",
+      "args": {
+        "requestId": 1,
+        "status": 200,
+        "body": "{\"products\": [{\"id\": 1, \"title\": \"Essence Mascara Lash Princess\", \"price\": 9.99, \"description\": \"A product from the dummyjson catalogue.\", \"category\": \"beauty\", \"brand\": \"Essence\", \"discountPercentage\": 0, \"rating\": 4.5, \"stock\": 5, \"thumbnail\": \"https://cdn.dummyjson.com/products/images/beauty/thumbnail.png\", \"tags\": [\"beauty\"]}, {\"id\": 2, \"title\": \"Eyeshadow Palette\", \"price\": 12.5, \"description\": \"A product from the dummyjson catalogue.\", \"category\": \"beauty\", \"brand\": \"Glamour Beauty\", \"discountPercentage\": 20, \"rating\": 4.5, \"stock\": 5, \"thumbnail\": \"https://cdn.dummyjson.com/products/images/beauty/thumbnail.png\", \"tags\": [\"beauty\"]}, {\"id\": 3, \"title\": \"Calvin Klein CK One\", \"price\": 25.0, \"description\": \"A product from the dummyjson catalogue.\", \"category\": \"fragrances\", \"brand\": \"Calvin Klein\", \"discountPercentage\": 20, \"rating\": 4.5, \"stock\": 5, \"thumbnail\": \"https://cdn.dummyjson.com/products/images/fragrances/thumbnail.png\", \"tags\": [\"fragrances\"]}, {\"id\": 4, \"title\": \"Powder Canister\", \"price\": 10.0, \"description\": \"A product from the dummyjson catalogue.\", \"category\": \"beauty\", \"brand\": \"Glamour Beauty\", \"discountPercentage\": 10, \"rating\": 4.5, \"stock\": 5, \"thumbnail\": \"https://cdn.dummyjson.com/products/images/beauty/thumbnail.png\", \"tags\": [\"beauty\"]}, {\"id\": 5, \"title\": \"Red Lipstick\", \"price\": 20.01, \"description\": \"A product from the dummyjson catalogue.\", \"category\": \"beauty\", \"brand\": \"Chic Cosmetics\", \"discountPercentage\": 0, \"rating\": 4.5, \"stock\": 5, \"thumbnail\": \"https://cdn.dummyjson.com/products/images/beauty/thumbnail.png\", \"tags\": [\"beauty\"]}, {\"id\": 6, \"title\": \"Red Nail Polish\", \"price\": 20.01, \"description\": \"A product from the dummyjson catalogue.\", \"category\": \"beauty\", \"discountPercentage\": 0.03, \"rating\": 4.5, \"stock\": 5, \"thumbnail\": \"https://cdn.dummyjson.com/products/images/beauty/thumbnail.png\", \"tags\": [\"beauty\"]}, {\"id\": 7, \"title\": \"Velvet Touch Concealer\", \"price\": 10.01, \"description\": \"A product from the dummyjson catalogue.\", \"category\": \"beauty\", \"discountPercentage\": 0.1, \"rating\": 4.5, \"stock\": 5, \"thumbnail\": \"https://cdn.dummyjson.com/products/images/beauty/thumbnail.png\", \"tags\": [\"beauty\"]}]}"
+      },
+      "expect": { "accepted": 7, "rejected": 0 }
+    },
+    {
+      "step": "page",
+      "args": { "query": {"minPrice": 10.0, "maxPrice": 20.0}, "cursor": null, "size": 20 },
+      "expect": {
+        "items": [
+          {"id": 2, "title": "Eyeshadow Palette", "price": 12.5, "discountedPrice": 10.0, "rating": 4.5, "thumbnail": "https://cdn.dummyjson.com/products/images/beauty/thumbnail.png"},
+          {"id": 3, "title": "Calvin Klein CK One", "price": 25.0, "discountedPrice": 20.0, "rating": 4.5, "thumbnail": "https://cdn.dummyjson.com/products/images/fragrances/thumbnail.png"},
+          {"id": 6, "title": "Red Nail Polish", "price": 20.01, "discountedPrice": 20.0, "rating": 4.5, "thumbnail": "https://cdn.dummyjson.com/products/images/beauty/thumbnail.png"},
+          {"id": 7, "title": "Velvet Touch Concealer", "price": 10.01, "discountedPrice": 10.0, "rating": 4.5, "thumbnail": "https://cdn.dummyjson.com/products/images/beauty/thumbnail.png"}
+        ],
+        "nextCursor": null
+      }
+    }
+  ]
+}

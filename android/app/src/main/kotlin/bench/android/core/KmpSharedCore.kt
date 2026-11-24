@@ -35,10 +35,12 @@ class KmpSharedCore(
         size: Int,
         query: Query,
     ): PageResult =
-        when (val result = core.page(cursor, size, CoreQuery(query.text))) {
+        when (val result = core.page(cursor, size, coreQuery(query))) {
             is CorePageResult.Page -> PageResult.Page(result.items.map(::summary), result.nextCursor)
             CorePageResult.InvalidSize -> PageResult.InvalidSize
         }
+
+    private fun coreQuery(query: Query) = with(query) { CoreQuery(text, category, minPrice, maxPrice) }
 
     override fun detail(id: Long): ProductDetail? =
         core.detail(id)?.run {
