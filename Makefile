@@ -44,7 +44,7 @@ coverage-kmp:
 	$(GRADLE) koverXmlReport koverVerify koverLog
 
 test-android: ## Android app unit and Robolectric tests
-	$(ANDROID_GRADLE) :app:testDebugUnitTest :benchmark:testReleaseUnitTest
+	$(ANDROID_GRADLE) :app:testDebugUnitTest :benchmark:testReleaseUnitTest :fixtures:testDebugUnitTest
 
 lint-android:
 	$(ANDROID_GRADLE) ktlintCheck detekt
