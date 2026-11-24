@@ -14,7 +14,7 @@ import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import androidx.paging.compose.collectAsLazyPagingItems
 import bench.android.core.FetchRequest
-import bench.android.core.Product
+import bench.android.core.ProductSummary
 import bench.android.core.SharedCore
 import kotlinx.coroutines.flow.Flow
 
@@ -22,14 +22,14 @@ fun productPages(
     core: SharedCore,
     fetch: (FetchRequest) -> FetchResult,
     pageSize: Int,
-): Flow<PagingData<Product>> = Pager(PagingConfig(pageSize)) { ProductPagingSource(core, fetch) }.flow
+): Flow<PagingData<ProductSummary>> = Pager(PagingConfig(pageSize)) { ProductPagingSource(core, fetch) }.flow
 
 private fun CombinedLoadStates.firstError() = listOf(refresh, append).filterIsInstance<LoadState.Error>().firstOrNull()
 
 // The root screen gains nothing from skipping, and its generated skip branches are unreachable in tests.
 @NonSkippableComposable
 @Composable
-fun App(products: Flow<PagingData<Product>>) {
+fun App(products: Flow<PagingData<ProductSummary>>) {
     val items = products.collectAsLazyPagingItems()
     LazyColumn {
         item { Text("Products") }

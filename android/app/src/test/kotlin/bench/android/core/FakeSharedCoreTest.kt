@@ -4,9 +4,9 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
 class FakeSharedCoreTest {
-    private val mascara = Product(id = 1, title = "Essence Mascara", price = 9.99)
-    private val palette = Product(id = 2, title = "Eyeshadow Palette", price = 19.0)
-    private val canister = Product(id = 3, title = "Powder Canister", price = 14.99)
+    private val mascara = ProductSummary(id = 1, title = "Essence Mascara", price = 9.99)
+    private val palette = ProductSummary(id = 2, title = "Eyeshadow Palette", price = 19.0)
+    private val canister = ProductSummary(id = 3, title = "Powder Canister", price = 14.99)
 
     @Test
     fun pagesOfStoredProductsFollowNextCursorInIdOrder() {
