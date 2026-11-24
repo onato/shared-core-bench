@@ -66,24 +66,6 @@ class KmpSharedCore(
 
     override fun refresh() = core.refresh()
 
-    private fun ratingBucket(bucket: CoreRatingBucket) =
-        when (bucket) {
-            CoreRatingBucket.Excellent -> RatingBucket.Excellent
-            CoreRatingBucket.Good -> RatingBucket.Good
-            CoreRatingBucket.Fair -> RatingBucket.Fair
-            CoreRatingBucket.Poor -> RatingBucket.Poor
-        }
-
-    private fun stockStatus(status: CoreStockStatus) =
-        when (status) {
-            CoreStockStatus.InStock -> StockStatus.InStock
-            CoreStockStatus.LowStock -> StockStatus.LowStock
-            CoreStockStatus.OutOfStock -> StockStatus.OutOfStock
-        }
-
-    private fun summary(summary: CoreProductSummary) =
-        with(summary) { ProductSummary(id, title, price, discountedPrice, rating, thumbnail) }
-
     companion object {
         fun create(
             context: Context,
@@ -91,3 +73,21 @@ class KmpSharedCore(
         ) = KmpSharedCore(Core.create(CoreConfig(dbPath), AndroidDrivers(context)))
     }
 }
+
+private fun ratingBucket(bucket: CoreRatingBucket) =
+    when (bucket) {
+        CoreRatingBucket.Excellent -> RatingBucket.Excellent
+        CoreRatingBucket.Good -> RatingBucket.Good
+        CoreRatingBucket.Fair -> RatingBucket.Fair
+        CoreRatingBucket.Poor -> RatingBucket.Poor
+    }
+
+private fun stockStatus(status: CoreStockStatus) =
+    when (status) {
+        CoreStockStatus.InStock -> StockStatus.InStock
+        CoreStockStatus.LowStock -> StockStatus.LowStock
+        CoreStockStatus.OutOfStock -> StockStatus.OutOfStock
+    }
+
+private fun summary(summary: CoreProductSummary) =
+    with(summary) { ProductSummary(id, title, price, discountedPrice, rating, thumbnail) }
