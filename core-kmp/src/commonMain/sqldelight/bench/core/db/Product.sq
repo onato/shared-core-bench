@@ -50,7 +50,11 @@ WITH keyed AS (
     END AS sort_key
   FROM product
 ),
-after AS (SELECT sort_key AS cursor_key FROM keyed WHERE id = :cursor)
+-- Under the id sort the cursor is its own key, so it needn't be a stored id.
+after AS (
+  SELECT coalesce((SELECT sort_key FROM keyed WHERE id = :cursor), CASE :sort WHEN 'id' THEN :cursor END)
+    AS cursor_key
+)
 SELECT id, title, price, discounted_price, rating, thumbnail FROM keyed
 WHERE (:cursor IS NULL OR sort_key > (SELECT cursor_key FROM after)
     OR (sort_key = (SELECT cursor_key FROM after) AND id > :cursor))
