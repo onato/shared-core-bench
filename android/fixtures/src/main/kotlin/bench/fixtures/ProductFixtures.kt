@@ -20,7 +20,7 @@ object ProductFixtures {
         skip: Int,
         total: Int,
     ): ByteArray {
-        val random = Random(seed)
+        val random = Random(seed + skip)
         val products =
             (skip + 1..skip + count).joinToString(",") { id ->
                 val price = random.nextInt(MIN_CENTS, MAX_CENTS) / CENTS

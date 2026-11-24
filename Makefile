@@ -1,5 +1,5 @@
 .PHONY: help bootstrap test lint coverage test-core test-scripts lint-scripts coverage-scripts \
-	test-kmp lint-kmp coverage-kmp test-android lint-android coverage-android bench bench-report
+	test-kmp lint-kmp coverage-kmp test-android test-android-device lint-android coverage-android bench bench-report
 
 # uv would warn about, then ignore, a VIRTUAL_ENV inherited from another checkout's shell.
 unexport VIRTUAL_ENV
@@ -45,6 +45,10 @@ coverage-kmp:
 
 test-android: ## Android app unit and Robolectric tests
 	$(ANDROID_GRADLE) :app:testDebugUnitTest :benchmark:testReleaseUnitTest :fixtures:testDebugUnitTest
+
+test-android-device: ## Instrumented UI tests in fixture mode on ANDROID_SERIAL (not part of make test)
+	@test -n "$(ANDROID_SERIAL)" || { echo "test-android-device: set ANDROID_SERIAL to a simpool lease" >&2; exit 1; }
+	ANDROID_SERIAL=$(ANDROID_SERIAL) $(ANDROID_GRADLE) :uitest:connectedDebugAndroidTest
 
 lint-android:
 	$(ANDROID_GRADLE) ktlintCheck detekt
