@@ -46,6 +46,7 @@ class KmpSharedCore(
                 brand,
                 price,
                 discountPercentage,
+                discountedPrice,
                 rating,
                 stock,
                 thumbnail,

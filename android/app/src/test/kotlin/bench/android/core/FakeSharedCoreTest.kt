@@ -72,6 +72,7 @@ class FakeSharedCoreTest {
                 brand = "Glamour Beauty",
                 price = 19.5,
                 discountPercentage = 5.5,
+                discountedPrice = 18.43,
                 rating = 3.5,
                 stock = 44,
                 thumbnail = "https://cdn.dummyjson.com/2.png",

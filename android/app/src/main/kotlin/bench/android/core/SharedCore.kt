@@ -39,6 +39,7 @@ data class ProductDetail(
     val brand: String?,
     val price: Double,
     val discountPercentage: Double,
+    val discountedPrice: Double,
     val rating: Double,
     val stock: Long,
     val thumbnail: String,

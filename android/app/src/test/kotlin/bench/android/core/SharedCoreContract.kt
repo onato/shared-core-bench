@@ -55,6 +55,7 @@ class SharedCoreContract(
                 "brand" to brand,
                 "price" to price,
                 "discountPercentage" to discountPercentage,
+                "discountedPrice" to discountedPrice,
                 "rating" to rating,
                 "stock" to stock,
                 "thumbnail" to thumbnail,
