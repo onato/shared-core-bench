@@ -47,7 +47,8 @@ code to make that test pass. Tick it only when it passes along with every other 
 - Structural changes (rename, extract, move) and behavioural changes never share a PR. PRs are
   squash-merged, so a PR is the unit of history: when an issue needs a structural change first,
   open it as its own small PR (title starts `Structural:`), merge it, then branch the behavioural
-  PR from the updated `main`. Within a branch, commits are free-form; the PR title and description
+  PR from the updated `main`. The structural PR closes an issue of its own: first open a sub-issue
+  of the same parent, titled `Structural: …` and blocking the behavioural issue. Within a branch, commits are free-form; the PR title and description
   become the commit on `main`.
 - Commit only when `make test`, `make lint` and `make coverage` pass with zero warnings.
 
