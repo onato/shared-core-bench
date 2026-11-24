@@ -5,6 +5,7 @@ Compares KMP, Rust/UniFFI and Lua as a shared business-logic core for an iOS and
 - `SPEC.md` — what gets built and measured
 - `ISSUES.md` — delivery milestones and how work flows
 - `CODING_STANDARDS.md` — what the PR review enforces; read it before writing tests or code
+- `contract/README.md` and `android/README.md` — what fixtures and app tests need; read before changing either
 - GitHub issues on `onato/shared-core-bench` — the work queue (board: users/onato/projects/2)
 
 Each issue carries a "Tests to write first" checklist — that is the test list. When I say "go",
