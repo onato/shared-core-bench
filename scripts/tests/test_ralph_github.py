@@ -26,10 +26,11 @@ def adapter(gh):
     return GitHubAdapter("onato", "shared-core-bench", 2, gh)
 
 
-def sub_issue(number, state="OPEN", status="Todo", blockers=(), project=2):
+def sub_issue(number, state="OPEN", status="Todo", blockers=(), project=2, labels=()):
     return {
         "number": number,
         "state": state,
+        "labels": {"nodes": [{"name": name} for name in labels]},
         "blockedBy": {"nodes": [{"number": n, "state": s} for n, s in blockers]},
         "projectItems": {
             "nodes": [{"project": {"number": project}, "fieldValueByName": {"name": status}}]
@@ -48,6 +49,7 @@ def test_milestone_issues_come_from_the_parents_sub_issues_with_status_and_open_
                             sub_issue(7, blockers=[(6, "CLOSED")]),
                             sub_issue(8, blockers=[(6, "CLOSED"), (7, "OPEN")]),
                             sub_issue(9, status="Todo", project=5),
+                            sub_issue(10, labels=["bug", "draft"]),
                         ]
                     }
                 }
@@ -62,6 +64,7 @@ def test_milestone_issues_come_from_the_parents_sub_issues_with_status_and_open_
         Issue(7, "Todo"),
         Issue(8, "Todo", open_blockers=(7,)),
         Issue(9, "No status"),
+        Issue(10, "Todo", draft=True),
     ]
     args, _ = gh.calls[0]
     assert args[:2] == ["api", "graphql"]
@@ -301,3 +304,46 @@ def test_tests_cannot_reach_github():
         gh_runner(subprocess.run)(["--version"], None)
     with pytest.raises(RuntimeError, match="tests must not touch the network"):
         socket.create_connection(("api.github.com", 443))
+
+
+def events(*events):
+    """`gh api --paginate …/events --jq '.[]'` prints one event per line."""
+    lines = [{"event": e, "label": {"name": n}, "actor": {"login": a}} for e, n, a in events]
+    return "".join(json.dumps(line) + "\n" for line in lines)
+
+
+@pytest.mark.parametrize(
+    ("reply", "approved"),
+    [
+        (events(("labeled", "draft", "onato"), ("labeled", "plan-approved", "onato")), True),
+        (events(("labeled", "plan-approved", "onato-agent[bot]")), False),
+        (
+            events(("labeled", "plan-approved", "onato"), ("unlabeled", "plan-approved", "onato")),
+            False,
+        ),
+        ("", False),
+    ],
+    ids=["the owner added it", "someone else added it", "removed later", "never added"],
+)
+def test_the_plan_is_approved_only_while_the_owner_added_plan_approved_last(reply, approved):
+    gh = FakeGh(reply)
+
+    assert adapter(gh).plan_approved(2) is approved
+    args, _ = gh.calls[0]
+    assert args == [
+        "api",
+        "--paginate",
+        "repos/onato/shared-core-bench/issues/2/events",
+        "--jq",
+        ".[]",
+    ]
+
+
+def test_undraft_removes_the_draft_label():
+    gh = FakeGh("")
+
+    adapter(gh).undraft(7)
+
+    assert gh.calls == [
+        (["issue", "edit", "7", "-R", "onato/shared-core-bench", "--remove-label", "draft"], None)
+    ]
