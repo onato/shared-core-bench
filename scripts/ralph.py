@@ -13,6 +13,8 @@ TODO, IN_PROGRESS, IN_REVIEW, DONE = "Todo", "In progress", "In review", "Done"
 STUCK_AFTER = 3
 POLL_SECONDS = 60
 MERGE_TIMEOUT = 3600
+# An improver session reviews this many merged PRs at a time, and whatever is left at the end.
+IMPROVE_AFTER = 5
 # The owner's budget for unattended runs: the share of the weekly usage limit used.
 WEEKLY_LIMIT = 0.20
 # The board only stays true while these GitHub Projects built-in workflows move the cards.
@@ -75,6 +77,7 @@ class GitHub(ReadsBoard, Protocol):
 
 class Session(Protocol):
     def work(self, issue: Issue) -> Outcome: ...
+    def improve(self, prs: tuple[int, ...]) -> Improvement: ...
     def weekly_usage(self) -> float | None: ...
 
 
@@ -130,6 +133,8 @@ class _Loop:
     pending: list[int] = field(default_factory=list)
     stuck: dict[int, str] = field(default_factory=dict)
     fixed: list[int] = field(default_factory=list)
+    merged: list[int] = field(default_factory=list)  # since the last improver session
+    improvements: list[Improvement] = field(default_factory=list)
     waiting_since: float | None = None
 
     def run(self) -> str:
@@ -150,13 +155,30 @@ class _Loop:
     def step(self, issue: Issue | None) -> Stop | None:
         self.refresh_pending()
         if issue is None:
-            return self.wait_for_merges(Stop())
+            stop = self.wait_for_merges(Stop())
+            if stop == Stop() and self.merged and self.halt() is None:
+                self.improve()
+                return None  # its PRs need merging before the loop stops
+            return stop
         if halt := self.halt():
             # No more sessions, but the open PRs still need merging: a strict `main` leaves
             # them behind whenever another merges, and auto-merge won't update them itself.
             return self.wait_for_merges(Stop(halt))
+        if len(self.merged) >= IMPROVE_AFTER:
+            self.improve()
+            return None
         self.work(issue)
         return None
+
+    def improve(self) -> None:
+        prs, self.merged = tuple(self.merged), []
+        improvement = self.session.improve(prs)
+        self.improvements.append(improvement)
+        self.pending += improvement.prs
+        for proposal in improvement.proposals:
+            self.notify(f"Ralph loop: the improver proposes #{proposal}; it needs your decision.")
+        if improvement.needs_human:
+            self.notify(f"Ralph loop: the improver needs you: {improvement.needs_human}.")
 
     def halt(self) -> str | None:
         if self.iterations == self.max_iterations:
@@ -169,6 +191,7 @@ class _Loop:
     def refresh_pending(self) -> None:
         prs = [self.github.pull_request(n) for n in self.pending]
         self.pending = [pr.number for pr in prs if not pr.merged]
+        self.merged += [pr.number for pr in prs if pr.merged and pr.number in self.opened]
         for pr in prs:
             if not pr.merged and pr.behind:
                 self.github.update_branch(pr.number)
@@ -208,7 +231,9 @@ class _Loop:
             self.notify(
                 f"Ralph loop: #{issue.number} needs you (moved to In review): {reason}.\n{url}"
             )
-        elif pr is not None and not pr.merged:
+        elif pr.merged:  # without a PR, stuck_reason gave a reason
+            self.merged.append(pr.number)
+        else:
             self.pending.append(pr.number)
 
     def stop_message(self, headline: str | None) -> str:
@@ -226,7 +251,18 @@ class _Loop:
         if self.fixed:
             moved = ", ".join(f"#{n}" for n in self.fixed)
             lines.append(f"Moved to Done (closed, but the board had not moved them): {moved}")
-        return "\n".join(lines)
+        return "\n".join(lines + self.improver_lines())
+
+    def improver_lines(self) -> list[str]:
+        prs = [n for i in self.improvements for n in i.prs]
+        proposals = [n for i in self.improvements for n in i.proposals]
+        lines = ["Improver PRs: " + ", ".join(f"PR #{n}" for n in prs)] if prs else []
+        if proposals:
+            lines.append("Improver proposals: " + ", ".join(f"#{n}" for n in proposals))
+        lines += [
+            f"Improver needs you: {i.needs_human}" for i in self.improvements if i.needs_human
+        ]
+        return lines
 
 
 def describe(issue: Issue) -> str:
