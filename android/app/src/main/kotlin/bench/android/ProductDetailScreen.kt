@@ -6,7 +6,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.NonSkippableComposable
 import bench.android.core.ProductDetail
 import bench.android.core.StockStatus
-import java.util.Locale
 
 // Like App: a screen gains nothing from skipping, and its generated skip branches are unreachable in tests.
 @NonSkippableComposable
@@ -23,8 +22,6 @@ fun ProductDetailScreen(product: ProductDetail) {
         Text("Tags: ${product.tags.joinToString()}")
     }
 }
-
-private fun dollars(amount: Double) = String.format(Locale.ROOT, "$%.2f", amount)
 
 private fun stockLabel(status: StockStatus) =
     when (status) {

@@ -1,6 +1,7 @@
 package bench.android
 
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasProgressBarRangeInfo
 import androidx.compose.ui.test.hasScrollAction
@@ -10,8 +11,10 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeUp
+import androidx.compose.ui.text.style.TextDecoration
 import bench.android.core.FakeSharedCore
 import bench.android.core.FetchRequest
+import bench.android.core.ProductSummary
 import bench.android.core.summary
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -104,6 +107,44 @@ class ProductListTest {
         awaitText("Essence Mascara")
         assertEquals(0, compose.onAllNodes(spinner).fetchSemanticsNodes().size)
     }
+
+    @Test
+    fun aDiscountedProductShowsItsDiscountedPriceAndItsOriginalPrice() {
+        show(FakeSharedCore(stored = listOf(cell(price = 9.99, discountedPrice = 9.24))))
+
+        awaitText("$9.24")
+        assertEquals(listOf(TextDecoration.LineThrough), decorationsOf("$9.99"))
+    }
+
+    @Test
+    fun aProductWithNoDiscountShowsOnePrice() {
+        show(FakeSharedCore(stored = listOf(cell(price = 19.0, discountedPrice = 19.0))))
+
+        awaitText("$19.00")
+        assertEquals(1, compose.onAllNodesWithText("$19.00", useUnmergedTree = true).fetchSemanticsNodes().size)
+    }
+
+    @Test
+    fun theRatingShowsWithOneDecimalPlace() {
+        show(FakeSharedCore(stored = listOf(cell(rating = 3.28))))
+
+        awaitText("3.3")
+    }
+
+    private fun cell(
+        price: Double = 19.0,
+        discountedPrice: Double = price,
+        rating: Double = 4.5,
+    ) = ProductSummary(1, "Eyeshadow Palette", price, discountedPrice, rating, thumbnail = "")
+
+    private fun decorationsOf(text: String) =
+        compose
+            .onNodeWithText(text, useUnmergedTree = true)
+            .fetchSemanticsNode()
+            .config[SemanticsProperties.Text]
+            .single()
+            .spanStyles
+            .map { it.item.textDecoration }
 
     private val spinner = hasProgressBarRangeInfo(ProgressBarRangeInfo.Indeterminate)
 

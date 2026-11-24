@@ -2,6 +2,8 @@ package bench.android
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Button
@@ -16,6 +18,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.dp
 import androidx.paging.CombinedLoadStates
 import androidx.paging.LoadState
 import androidx.paging.Pager
@@ -27,6 +34,7 @@ import bench.android.core.ProductDetail
 import bench.android.core.ProductSummary
 import bench.android.core.SharedCore
 import kotlinx.coroutines.flow.Flow
+import java.util.Locale
 
 fun productPages(
     core: SharedCore,
@@ -35,6 +43,29 @@ fun productPages(
 ): Flow<PagingData<ProductSummary>> = Pager(PagingConfig(pageSize)) { ProductPagingSource(core, fetch) }.flow
 
 private fun CombinedLoadStates.firstError() = listOf(refresh, append).filterIsInstance<LoadState.Error>().firstOrNull()
+
+internal fun dollars(amount: Double) = String.format(Locale.US, "$%.2f", amount)
+
+private fun struckThrough(text: String) =
+    buildAnnotatedString { withStyle(SpanStyle(textDecoration = TextDecoration.LineThrough)) { append(text) } }
+
+@Composable
+private fun ProductCell(
+    product: ProductSummary,
+    modifier: Modifier,
+) {
+    ListItem(
+        modifier = modifier,
+        headlineContent = { Text(product.title) },
+        supportingContent = {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(dollars(product.discountedPrice))
+                if (product.discountedPrice != product.price) Text(struckThrough(dollars(product.price)))
+            }
+        },
+        trailingContent = { Text(String.format(Locale.US, "%.1f", product.rating)) },
+    )
+}
 
 // The root screen gains nothing from skipping, and its generated skip branches are unreachable in tests.
 @NonSkippableComposable
@@ -51,12 +82,7 @@ fun App(
             LazyColumn(state = listState) {
                 item { Text("Products") }
                 items(items.itemCount) { index ->
-                    items[index]?.let { product ->
-                        ListItem(
-                            headlineContent = { Text(product.title) },
-                            modifier = Modifier.clickable { selected = product.id },
-                        )
-                    }
+                    items[index]?.let { product -> ProductCell(product, Modifier.clickable { selected = product.id }) }
                 }
                 if (items.itemCount == 0 && items.loadState.append.endOfPaginationReached) {
                     item { Text("No products") }
