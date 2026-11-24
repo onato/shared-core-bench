@@ -1,10 +1,16 @@
 name: claude-review
 on:
   pull_request:
-    types: [opened, synchronize, reopened]
+    # `edited`: the review reads the PR body, so a body written after the push needs a fresh review.
+    types: [opened, synchronize, reopened, edited]
+# A push and a body edit seconds apart would otherwise race; only the newest review counts.
+concurrency:
+  group: claude-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
 jobs:
   claude-review:
-    # Public repo: never hand the token to a fork's code.
+    # Public repo: never hand the token to a fork's code. No filter on what an edit changed: a
+    # skipped run counts as a passing check, so it could replace a failing review.
     if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 30
