@@ -40,5 +40,5 @@ SELECT tag FROM product_tag WHERE product_id = ? ORDER BY position;
 
 pageAfter:
 SELECT id, title, price, discount_percentage, rating, thumbnail FROM product
-WHERE id > :cursor AND instr(title, :text) > 0
+WHERE id > :cursor AND (instr(title, :text) > 0 OR instr(brand, :text) > 0)
 ORDER BY id LIMIT :limit;
