@@ -291,6 +291,29 @@ def test_at_the_iteration_cap_the_loop_waits_for_its_open_prs_before_stopping():
     assert stop.startswith("Ralph loop stopped: iteration cap (1) reached.\n")
 
 
+def test_other_prs_a_session_opened_are_brought_up_to_date_and_waited_for():
+    github = FakeGitHub([Issue(18, TODO)])
+    github.prs[127] = PullRequest(number=127, behind=True)
+    session = FakeSession(github, {18: (Outcome(pr=130, also=(127,)), PullRequest(130), False)})
+    clock = Clock()
+    clock.on_sleep = lambda: github.prs.update({127: PullRequest(number=127, merged=True)})
+
+    loop(github, session, clock=clock)
+
+    assert github.updates == [127]
+    assert clock.sleeps == [60]
+
+
+def test_other_prs_a_session_merged_are_given_to_the_improver():
+    github = FakeGitHub([Issue(18, TODO)])
+    github.prs[126] = PullRequest(number=126, merged=True)
+    session = FakeSession(github, {18: (Outcome(pr=130, also=(126,)), PullRequest(130), False)})
+
+    loop(github, session)
+
+    assert session.improved == [((130, 126), 1)]
+
+
 def test_gives_up_waiting_for_auto_merge_after_an_hour():
     github = FakeGitHub([Issue(7, TODO), Issue(8, TODO)], blocked_by={8: (7,)})
     session = FakeSession(github, {7: (Outcome(pr=40), PullRequest(number=40), True)})

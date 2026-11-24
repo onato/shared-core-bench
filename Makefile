@@ -1,6 +1,9 @@
 .PHONY: help bootstrap test lint coverage test-core test-scripts lint-scripts coverage-scripts \
 	test-kmp lint-kmp coverage-kmp test-android lint-android coverage-android bench bench-report
 
+# uv would warn about, then ignore, a VIRTUAL_ENV inherited from another checkout's shell.
+unexport VIRTUAL_ENV
+
 GRADLE := core-kmp/gradlew --project-dir core-kmp --console=plain
 ANDROID_GRADLE := android/gradlew --project-dir android --console=plain
 

@@ -47,6 +47,7 @@ class PullRequest:
 class Outcome:
     pr: int | None
     needs_human: str | None = None
+    also: tuple[int, ...] = ()  # other PRs the session opened, such as a checkpoint's fixes
 
 
 @dataclass(frozen=True)
@@ -229,6 +230,8 @@ class _Loop:
         pr = self.github.pull_request(outcome.pr) if outcome.pr is not None else None
         if pr is not None:
             self.opened.append(pr.number)
+        self.opened += outcome.also
+        self.pending += outcome.also
         reason = stuck_reason(outcome, pr)
         if reason:
             self.stuck[issue.number] = reason
