@@ -36,6 +36,7 @@ class FakeSharedCore(
     override fun page(
         cursor: Long?,
         size: Int,
+        query: Query,
     ): PageResult {
         val after = products.values.filter { cursor == null || it.id > cursor }
         val items = after.take(size)

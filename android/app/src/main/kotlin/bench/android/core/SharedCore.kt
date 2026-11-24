@@ -13,12 +13,18 @@ interface SharedCore {
     fun page(
         cursor: Long?,
         size: Int,
+        query: Query = Query(),
     ): PageResult
 
     fun detail(id: Long): ProductDetail?
 
     fun stats(): CoreStats
 }
+
+/** Which products a page holds; an empty [text] matches every product. */
+data class Query(
+    val text: String = "",
+)
 
 data class FetchRequest(
     val requestId: Long,

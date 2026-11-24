@@ -30,12 +30,17 @@ class Core private constructor(
     fun page(
         cursor: Long?,
         size: Int,
+        query: Query,
     ): PageResult {
         if (size <= 0) return PageResult.InvalidSize
         // One row past the page tells whether another page follows.
         val rows =
             database.productQueries
-                .pageAfter(cursor ?: Long.MIN_VALUE, size + 1L) { id, title, price, discount, rating, thumbnail ->
+                .pageAfter(
+                    cursor = cursor ?: Long.MIN_VALUE,
+                    text = query.text,
+                    limit = size + 1L,
+                ) { id, title, price, discount, rating, thumbnail ->
                     ProductSummary(id, title, price, discountedPrice(price, discount), rating, thumbnail)
                 }.executeAsList()
         val items = rows.take(size)

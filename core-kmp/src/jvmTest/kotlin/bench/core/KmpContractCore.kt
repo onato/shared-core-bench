@@ -7,6 +7,7 @@ import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.int
+import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.long
 import kotlinx.serialization.json.longOrNull
@@ -54,7 +55,7 @@ class KmpContractCore(
 
     override fun page(args: JsonObject): JsonElement {
         val cursor = args["cursor"]?.jsonPrimitive?.longOrNull
-        return when (val result = core.page(cursor, args.getValue("size").jsonPrimitive.int)) {
+        return when (val result = core.page(cursor, args.getValue("size").jsonPrimitive.int, query(args))) {
             is PageResult.Page -> {
                 JsonObject(
                     mapOf(
@@ -68,6 +69,11 @@ class KmpContractCore(
                 errorResult("invalid-page-size")
             }
         }
+    }
+
+    private fun query(args: JsonObject): Query {
+        val query = args["query"]?.jsonObject ?: return Query()
+        return Query(text = query.getValue("text").jsonPrimitive.content)
     }
 
     override fun nextFetch(args: JsonObject): JsonElement {
