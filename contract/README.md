@@ -60,11 +60,19 @@ reaches well past the new fixture. Count these into the issue's size before star
   ingest products (`IngestStorageTest`, `AndroidDriversTest`), the app's adapter tests
   (`KmpSharedCore*Test`, `FakeSharedCoreTest`, `Summaries.kt`) and the benchmark's
   `android/benchmark/src/main/kotlin/bench/benchmark/ProductFixtures.kt`.
+- **A new argument to a step** (a `page` query field, say): the core's own type for it in
+  `core-kmp/src/commonMain/kotlin/bench/core/` (`Query.kt`), both contract adapters, and the app's
+  `SharedCore.kt` with `KmpSharedCore.kt` and the test `FakeSharedCore.kt`, because the app runs
+  every case too. Both adapters read an optional argument with `args["name"]` and a default, never
+  `getValue`: existing cases omit it, and `getValue` fails them with `Key … is missing` before the
+  core runs.
 
 ## Runners
 
 A core's runner turns each case file into its own test, sends every step to the core and compares
-the result with `expect` as JSON values, so key order and whitespace don't matter. It fails:
+the result with `expect` as JSON values, so key order and whitespace don't matter. Numbers are
+compared as written, though: the cores return prices as doubles, so a whole-number price is
+written `10.0` in `expect`, never `10`. It fails:
 
 - on the first step whose result differs, naming the file, step index and step type, with the
   expected and actual JSON pretty-printed;
