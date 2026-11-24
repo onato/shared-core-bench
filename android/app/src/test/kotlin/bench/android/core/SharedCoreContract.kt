@@ -48,6 +48,7 @@ class SharedCoreContract(
             category = query["category"]?.jsonPrimitive?.content,
             minPrice = query["minPrice"]?.jsonPrimitive?.double,
             maxPrice = query["maxPrice"]?.jsonPrimitive?.double,
+            sort = query["sort"]?.jsonPrimitive?.content?.let(SORTS::getValue) ?: Sort.Id,
         )
     }
 
@@ -112,6 +113,13 @@ class SharedCoreContract(
         }
 
     private companion object {
+        val SORTS =
+            mapOf(
+                "id" to Sort.Id,
+                "price-asc" to Sort.PriceAsc,
+                "price-desc" to Sort.PriceDesc,
+                "rating-desc" to Sort.RatingDesc,
+            )
         val FAILURE_CODES =
             mapOf(
                 IngestFailure.UnknownRequest to "unknown-request",

@@ -32,7 +32,7 @@ def _timings(benchmark: dict) -> dict:
     # androidx.benchmark prefixes each suppressed error, e.g. `EMULATOR_` or `DEBUGGABLE_`.
     name = re.sub(r"^([A-Z]+_)+", "", benchmark["name"])
     return {
-        "suite": "core",
+        "suite": "boundary" if benchmark["className"].endswith(".BoundaryBenchmark") else "core",
         "workload": name,
         "n": int(re.search(r"\d+", name).group()),
         "median_ns": timings["median"],

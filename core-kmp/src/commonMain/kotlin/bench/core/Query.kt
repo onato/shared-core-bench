@@ -9,4 +9,15 @@ data class Query(
     val category: String? = null,
     val minPrice: Double? = null,
     val maxPrice: Double? = null,
+    val sort: Sort = Sort.Id,
 )
+
+/** The order a page lists products in; ties order by ascending id. The price sorts use the discounted price. */
+enum class Sort(
+    internal val key: String,
+) {
+    Id("id"),
+    PriceAsc("price-asc"),
+    PriceDesc("price-desc"),
+    RatingDesc("rating-desc"),
+}

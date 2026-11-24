@@ -79,6 +79,7 @@ class KmpContractCore(
             category = query["category"]?.jsonPrimitive?.content,
             minPrice = query["minPrice"]?.jsonPrimitive?.double,
             maxPrice = query["maxPrice"]?.jsonPrimitive?.double,
+            sort = query["sort"]?.jsonPrimitive?.content?.let(SORTS::getValue) ?: Sort.Id,
         )
     }
 
@@ -137,6 +138,13 @@ class KmpContractCore(
     }
 
     private companion object {
+        val SORTS =
+            mapOf(
+                "id" to Sort.Id,
+                "price-asc" to Sort.PriceAsc,
+                "price-desc" to Sort.PriceDesc,
+                "rating-desc" to Sort.RatingDesc,
+            )
         val RATING_BUCKETS =
             mapOf(
                 RatingBucket.Excellent to "excellent",
