@@ -57,6 +57,7 @@ object ContractRunner {
             "nextFetch" -> core.nextFetch(args)
             "detail" -> core.detail(args)
             "stats" -> core.stats(args)
+            "refresh" -> core.refresh(args)
             else -> null
         }
 

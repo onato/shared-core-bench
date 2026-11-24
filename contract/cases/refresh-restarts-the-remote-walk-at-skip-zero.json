@@ -1,0 +1,18 @@
+{
+  "steps": [
+    {
+      "step": "ingest",
+      "args": {
+        "requestId": 1,
+        "status": 200,
+        "body": "{\"products\": [{\"id\": 1, \"title\": \"Essence Mascara\", \"price\": 9.99, \"description\": \"A product from the dummyjson catalogue.\", \"category\": \"beauty\", \"brand\": \"Essence\", \"discountPercentage\": 7.5, \"rating\": 4.5, \"stock\": 5, \"thumbnail\": \"https://cdn.dummyjson.com/products/images/beauty/thumbnail.png\", \"tags\": [\"beauty\"]}], \"total\": 40, \"skip\": 0, \"limit\": 20}"
+      },
+      "expect": { "accepted": 1, "rejected": 0 }
+    },
+    { "step": "refresh", "expect": null },
+    {
+      "step": "nextFetch",
+      "expect": { "requestId": 3, "url": "https://dummyjson.com/products?limit=20&skip=0" }
+    }
+  ]
+}

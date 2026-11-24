@@ -71,7 +71,9 @@ class KmpSharedCore(
             )
         }
 
-    override fun stats(): CoreStats = CoreStats(core.stats().productCount)
+    override fun stats(): CoreStats = with(core.stats()) { CoreStats(productCount, deletedCount) }
+
+    override fun refresh() = core.refresh()
 
     private fun ratingBucket(bucket: CoreRatingBucket) =
         when (bucket) {

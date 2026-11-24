@@ -19,6 +19,9 @@ interface SharedCore {
     fun detail(id: Long): ProductDetail?
 
     fun stats(): CoreStats
+
+    /** Starts the remote walk again from the first page. */
+    fun refresh()
 }
 
 /**
@@ -71,8 +74,10 @@ enum class RatingBucket { Excellent, Good, Fair, Poor }
 
 enum class StockStatus { InStock, LowStock, OutOfStock }
 
+/** [productCount] counts every stored product, soft-deleted ones included. */
 data class CoreStats(
     val productCount: Long,
+    val deletedCount: Long,
 )
 
 sealed interface IngestResult {

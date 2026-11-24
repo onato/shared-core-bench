@@ -2,7 +2,7 @@ import json
 import subprocess
 from datetime import datetime
 
-from ralph import Improvement, Issue, Outcome
+from ralph import POLL_SECONDS, Improvement, Issue, Outcome
 from ralph_session import ClaudeSession
 
 
@@ -12,25 +12,47 @@ class FakeTokens:
 
 
 class FakeProcesses:
-    """Records each command; `claude` streams `events` to its stdout and exits with `exit`."""
+    """Records each command; `claude` streams `events` to its stdout and exits with `exit`
+    after `polls` waits have timed out."""
 
-    def __init__(self, *events, exit=0):
+    def __init__(self, *events, exit=0, polls=0):
         self.events = events
         self.exit = exit
+        self.polls = polls
+        self.waits = []  # each wait's timeout
         self.calls = []
-        self.fails = {}  # git subcommand → the CompletedProcess it fails with
+        self.fails = {}  # git subcommand, one word or two → the CompletedProcess it fails with
+
+    def start(self, args, **kwargs):
+        self.calls.append((args, kwargs))
+        for event in self.events:
+            kwargs["stdout"].write(json.dumps(event) + "\n")
+        return FakeProcess(self)
 
     def __call__(self, args, **kwargs):
         self.calls.append((args, kwargs))
-        if args[0] == "git" and args[3] in self.fails:
-            return self.fails[args[3]]
-        if args[0] == "claude":
-            for event in self.events:
-                kwargs["stdout"].write(json.dumps(event) + "\n")
-        return subprocess.CompletedProcess(args, self.exit if args[0] == "claude" else 0)
+        for subcommand in (" ".join(args[3:5]), args[3]) if args[0] == "git" else ():
+            if subcommand in self.fails:
+                return self.fails[subcommand]
+        return subprocess.CompletedProcess(args, 0)
 
     def claude(self):
         return next((args, kwargs) for args, kwargs in self.calls if args[0] == "claude")
+
+
+class FakeProcess:
+    def __init__(self, processes):
+        self.processes = processes
+
+    def wait(self, timeout):
+        self.processes.waits.append(timeout)
+        if len(self.processes.waits) <= self.processes.polls:
+            raise subprocess.TimeoutExpired("claude", timeout)
+        return self.processes.exit
+
+
+def nothing():
+    pass
 
 
 def result(text):
@@ -46,6 +68,7 @@ def session(tmp_path, processes):
         repo=repo,
         tokens=FakeTokens(),
         run=processes,
+        start=processes.start,
         environ={"PATH": "/usr/bin"},
         now=lambda: datetime(2026, 11, 23, 1, 2, 3),
     )
@@ -55,7 +78,7 @@ def test_a_session_runs_claude_on_the_issue_in_its_own_worktree_and_logs_the_str
     processes = FakeProcesses({"type": "system"}, result("Opened it.\nPR: #52"))
     repo, claude = session(tmp_path, processes)
 
-    outcome = claude.work(Issue(7, "In progress"))
+    outcome = claude.work(Issue(7, "In progress"), nothing)
 
     worktree = tmp_path / "shared-core-bench-7"
     assert outcome == Outcome(pr=52)
@@ -90,11 +113,23 @@ def test_a_session_runs_claude_on_the_issue_in_its_own_worktree_and_logs_the_str
     assert log.read_text().splitlines()[-1] == json.dumps(result("Opened it.\nPR: #52"))
 
 
+def test_while_claude_runs_the_session_calls_while_running_every_poll(tmp_path):
+    processes = FakeProcesses(result("PR: #52"), polls=2)
+    _, claude = session(tmp_path, processes)
+    calls = []
+
+    outcome = claude.work(Issue(7, "In progress"), lambda: calls.append(len(processes.waits)))
+
+    assert calls == [1, 2]
+    assert processes.waits == [POLL_SECONDS] * 3
+    assert outcome == Outcome(pr=52)
+
+
 def test_the_session_commits_and_pushes_as_the_bot_not_the_owner(tmp_path):
     processes = FakeProcesses(result("PR: #52"))
     _, claude = session(tmp_path, processes)
 
-    claude.work(Issue(7, "In progress"))
+    claude.work(Issue(7, "In progress"), nothing)
 
     env = processes.claude()[1]["env"]
     bot = "onato-agent[bot]"
@@ -121,7 +156,7 @@ def test_each_session_starts_fresh_even_when_the_loop_runs_inside_claude_code(tm
     _, claude = session(tmp_path, processes)
     claude.environ = {"PATH": "/usr/bin", "CLAUDECODE": "1", "CLAUDE_CODE_SESSION_ID": "parent"}
 
-    claude.work(Issue(7, "In progress"))
+    claude.work(Issue(7, "In progress"), nothing)
 
     env = processes.claude()[1]["env"]
     assert [k for k in env if k.startswith("CLAUDE")] == []
@@ -134,7 +169,7 @@ def test_a_worktree_that_cannot_be_made_needs_a_human_and_starts_no_claude(tmp_p
     processes.fails = {"worktree": subprocess.CompletedProcess([], 128, "", error)}
     _, claude = session(tmp_path, processes)
 
-    outcome = claude.work(Issue(7, "In progress"))
+    outcome = claude.work(Issue(7, "In progress"), nothing)
 
     assert outcome == Outcome(
         pr=None,
@@ -148,7 +183,7 @@ def test_a_needs_human_marker_is_reported_to_the_loop_as_its_reason(tmp_path):
     text = "Stopped.\nPR: #53\nNEEDS_HUMAN: the spec doesn't say which SQLite version to pin\n"
     _, claude = session(tmp_path, FakeProcesses(result(text)))
 
-    outcome = claude.work(Issue(8, "In progress"))
+    outcome = claude.work(Issue(8, "In progress"), nothing)
 
     assert outcome == Outcome(pr=53, needs_human="the spec doesn't say which SQLite version to pin")
 
@@ -157,7 +192,7 @@ def test_the_first_pr_line_is_the_issues_pr_and_the_rest_are_other_prs_it_opened
     text = "Done.\nPR: #130\nPR: #126\nPR: #127\n"
     _, claude = session(tmp_path, FakeProcesses(result(text)))
 
-    outcome = claude.work(Issue(18, "In progress"))
+    outcome = claude.work(Issue(18, "In progress"), nothing)
 
     assert outcome == Outcome(pr=130, also=(126, 127))
 
@@ -165,7 +200,7 @@ def test_the_first_pr_line_is_the_issues_pr_and_the_rest_are_other_prs_it_opened
 def test_a_session_that_ends_without_a_result_needs_a_human_and_points_at_its_log(tmp_path):
     repo, claude = session(tmp_path, FakeProcesses({"type": "system"}, exit=1))
 
-    outcome = claude.work(Issue(9, "In progress"))
+    outcome = claude.work(Issue(9, "In progress"), nothing)
 
     log = repo / ".ralph" / "logs" / "20261123-010203-9.log"
     assert outcome == Outcome(pr=None, needs_human=f"the session ended without a result; see {log}")
@@ -175,7 +210,7 @@ def test_the_improver_reviews_the_merged_prs_in_a_detached_worktree_of_main(tmp_
     processes = FakeProcesses(result("Done.\nPR: #63\nPR: #64\nPROPOSED: #65\n"))
     repo, claude = session(tmp_path, processes)
 
-    improvement = claude.improve((60, 61, 62))
+    improvement = claude.improve((60, 61, 62), nothing)
 
     worktree = tmp_path / "shared-core-bench-improve-20261123-010203"
     assert improvement == Improvement(prs=(63, 64), proposals=(65,))
@@ -194,7 +229,7 @@ def test_an_improver_without_a_worktree_needs_a_human_and_starts_no_claude(tmp_p
     processes.fails = {"fetch": subprocess.CompletedProcess([], 128, "", "fatal: offline\n")}
     _, claude = session(tmp_path, processes)
 
-    improvement = claude.improve((60,))
+    improvement = claude.improve((60,), nothing)
 
     assert improvement == Improvement(needs_human="git fetch origin failed: fatal: offline")
     assert [args[0] for args, _ in processes.calls] == ["git"]
@@ -203,7 +238,45 @@ def test_an_improver_without_a_worktree_needs_a_human_and_starts_no_claude(tmp_p
 def test_an_improver_that_ends_without_a_result_needs_a_human_and_points_at_its_log(tmp_path):
     repo, claude = session(tmp_path, FakeProcesses({"type": "system"}, exit=1))
 
-    improvement = claude.improve((60,))
+    improvement = claude.improve((60,), nothing)
 
     log = repo / ".ralph" / "logs" / "20261123-010203-improve.log"
     assert improvement == Improvement(needs_human=f"the session ended without a result; see {log}")
+
+
+def test_removing_an_issues_worktree_keeps_uncommitted_work_and_deletes_its_branch(tmp_path):
+    processes = FakeProcesses()
+    repo, claude = session(tmp_path, processes)
+
+    failed = claude.remove(7)
+
+    assert failed is None
+    assert [args for args, _ in processes.calls] == [
+        ["git", "-C", str(repo), "worktree", "remove", str(tmp_path / "shared-core-bench-7")],
+        ["git", "-C", str(repo), "branch", "-D", "swilliams/7-ralph"],
+    ]
+
+
+def test_the_improvers_worktree_is_removed_once_its_session_ends(tmp_path):
+    processes = FakeProcesses(result("PR: #63"))
+    repo, claude = session(tmp_path, processes)
+
+    claude.improve((60,), nothing)
+
+    worktree = tmp_path / "shared-core-bench-improve-20261123-010203"
+    assert processes.calls[-1][0] == ["git", "-C", str(repo), "worktree", "remove", str(worktree)]
+
+
+def test_an_improver_worktree_that_cannot_be_removed_is_reported_with_its_prs(tmp_path):
+    processes = FakeProcesses(result("PR: #63"))
+    error = "fatal: contains modified or untracked files, use --force to delete it\n"
+    processes.fails = {"worktree remove": subprocess.CompletedProcess([], 128, "", error)}
+    _, claude = session(tmp_path, processes)
+
+    improvement = claude.improve((60,), nothing)
+
+    assert improvement == Improvement(
+        prs=(63,),
+        left_in_place="git worktree remove failed: fatal: contains modified or untracked files, "
+        "use --force to delete it",
+    )

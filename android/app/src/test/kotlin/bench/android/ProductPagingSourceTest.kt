@@ -5,6 +5,7 @@ import androidx.paging.PagingSource.LoadResult
 import androidx.paging.testing.TestPager
 import bench.android.core.FakeSharedCore
 import bench.android.core.FetchRequest
+import bench.android.core.Query
 import bench.android.core.summary
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -28,7 +29,7 @@ class ProductPagingSourceTest {
 
     private val config = PagingConfig(pageSize = 2, initialLoadSize = 2)
 
-    private fun pager(core: FakeSharedCore) = TestPager(config, ProductPagingSource(core, ::fetch))
+    private fun pager(core: FakeSharedCore) = TestPager(config, ProductPagingSource(core, ::fetch, Query()))
 
     @Test
     fun firstLoadReturnsTheFirstPageFromTheCore() =
@@ -91,7 +92,8 @@ class ProductPagingSourceTest {
     @Test
     fun refreshingAfterScrollingStartsAgainFromTheFirstProduct() =
         runTest {
-            val source = ProductPagingSource(FakeSharedCore(stored = listOf(canister, mascara, palette)), ::fetch)
+            val source =
+                ProductPagingSource(FakeSharedCore(stored = listOf(canister, mascara, palette)), ::fetch, Query())
             val pager = TestPager(config, source)
             pager.refresh()
             pager.append()

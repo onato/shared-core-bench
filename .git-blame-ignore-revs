@@ -20,3 +20,6 @@ be156a7a7aff6dd29d6d6093d058c616ba7ccb69
 
 # Structural: page items are ProductSummary (#142)
 cbff9ec8f5c178def46d936bcd7cf04491bd4e80
+
+# Structural: extract ClaudeSession's git-step and naming helpers (#171)
+5280506c10b0b3121b1236a201a29d4c3bc92d02

@@ -5,11 +5,14 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasProgressBarRangeInfo
 import androidx.compose.ui.test.hasScrollAction
+import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeDown
 import androidx.compose.ui.test.swipeUp
 import androidx.compose.ui.text.style.TextDecoration
 import bench.android.core.FakeSharedCore
@@ -19,14 +22,17 @@ import bench.android.core.summary
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.RuleChain
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import java.util.concurrent.CountDownLatch
 
 @RunWith(RobolectricTestRunner::class)
 class ProductListTest {
-    @get:Rule
     val compose = createComposeRule()
+
+    @get:Rule
+    val rules: RuleChain = RuleChain.outerRule(DrainMainLooper()).around(compose)
 
     private val mascara = summary(id = 1, title = "Essence Mascara", price = 9.99)
     private val palette = summary(id = 2, title = "Eyeshadow Palette", price = 19.0)
@@ -37,7 +43,7 @@ class ProductListTest {
         core: FakeSharedCore,
         fetch: (FetchRequest) -> FetchResult = ::noNetwork,
     ) {
-        compose.setContent { App(productPages(core, fetch, pageSize = 2), core::detail) }
+        compose.setContent { App({ productPages(core, fetch, pageSize = 2, it) }, core::detail, core::refresh) }
     }
 
     @Test
@@ -131,6 +137,80 @@ class ProductListTest {
         awaitText("3.3")
     }
 
+    @Test
+    fun typingPartOfATitleShowsOnlyMatchingProducts() {
+        show(FakeSharedCore(stored = listOf(mascara, palette)))
+        awaitText("Eyeshadow Palette")
+
+        search("mascara")
+
+        awaitText("Essence Mascara")
+        awaitGone("Eyeshadow Palette")
+    }
+
+    @Test
+    fun clearingTheSearchShowsEveryProductAgain() {
+        show(FakeSharedCore(stored = listOf(mascara, palette)))
+        search("mascara")
+        awaitGone("Eyeshadow Palette")
+
+        search("")
+
+        awaitText("Essence Mascara")
+        awaitText("Eyeshadow Palette")
+    }
+
+    @Test
+    fun aSearchWithNoMatchSaysNoProductsMatch() {
+        show(FakeSharedCore(stored = listOf(mascara, palette)))
+        awaitText("Essence Mascara")
+
+        search("lipstick")
+
+        awaitText("No products match")
+    }
+
+    @Test
+    fun pullingDownRefreshesAndAProductRenamedOnTheServerShowsItsNewTitle() {
+        val core = FakeSharedCore(remotePages = listOf(listOf(mascara)))
+        show(core) { FetchResult.Response(200, ByteArray(0)) }
+        awaitText("Essence Mascara")
+
+        core.remotePages = listOf(listOf(mascara.copy(title = "Lash Princess Mascara")))
+        pullDown()
+
+        awaitText("Lash Princess Mascara")
+        awaitGone("Essence Mascara")
+    }
+
+    @Test
+    fun aProductTheServerNoLongerReturnsIsGoneAfterARefresh() {
+        val core = FakeSharedCore(remotePages = listOf(listOf(mascara, palette)))
+        show(core) { FetchResult.Response(200, ByteArray(0)) }
+        awaitText("Eyeshadow Palette")
+
+        core.remotePages = listOf(listOf(mascara))
+        pullDown()
+
+        awaitGone("Eyeshadow Palette")
+        awaitText("Essence Mascara")
+    }
+
+    @Test
+    fun aFailedRefreshShowsTheErrorWithRetryAndKeepsTheProductsShown() {
+        val responses = ArrayDeque(listOf(FetchResult.Response(200, ByteArray(0)), FetchResult.NetworkError("offline")))
+        show(FakeSharedCore(remotePages = listOf(listOf(mascara))), fetch = { responses.removeFirst() })
+        awaitText("Essence Mascara")
+
+        pullDown()
+
+        awaitText("Network error: offline")
+        compose.onNodeWithText("Retry").assertIsDisplayed()
+        compose.onNodeWithText("Essence Mascara").assertIsDisplayed()
+    }
+
+    private fun pullDown() = compose.onNode(hasScrollAction()).performTouchInput { swipeDown() }
+
     private fun cell(
         price: Double = 19.0,
         discountedPrice: Double = price,
@@ -151,6 +231,12 @@ class ProductListTest {
     private fun awaitText(text: String) {
         compose.waitUntil { compose.onAllNodesWithText(text).fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithText(text).assertIsDisplayed()
+    }
+
+    private fun search(text: String) = compose.onNode(hasSetTextAction()).performTextReplacement(text)
+
+    private fun awaitGone(text: String) {
+        compose.waitUntil { compose.onAllNodesWithText(text).fetchSemanticsNodes().isEmpty() }
     }
 
     private fun scrollUntilShown(text: String) {

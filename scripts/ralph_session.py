@@ -9,7 +9,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Protocol
 
-from ralph import Improvement, Issue, Outcome
+from ralph import POLL_SECONDS, Improvement, Issue, Outcome
 
 BOT = "onato-agent[bot]"
 BOT_EMAIL = "359795497+onato-agent[bot]@users.noreply.github.com"  # the bot's GitHub user id
@@ -39,49 +39,73 @@ class ClaudeSession:
     repo: Path
     tokens: SessionTokens
     run: Callable[..., subprocess.CompletedProcess]
+    start: Callable[..., subprocess.Popen]
     environ: dict[str, str]
     now: Callable[[], datetime]
 
-    def work(self, issue: Issue) -> Outcome:
-        branch = f"swilliams/{issue.number}-ralph"
-        worktree = self.repo.parent / f"shared-core-bench-{issue.number}"
+    def work(self, issue: Issue, while_running: Callable[[], None]) -> Outcome:
+        branch, worktree = self._branch(issue.number), self._worktree(issue.number)
         failed = self._add_worktree(worktree, ["-b", branch, "origin/main"])
         if failed:
             return Outcome(pr=None, needs_human=failed)
         prompt = (self.repo / ".ralph" / "PROMPT.md").read_text()
         prompt = prompt.replace("{issue}", str(issue.number)).replace("{branch}", branch)
-        text, log = self._claude(prompt, worktree, str(issue.number))
+        text, log = self._claude(prompt, worktree, str(issue.number), while_running)
         if text is None:
             return Outcome(pr=None, needs_human=f"the session ended without a result; see {log}")
         return outcome(text)
 
-    def improve(self, prs: tuple[int, ...]) -> Improvement:
+    def remove(self, issue: int) -> str | None:
+        """What failed, or None once the issue's worktree and branch are gone."""
+        return self._git(
+            ["worktree", "remove", str(self._worktree(issue))],
+            ["branch", "-D", self._branch(issue)],  # -D: a squash merge leaves it unmerged
+        )
+
+    def _branch(self, issue: int) -> str:
+        return f"swilliams/{issue}-ralph"
+
+    def _worktree(self, issue: int) -> Path:
+        return self.repo.parent / f"shared-core-bench-{issue}"
+
+    def improve(self, prs: tuple[int, ...], while_running: Callable[[], None]) -> Improvement:
         worktree = self.repo.parent / f"shared-core-bench-improve-{self.now():%Y%m%d-%H%M%S}"
         failed = self._add_worktree(worktree, ["--detach", "origin/main"])
         if failed:
             return Improvement(needs_human=failed)
         named = "PRs " + ", ".join(f"#{n}" for n in prs)
         prompt = (self.repo / ".ralph" / "IMPROVE.md").read_text().replace("{prs}", named)
-        text, log = self._claude(prompt, worktree, "improve")
+        text, log = self._claude(prompt, worktree, "improve", while_running)
+        left = self._git(["worktree", "remove", str(worktree)])
         if text is None:
-            return Improvement(needs_human=f"the session ended without a result; see {log}")
-        return Improvement(prs=numbers("PR", text), proposals=numbers("PROPOSED", text))
+            return Improvement(
+                needs_human=f"the session ended without a result; see {log}", left_in_place=left
+            )
+        return Improvement(
+            prs=numbers("PR", text), proposals=numbers("PROPOSED", text), left_in_place=left
+        )
 
     def _add_worktree(self, worktree: Path, start: list[str]) -> str | None:
         """What failed, or None once the worktree exists."""
-        for step in (["fetch", "origin"], ["worktree", "add", str(worktree), *start]):
+        return self._git(["fetch", "origin"], ["worktree", "add", str(worktree), *start])
+
+    def _git(self, *steps: list[str]) -> str | None:
+        """What failed, stopping at the first step to fail, or None once all have run."""
+        for step in steps:
             done = self.run(["git", "-C", str(self.repo), *step], capture_output=True, text=True)
             if done.returncode != 0:
                 return f"git {' '.join(step[:2])} failed: {done.stderr.strip()}"
         return None
 
-    def _claude(self, prompt: str, worktree: Path, name: str) -> tuple[str | None, Path]:
+    def _claude(
+        self, prompt: str, worktree: Path, name: str, while_running: Callable[[], None]
+    ) -> tuple[str | None, Path]:
         """The session's final result, if it reached one, and its log."""
         logs = self.repo / ".ralph" / "logs"
         logs.mkdir(exist_ok=True)
         log = logs / f"{self.now():%Y%m%d-%H%M%S}-{name}.log"
         with log.open("w") as out:
-            self.run(
+            process = self.start(
                 [
                     "claude",
                     "-p",
@@ -98,7 +122,17 @@ class ClaudeSession:
                 stderr=subprocess.STDOUT,
                 text=True,
             )
+            while not exited(process):
+                while_running()
         return final_result(log), log
+
+
+def exited(process: subprocess.Popen) -> bool:
+    try:
+        process.wait(timeout=POLL_SECONDS)
+    except subprocess.TimeoutExpired:
+        return False
+    return True
 
 
 def events(log: Path) -> list[dict]:

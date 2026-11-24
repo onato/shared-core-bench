@@ -9,7 +9,10 @@ CREATE TABLE product (
     discounted_price REAL NOT NULL,
     rating REAL NOT NULL,
     stock INTEGER NOT NULL,
-    thumbnail TEXT NOT NULL
+    thumbnail TEXT NOT NULL,
+    -- The refresh generation whose walk last returned this product.
+    seen_generation INTEGER NOT NULL,
+    deleted INTEGER NOT NULL
 );
 
 CREATE TABLE product_tag (
@@ -21,8 +24,12 @@ CREATE TABLE product_tag (
 
 upsert:
 INSERT OR REPLACE INTO product (
-    id, title, description, category, brand, price, discount_percentage, discounted_price, rating, stock, thumbnail
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+    id, title, description, category, brand, price, discount_percentage, discounted_price, rating, stock, thumbnail,
+    seen_generation, deleted
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0);
+
+softDeleteUnseenBefore:
+UPDATE product SET deleted = 1 WHERE seen_generation < ?;
 
 deleteTagsOf:
 DELETE FROM product_tag WHERE product_id = ?;
@@ -33,9 +40,12 @@ INSERT INTO product_tag (product_id, position, tag) VALUES (?, ?, ?);
 count:
 SELECT count(*) FROM product;
 
+deletedCount:
+SELECT count(*) FROM product WHERE deleted = 1;
+
 byId:
 SELECT id, title, description, category, brand, price, discount_percentage, rating, stock, thumbnail
-FROM product WHERE id = ?;
+FROM product WHERE id = ? AND deleted = 0;
 
 tagsOf:
 SELECT tag FROM product_tag WHERE product_id = ? ORDER BY position;
@@ -58,6 +68,7 @@ after AS (
 SELECT id, title, price, discounted_price, rating, thumbnail FROM keyed
 WHERE (:cursor IS NULL OR sort_key > (SELECT cursor_key FROM after)
     OR (sort_key = (SELECT cursor_key FROM after) AND id > :cursor))
+  AND deleted = 0
   AND (instr(lower(title), lower(:text)) > 0 OR instr(lower(brand), lower(:text)) > 0)
   AND (:category IS NULL OR category = :category)
   AND (:minPrice IS NULL OR discounted_price >= :minPrice)
