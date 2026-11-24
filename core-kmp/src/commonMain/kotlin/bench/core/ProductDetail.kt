@@ -28,6 +28,8 @@ data class ProductDetail(
 
     val ratingBucket: RatingBucket get() = RatingBucket.of(rating)
 
+    val stockStatus: StockStatus get() = StockStatus.of(stock)
+
     private companion object {
         const val UNITS = 10_000L
         const val PERCENT = 100

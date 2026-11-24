@@ -90,6 +90,7 @@ class KmpContractCore(
                 "rating" to JsonPrimitive(product.rating),
                 "ratingBucket" to JsonPrimitive(RATING_BUCKETS.getValue(product.ratingBucket)),
                 "stock" to JsonPrimitive(product.stock),
+                "stockStatus" to JsonPrimitive(STOCK_STATUSES.getValue(product.stockStatus)),
                 "thumbnail" to JsonPrimitive(product.thumbnail),
                 "tags" to JsonArray(product.tags.map(::JsonPrimitive)),
             ),
@@ -117,6 +118,12 @@ class KmpContractCore(
                 RatingBucket.Good to "good",
                 RatingBucket.Fair to "fair",
                 RatingBucket.Poor to "poor",
+            )
+        val STOCK_STATUSES =
+            mapOf(
+                StockStatus.InStock to "in-stock",
+                StockStatus.LowStock to "low-stock",
+                StockStatus.OutOfStock to "out-of-stock",
             )
     }
 }

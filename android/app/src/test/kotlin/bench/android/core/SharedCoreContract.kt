@@ -59,6 +59,7 @@ class SharedCoreContract(
                 "rating" to rating,
                 "ratingBucket" to RATING_BUCKETS.getValue(ratingBucket),
                 "stock" to stock,
+                "stockStatus" to STOCK_STATUSES.getValue(stockStatus),
                 "thumbnail" to thumbnail,
                 "tags" to JsonArray(tags.map(::JsonPrimitive)),
             )
@@ -96,6 +97,12 @@ class SharedCoreContract(
                 RatingBucket.Good to "good",
                 RatingBucket.Fair to "fair",
                 RatingBucket.Poor to "poor",
+            )
+        val STOCK_STATUSES =
+            mapOf(
+                StockStatus.InStock to "in-stock",
+                StockStatus.LowStock to "low-stock",
+                StockStatus.OutOfStock to "out-of-stock",
             )
     }
 }

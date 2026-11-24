@@ -15,7 +15,8 @@
       "args": { "id": 1 },
       "expect": {
         "id": 1, "title": "Essence Mascara", "description": "Lash mascara", "category": "beauty", "brand": "Essence",
-        "price": 9.99, "discountPercentage": 7.5, "discountedPrice": 9.24, "rating": 4.5, "ratingBucket": "excellent", "stock": 5,
+        "price": 9.99, "discountPercentage": 7.5, "discountedPrice": 9.24,
+        "rating": 4.5, "ratingBucket": "excellent", "stock": 5, "stockStatus": "low-stock",
         "thumbnail": "https://cdn.dummyjson.com/1.png", "tags": ["sale"]
       }
     }

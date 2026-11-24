@@ -76,6 +76,7 @@ class FakeSharedCoreTest {
                 rating = 3.5,
                 ratingBucket = RatingBucket.Fair,
                 stock = 44,
+                stockStatus = StockStatus.InStock,
                 thumbnail = "https://cdn.dummyjson.com/2.png",
                 tags = listOf("beauty", "eyeshadow"),
             )
