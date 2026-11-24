@@ -103,6 +103,9 @@ class KmpContractCore(
                 "id" to JsonPrimitive(product.id),
                 "title" to JsonPrimitive(product.title),
                 "price" to JsonPrimitive(product.price),
+                "discountedPrice" to JsonPrimitive(product.discountedPrice),
+                "rating" to JsonPrimitive(product.rating),
+                "thumbnail" to JsonPrimitive(product.thumbnail),
             ),
         )
 

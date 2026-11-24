@@ -34,7 +34,7 @@ class KmpSharedCore(
         size: Int,
     ): PageResult =
         when (val result = core.page(cursor, size)) {
-            is CorePageResult.Page -> PageResult.Page(result.items.map(::product), result.nextCursor)
+            is CorePageResult.Page -> PageResult.Page(result.items.map(::summary), result.nextCursor)
             CorePageResult.InvalidSize -> PageResult.InvalidSize
         }
 
@@ -75,7 +75,8 @@ class KmpSharedCore(
             CoreStockStatus.OutOfStock -> StockStatus.OutOfStock
         }
 
-    private fun product(product: CoreProductSummary) = ProductSummary(product.id, product.title, product.price)
+    private fun summary(summary: CoreProductSummary) =
+        with(summary) { ProductSummary(id, title, price, discountedPrice, rating, thumbnail) }
 
     companion object {
         fun create(
