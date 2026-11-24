@@ -8,9 +8,10 @@ Compares KMP, Rust/UniFFI and Lua as a shared business-logic core for an iOS and
 - `contract/README.md` and `android/README.md` — what fixtures and app tests need; read before changing either
 - GitHub issues on `onato/shared-core-bench` — the work queue (board: users/onato/projects/2)
 
-Each issue carries a "Tests to write first" checklist — that is the test list. When I say "go",
-find the next unchecked test in the current issue, implement the test, then implement only enough
-code to make that test pass. Tick it only when it passes along with every other non-benchmark test.
+Each issue carries two checklists: "Contract cases" (the outer loop, below) and "Tests to write
+first" (the test list). When I say "go", start with the contract cases if they aren't written yet;
+otherwise find the next unchecked test, implement the test, then implement only enough code to make
+that test pass. Tick an item only when it passes along with every other non-benchmark test.
 
 # Issue and PR workflow
 
@@ -39,9 +40,21 @@ code to make that test pass. Tick it only when it passes along with every other 
 
 # TDD and Tidy First
 
+Two loops, as in *Growing Object-Oriented Software, Guided by Tests*:
+
+- **Outer loop: contract cases.** The issue's "Contract cases" are acceptance tests: fixtures in
+  `contract/cases/` that every core must pass, Rust and Lua included. Write them all first, before
+  any production code, and run them: they fail together because the feature doesn't exist yet.
+  That one red run is their evidence. A case that turns green partway through the inner loop is
+  expected. Never break code on purpose to make a case fail.
+- **Inner loop: tests to write first.** Strict TDD, one test at a time, until the contract cases
+  pass. An issue may have no inner tests when its contract cases drive the whole change. The rules
+  below are for this loop.
+
 - Red → Green → Refactor. Write the simplest failing test, run it, and see it fail for the
   expected reason before writing production code. A test that passes on first run proves
-  nothing — fix the test.
+  nothing: drop it if it adds no behaviour, or rewrite it until it demands code that doesn't exist
+  yet. Never break code on purpose to see it fail.
 - Implement only enough to pass. Refactor only when green, in named steps (Extract Function,
   Inline Variable, …), running the tests after each. The refactor step reshapes only code this
   branch added. Extracting from, renaming or moving code already on `main` is a structural change:

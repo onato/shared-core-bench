@@ -20,8 +20,25 @@ learned.
   request linked to issue** → In review, **Auto-add to project** (`is:issue`). The Ralph loop
   refuses to start while any is off, and moves closed issues the board missed to Done.
 - **Next issue**: the lowest-numbered open Todo issue in the current milestone whose blockers are
-  closed. Each issue lists its tests to write first; "go" means the next unchecked test in the
-  current issue (Beck's `plan.md` loop, one file per issue instead of one per repo).
+  closed. Each issue lists its contract cases and its tests to write first; "go" means the next
+  unchecked test in the current issue (Beck's `plan.md` loop, one file per issue instead of one per
+  repo), after its contract cases are written.
+- **Issue format** (see `CLAUDE.md` → TDD for the two loops):
+
+  ```markdown
+  ## Goal
+  ## Contract cases            ← fixtures in contract/cases/, all written first, red together
+  - [ ] Fixture: `<case>` — <the behaviour it pins>
+  ## Tests to write first      ← unit, app and UI tests, one at a time, each red before its code
+  - [ ] <behaviour>
+  ## Done when
+  - Contract cases seen failing together before any code, and each test seen failing before its
+    own code (say so in the PR)
+  ## Blocked by
+  ```
+
+  Either list may be `none` (say why). Order the tests to write first so each one needs code the
+  earlier ones didn't: a test the previous step already satisfies belongs in no list.
 - Hierarchy uses GitHub sub-issues: one parent issue per milestone, tasks as its sub-issues, and
   GitHub issue dependencies ("blocked by") for order.
 - Board: https://github.com/users/onato/projects/2

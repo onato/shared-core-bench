@@ -36,8 +36,12 @@ Check the diff against the issue the PR closes, without reference to Pass 1.
 
 ## Evidence
 
-The PR body's Evidence section must show the new tests failing for the expected reason before
-the code, and passing after, with the coverage result. Missing or unconvincing evidence is a
+The PR body's Evidence section must show, before the code, the issue's new contract cases
+failing together in one run (the outer loop), and each new test failing for the expected reason
+before its own code (the inner loop). It must then show them all passing, with the coverage result.
+A contract case that went green partway through the inner loop is expected. A red run made by
+breaking code on purpose, or a test that passed on its first run and was kept, is a **hard**
+finding. Missing or unconvincing evidence is a
 **hard** finding. A change with no new behaviour (docs, config, `Structural:`) needs no red run
 but must say why.
 

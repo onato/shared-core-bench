@@ -60,7 +60,8 @@ Go through the patterns in this order and pick the cheapest fix that would have 
 ## 5. File the fixes
 
 Each fix is its own issue in the current milestone, with tests to write first where it is
-code. Each fix becomes a small PR of its own, never part of a feature PR.
+code. Issues follow the format in `ISSUES.md` → Issue format, which keeps contract cases apart
+from tests to write first. Each fix becomes a small PR of its own, never part of a feature PR.
 
 - **Tightening or clarifying**, such as a new check, a clearer doc or a stricter rule: file it
   as an issue that blocks the next Todo issue, so the loop takes it first. The improver may
