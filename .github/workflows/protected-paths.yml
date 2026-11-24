@@ -1,0 +1,32 @@
+name: protected-paths
+# pull_request_target runs this workflow, the script and the list as they are on main, so a PR
+# can't edit its way past the check. Nothing from the PR is checked out or run.
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+permissions:
+  contents: read
+  issues: read
+  pull-requests: read
+jobs:
+  protected-paths:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: List the paths the PR changes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        # previous_filename covers renames, so moving a protected file away still counts.
+        run: >
+          gh api --paginate "repos/${{ github.repository }}/pulls/${{ github.event.number }}/files"
+          --jq '.[] | .filename, (.previous_filename // empty)' > "$RUNNER_TEMP/changed.txt"
+      - name: Read the PR's label events
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >
+          gh api --paginate "repos/${{ github.repository }}/issues/${{ github.event.number }}/events"
+          --jq '.[]' | jq -s . > "$RUNNER_TEMP/label-events.json"
+      - name: Check protected paths
+        run: >
+          python3 scripts/protected_paths.py --approver "${{ github.repository_owner }}"
+          --label-events "$RUNNER_TEMP/label-events.json" < "$RUNNER_TEMP/changed.txt"

@@ -18,6 +18,9 @@ The `protect-main` ruleset applies to the default branch, with no bypass actors 
   - `ci` — `make lint test coverage`
   - `pr-size` — at most 400 changed lines, tests included, excluding `.github/pr-size-exclude`;
     an oversized PR passes only once the owner adds the `size-approved` label
+  - `protected-paths` — a PR touching a path in `.github/protected-paths` passes only once the
+    owner adds the `gate-approved` label. The check runs on `pull_request_target`, so its
+    workflow, script and list come from `main`, not from the PR.
   - `claude-review` — the Claude review must return `APPROVE`
 - No force pushes and no deletion of `main`.
 

@@ -1,0 +1,25 @@
+# A PR changing any of these needs the owner's gate-approved label (scripts/protected_paths.py).
+# gitignore-style patterns, matched as in pr-size-exclude.
+
+# Workflows, the review prompt, pr-size-exclude and this list
+/.github/
+/CODING_STANDARDS.md
+
+# Hooks, settings and skills, including the improver's retro playbook
+/.claude/
+
+# The loop's instructions
+/.ralph/PROMPT.md
+/.ralph/IMPROVE.md
+
+# Coverage gates and exclusions
+coverage-exclusions
+/pyproject.toml
+/core-kmp/build.gradle.kts
+/android/app/build.gradle.kts
+
+# Scripts the checks run
+/scripts/gates.py
+/scripts/pr_size.py
+/scripts/protected_paths.py
+/scripts/review_verdict.py
