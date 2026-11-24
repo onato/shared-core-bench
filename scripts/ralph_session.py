@@ -9,7 +9,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Protocol
 
-from ralph import Issue, Outcome
+from ralph import Improvement, Issue, Outcome
 
 BOT = "onato-agent[bot]"
 BOT_EMAIL = "359795497+onato-agent[bot]@users.noreply.github.com"  # the bot's GitHub user id
@@ -55,6 +55,18 @@ class ClaudeSession:
         if text is None:
             return Outcome(pr=None, needs_human=f"the session ended without a result; see {log}")
         return outcome(text)
+
+    def improve(self, prs: tuple[int, ...]) -> Improvement:
+        worktree = self.repo.parent / f"shared-core-bench-improve-{self.now():%Y%m%d-%H%M%S}"
+        failed = self._add_worktree(worktree, ["--detach", "origin/main"])
+        if failed:
+            return Improvement(needs_human=failed)
+        named = "PRs " + ", ".join(f"#{n}" for n in prs)
+        prompt = (self.repo / ".ralph" / "IMPROVE.md").read_text().replace("{prs}", named)
+        text, log = self._claude(prompt, worktree, "improve")
+        if text is None:
+            return Improvement(needs_human=f"the session ended without a result; see {log}")
+        return Improvement(prs=numbers("PR", text), proposals=numbers("PROPOSED", text))
 
     def _add_worktree(self, worktree: Path, start: list[str]) -> str | None:
         """What failed, or None once the worktree exists."""
@@ -122,3 +134,7 @@ def outcome(text: str) -> Outcome:
         pr=int(pr.group(1)) if pr else None,
         needs_human=human.group(1) if human else None,
     )
+
+
+def numbers(marker: str, text: str) -> tuple[int, ...]:
+    return tuple(int(n) for n in re.findall(rf"^{marker}: #(\d+)\s*$", text, re.MULTILINE))
