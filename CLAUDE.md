@@ -17,6 +17,10 @@ code to make that test pass. Tick it only when it passes along with every other 
   blockers. Move it to In progress on the project board when starting.
 - One issue = one branch = one worktree (`swilliams/<issue#>-<slug>` from `origin/main`) = one PR
   whose body says `Closes #<n>`. Write the PR body with the `pr` skill.
+- A hook denies any `gh` call that publishes text without the `🤖 … Claude Code` marker line,
+  ticking an issue's checklist included, so keep that line in every body you write or edit. A
+  denied Bash call runs none of its commands: give each `gh` publish its own call, and write a
+  `--body-file` in an earlier one.
 - Keep PRs under 400 changed lines, tests included; only the generated or vendored paths in
   `.github/pr-size-exclude` are left out. Reviews lose effectiveness past 200–400 lines (the
   Cisco/SmartBear study), and test code already gets less review than production code.
