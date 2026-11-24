@@ -184,7 +184,7 @@ shared-core-bench/
   core-rust/           # Rust crate + uniffi.toml
   core-lua/            # Lua sources + C/JNI/Swift bridge
   fixtures/            # deterministic data generator + local fixture server (M1's generator is
-                       #   android/benchmark's ProductFixtures, until another core needs it)
+                       #   android/fixtures' ProductFixtures, until another core needs it)
   ios/                 # SwiftUI app, backend picker, benchmark screen
   android/             # Compose app, backend picker, benchmark screen; its own Gradle build
   report/              # CSV results + generated report

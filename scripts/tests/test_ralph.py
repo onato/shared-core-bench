@@ -33,6 +33,7 @@ class FakeGitHub:
         self.moves = []
         self.comments = []
         self.updates = []
+        self.update_fails = []  # errors the next updates raise, one each
         self.workflows = {name: True for name in REQUIRED_WORKFLOWS}
         self.approved = False  # the owner's plan-approved label on the milestone's parent
         self.undrafted = []
@@ -70,6 +71,8 @@ class FakeGitHub:
         return f"https://github.com/onato/shared-core-bench/issues/{issue}#issuecomment-1"
 
     def update_branch(self, pr):
+        if self.update_fails:
+            raise GitHubError(self.update_fails.pop(0))
         self.updates.append(pr)
         self.prs[pr] = replace(self.prs[pr], behind=False)
 
@@ -88,16 +91,31 @@ class FakeSession:
         self.status_at_start = []
         self.improved = []  # (the PRs it was given, how many issues had been worked by then)
         self.improvement = Improvement()
+        self.removed = []
+        self.removal_fails = {}  # issue → what failed
+        self.while_running = {}  # issue → what happens on GitHub while its session runs
+        # issue → the PRs updated by the time its session ended; "improve" → one list per run
+        self.updates_at_end = {}
 
-    def improve(self, prs):
+    def remove(self, issue):
+        self.removed.append(issue)
+        return self.removal_fails.get(issue)
+
+    def improve(self, prs, while_running):
         self.improved.append((prs, len(self.worked)))
+        self.while_running.pop("improve", lambda: None)()
+        while_running()
+        self.updates_at_end.setdefault("improve", []).append(list(self.github.updates))
         for number in self.improvement.prs:
             self.github.prs[number] = PullRequest(number=number, merged=True)
         return self.improvement
 
-    def work(self, issue):
+    def work(self, issue, while_running):
         self.worked.append(issue.number)
         self.status_at_start.append(self.github.issues[issue.number].status)
+        self.while_running.get(issue.number, lambda: None)()
+        while_running()
+        self.updates_at_end[issue.number] = list(self.github.updates)
         outcome, pr, pending = self.runs[issue.number]
         if pr is not None:
             self.github.prs[pr.number] = pr
@@ -277,6 +295,40 @@ def test_pending_prs_left_behind_main_are_brought_up_to_date_while_the_loop_work
     assert github.updates == [41]
 
 
+def test_a_pending_pr_that_falls_behind_while_a_session_runs_is_updated_before_it_ends():
+    github = FakeGitHub([Issue(7, TODO), Issue(8, TODO)])
+    session = FakeSession(github, {7: pending_run(40), 8: merged_run(41)})
+    session.while_running = {8: lambda: github.prs.update({40: PullRequest(40, behind=True)})}
+    clock = Clock()
+    clock.on_sleep = lambda: github.merge(7, 40)
+
+    loop(github, session, clock=clock)
+
+    assert (session.updates_at_end[7], session.updates_at_end[8]) == ([], [40])
+
+
+def test_a_github_error_while_a_session_runs_is_listed_in_the_stop_message_and_it_goes_on():
+    github = FakeGitHub([Issue(7, TODO), Issue(8, TODO), Issue(9, TODO)])
+    session = FakeSession(github, {7: pending_run(40), 8: merged_run(41), 9: merged_run(42)})
+
+    def falls_behind_and_update_fails():
+        github.prs[40] = PullRequest(40, behind=True)
+        github.update_fails = ["gh api pulls/40/update-branch failed: HTTP 502"]
+
+    session.while_running = {8: falls_behind_and_update_fails}
+    clock = Clock()
+    clock.on_sleep = lambda: github.merge(7, 40)
+
+    stop = loop(github, session, clock=clock)
+
+    assert session.worked == [7, 8, 9]
+    assert stop == (
+        "Ralph loop stopped: milestone complete.\n"
+        "GitHub errors while a session ran:\n"
+        "- gh api pulls/40/update-branch failed: HTTP 502"
+    )
+
+
 def test_at_the_iteration_cap_the_loop_waits_for_its_open_prs_before_stopping():
     github = FakeGitHub([Issue(7, TODO), Issue(8, TODO)])
     session = FakeSession(github, {7: pending_run(40, behind=True), 8: merged_run(41)})
@@ -312,6 +364,49 @@ def test_other_prs_a_session_merged_are_given_to_the_improver():
     loop(github, session)
 
     assert session.improved == [((130, 126), 1)]
+
+
+def test_after_a_session_whose_pr_merged_its_worktree_and_branch_are_removed():
+    github = FakeGitHub([Issue(7, TODO)])
+    session = FakeSession(github, {7: merged_run(40)})
+
+    loop(github, session)
+
+    assert session.removed == [7]
+
+
+def test_a_pending_prs_worktree_is_removed_once_it_merges():
+    github = FakeGitHub([Issue(7, TODO)])
+    session = FakeSession(github, {7: pending_run(40)})
+    clock = Clock()
+    clock.on_sleep = lambda: github.merge(7, 40)
+
+    loop(github, session, clock=clock)
+
+    assert session.removed == [7]
+
+
+def test_a_stuck_issues_worktree_is_kept_for_the_owner_even_if_its_pr_merged():
+    github = FakeGitHub([Issue(7, TODO), Issue(8, TODO)])
+    stuck = (Outcome(pr=40, needs_human="pick a licence"), PullRequest(number=40), False)
+    session = FakeSession(github, {7: stuck, 8: (Outcome(pr=None), None, False)})
+
+    loop(github, session)
+
+    assert session.removed == []
+
+
+def test_a_failed_removal_is_listed_in_the_stop_message_and_the_loop_goes_on():
+    github = FakeGitHub([Issue(7, TODO), Issue(8, TODO)])
+    session = FakeSession(github, {7: merged_run(40), 8: merged_run(41)})
+    session.removal_fails = {7: "git worktree remove failed: fatal: contains modified files"}
+
+    stop = loop(github, session)
+
+    assert session.worked == [7, 8]
+    assert stop.endswith(
+        "Worktrees left in place:\n- #7: git worktree remove failed: fatal: contains modified files"
+    )
 
 
 def test_gives_up_waiting_for_auto_merge_after_an_hour():
@@ -365,6 +460,22 @@ def test_after_five_merged_prs_an_improver_session_runs_before_the_next_issue():
     assert session.improved[0] == ((41, 42, 43, 44, 45), 5)
 
 
+def test_a_pending_pr_that_falls_behind_while_the_improver_runs_is_updated_before_it_ends():
+    github = FakeGitHub([Issue(n, TODO) for n in range(1, 8)])
+    session = FakeSession(
+        github, {1: pending_run(41), **{n: merged_run(40 + n) for n in range(2, 8)}}
+    )
+    session.while_running = {
+        "improve": lambda: github.prs.update({41: PullRequest(41, behind=True)})
+    }
+    clock = Clock()
+    clock.on_sleep = lambda: github.merge(1, 41)
+
+    loop(github, session, clock=clock)
+
+    assert session.updates_at_end["improve"][0] == [41]
+
+
 def test_with_nothing_left_to_take_an_improver_reviews_the_rest_before_the_loop_stops():
     github = FakeGitHub([Issue(7, TODO), Issue(8, TODO)], blocked_by={8: (7,)})
     session = FakeSession(github, {7: pending_run(40), 8: merged_run(41)})
@@ -407,6 +518,18 @@ def test_an_improver_that_needs_the_owner_messages_them_and_the_loop_goes_on():
 
     assert notes[0] == "Ralph loop: the improver needs you: git fetch origin failed: offline."
     assert stop.endswith("\nImprover needs you: git fetch origin failed: offline")
+
+
+def test_an_improver_worktree_left_in_place_is_listed_in_the_stop_message():
+    github = FakeGitHub([Issue(7, TODO)])
+    session = FakeSession(github, {7: merged_run(40)})
+    session.improvement = Improvement(left_in_place="git worktree remove failed: modified files")
+
+    stop = loop(github, session)
+
+    assert stop.endswith(
+        "\nImprover worktree left in place: git worktree remove failed: modified files"
+    )
 
 
 def test_the_loop_does_not_take_a_draft_issue():

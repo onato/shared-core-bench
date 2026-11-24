@@ -32,6 +32,7 @@ kotlin {
 
 dependencies {
     implementation("bench:core-kmp")
+    implementation(project(":fixtures"))
     testImplementation(libs.junit)
     testImplementation(libs.robolectric)
     androidTestImplementation(libs.benchmark.junit4)

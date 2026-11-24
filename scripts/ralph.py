@@ -57,6 +57,7 @@ class Improvement:
     prs: tuple[int, ...] = ()
     proposals: tuple[int, ...] = ()
     needs_human: str | None = None
+    left_in_place: str | None = None  # why its worktree could not be removed
 
 
 class GitHubError(Exception):
@@ -78,8 +79,10 @@ class GitHub(ReadsBoard, Protocol):
 
 
 class Session(Protocol):
-    def work(self, issue: Issue) -> Outcome: ...
-    def improve(self, prs: tuple[int, ...]) -> Improvement: ...
+    # `while_running` is called every POLL_SECONDS until the session ends.
+    def work(self, issue: Issue, while_running: Callable[[], None]) -> Outcome: ...
+    def remove(self, issue: int) -> str | None: ...  # what failed, if the worktree stays
+    def improve(self, prs: tuple[int, ...], while_running: Callable[[], None]) -> Improvement: ...
 
 
 def next_issue(issues: list[Issue]) -> Issue | None:
@@ -138,6 +141,9 @@ class _Loop:
     fixed: list[int] = field(default_factory=list)
     merged: list[int] = field(default_factory=list)  # since the last improver session
     improvements: list[Improvement] = field(default_factory=list)
+    worktrees: dict[int, int] = field(default_factory=dict)  # a pending PR → its issue
+    left_in_place: dict[int, str] = field(default_factory=dict)  # issue → why its worktree stayed
+    errors_while_running: list[str] = field(default_factory=list)
     waiting_since: float | None = None
 
     def run(self) -> str:
@@ -184,7 +190,7 @@ class _Loop:
 
     def improve(self) -> None:
         prs, self.merged = tuple(self.merged), []
-        improvement = self.session.improve(prs)
+        improvement = self.session.improve(prs, self.update_behind_pending)
         self.improvements.append(improvement)
         self.pending += improvement.prs
         for proposal in improvement.proposals:
@@ -202,8 +208,25 @@ class _Loop:
         self.pending = [pr.number for pr in prs if not pr.merged]
         self.merged += [pr.number for pr in prs if pr.merged and pr.number in self.opened]
         for pr in prs:
+            if pr.merged and pr.number in self.worktrees:
+                self.remove_worktree(self.worktrees.pop(pr.number))
+        self.update_behind(prs)
+
+    def update_behind(self, prs: list[PullRequest]) -> None:
+        for pr in prs:
             if not pr.merged and pr.behind:
                 self.github.update_branch(pr.number)
+
+    def update_behind_pending(self) -> None:
+        """While a session runs: a GitHub error is reported at the end, not raised into it."""
+        try:
+            self.update_behind([self.github.pull_request(n) for n in self.pending])
+        except GitHubError as error:
+            self.errors_while_running.append(str(error))
+
+    def remove_worktree(self, issue: int) -> None:
+        if failed := self.session.remove(issue):
+            self.left_in_place[issue] = failed
 
     def move_closed_to_done(self, issues: list[Issue]) -> None:
         for closed in [i for i in issues if not i.is_open and i.status != DONE]:
@@ -226,7 +249,7 @@ class _Loop:
         self.waiting_since = None
         self.iterations += 1
         self.github.set_status(issue.number, IN_PROGRESS)
-        outcome = self.session.work(issue)
+        outcome = self.session.work(issue, self.update_behind_pending)
         pr = self.github.pull_request(outcome.pr) if outcome.pr is not None else None
         if pr is not None:
             self.opened.append(pr.number)
@@ -244,8 +267,10 @@ class _Loop:
             )
         elif pr.merged:  # without a PR, stuck_reason gave a reason
             self.merged.append(pr.number)
+            self.remove_worktree(issue.number)
         else:
             self.pending.append(pr.number)
+            self.worktrees[pr.number] = issue.number
 
     def stop_message(self, headline: str | None) -> str:
         still_open = [i for i in self.github.milestone_issues(self.milestone) if i.is_open]
@@ -264,6 +289,16 @@ class _Loop:
         if self.fixed:
             moved = ", ".join(f"#{n}" for n in self.fixed)
             lines.append(f"Moved to Done (closed, but the board had not moved them): {moved}")
+        if self.left_in_place:
+            lines += [
+                "Worktrees left in place:",
+                *(f"- #{n}: {r}" for n, r in self.left_in_place.items()),
+            ]
+        if self.errors_while_running:
+            lines += [
+                "GitHub errors while a session ran:",
+                *(f"- {e}" for e in self.errors_while_running),
+            ]
         return "\n".join(lines + self.improver_lines())
 
     def improver_lines(self) -> list[str]:
@@ -274,6 +309,11 @@ class _Loop:
             lines.append("Improver proposals: " + ", ".join(f"#{n}" for n in proposals))
         lines += [
             f"Improver needs you: {i.needs_human}" for i in self.improvements if i.needs_human
+        ]
+        lines += [
+            f"Improver worktree left in place: {i.left_in_place}"
+            for i in self.improvements
+            if i.left_in_place
         ]
         return lines
 
@@ -376,7 +416,9 @@ if __name__ == "__main__":
         tokens = Tokens(
             app.app_id, app.installation_id, sign, github_post(urllib.request.urlopen), time.time
         )
-        session = ClaudeSession(repo, tokens, subprocess.run, dict(os.environ), datetime.now)
+        session = ClaudeSession(
+            repo, tokens, subprocess.run, subprocess.Popen, dict(os.environ), datetime.now
+        )
         telegram = Path.home() / ".claude" / "skills" / "telegram" / "send.sh"
 
         def notify(message: str) -> None:
