@@ -18,12 +18,13 @@ class FakeProcesses:
         self.events = events
         self.exit = exit
         self.calls = []
-        self.fails = {}  # git subcommand → the CompletedProcess it fails with
+        self.fails = {}  # git subcommand, one word or two → the CompletedProcess it fails with
 
     def __call__(self, args, **kwargs):
         self.calls.append((args, kwargs))
-        if args[0] == "git" and args[3] in self.fails:
-            return self.fails[args[3]]
+        for subcommand in (" ".join(args[3:5]), args[3]) if args[0] == "git" else ():
+            if subcommand in self.fails:
+                return self.fails[subcommand]
         if args[0] == "claude":
             for event in self.events:
                 kwargs["stdout"].write(json.dumps(event) + "\n")
@@ -207,3 +208,41 @@ def test_an_improver_that_ends_without_a_result_needs_a_human_and_points_at_its_
 
     log = repo / ".ralph" / "logs" / "20261123-010203-improve.log"
     assert improvement == Improvement(needs_human=f"the session ended without a result; see {log}")
+
+
+def test_removing_an_issues_worktree_keeps_uncommitted_work_and_deletes_its_branch(tmp_path):
+    processes = FakeProcesses()
+    repo, claude = session(tmp_path, processes)
+
+    failed = claude.remove(7)
+
+    assert failed is None
+    assert [args for args, _ in processes.calls] == [
+        ["git", "-C", str(repo), "worktree", "remove", str(tmp_path / "shared-core-bench-7")],
+        ["git", "-C", str(repo), "branch", "-D", "swilliams/7-ralph"],
+    ]
+
+
+def test_the_improvers_worktree_is_removed_once_its_session_ends(tmp_path):
+    processes = FakeProcesses(result("PR: #63"))
+    repo, claude = session(tmp_path, processes)
+
+    claude.improve((60,))
+
+    worktree = tmp_path / "shared-core-bench-improve-20261123-010203"
+    assert processes.calls[-1][0] == ["git", "-C", str(repo), "worktree", "remove", str(worktree)]
+
+
+def test_an_improver_worktree_that_cannot_be_removed_is_reported_with_its_prs(tmp_path):
+    processes = FakeProcesses(result("PR: #63"))
+    error = "fatal: contains modified or untracked files, use --force to delete it\n"
+    processes.fails = {"worktree remove": subprocess.CompletedProcess([], 128, "", error)}
+    _, claude = session(tmp_path, processes)
+
+    improvement = claude.improve((60,))
+
+    assert improvement == Improvement(
+        prs=(63,),
+        left_in_place="git worktree remove failed: fatal: contains modified or untracked files, "
+        "use --force to delete it",
+    )

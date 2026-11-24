@@ -88,6 +88,12 @@ class FakeSession:
         self.status_at_start = []
         self.improved = []  # (the PRs it was given, how many issues had been worked by then)
         self.improvement = Improvement()
+        self.removed = []
+        self.removal_fails = {}  # issue → what failed
+
+    def remove(self, issue):
+        self.removed.append(issue)
+        return self.removal_fails.get(issue)
 
     def improve(self, prs):
         self.improved.append((prs, len(self.worked)))
@@ -314,6 +320,49 @@ def test_other_prs_a_session_merged_are_given_to_the_improver():
     assert session.improved == [((130, 126), 1)]
 
 
+def test_after_a_session_whose_pr_merged_its_worktree_and_branch_are_removed():
+    github = FakeGitHub([Issue(7, TODO)])
+    session = FakeSession(github, {7: merged_run(40)})
+
+    loop(github, session)
+
+    assert session.removed == [7]
+
+
+def test_a_pending_prs_worktree_is_removed_once_it_merges():
+    github = FakeGitHub([Issue(7, TODO)])
+    session = FakeSession(github, {7: pending_run(40)})
+    clock = Clock()
+    clock.on_sleep = lambda: github.merge(7, 40)
+
+    loop(github, session, clock=clock)
+
+    assert session.removed == [7]
+
+
+def test_a_stuck_issues_worktree_is_kept_for_the_owner_even_if_its_pr_merged():
+    github = FakeGitHub([Issue(7, TODO), Issue(8, TODO)])
+    stuck = (Outcome(pr=40, needs_human="pick a licence"), PullRequest(number=40), False)
+    session = FakeSession(github, {7: stuck, 8: (Outcome(pr=None), None, False)})
+
+    loop(github, session)
+
+    assert session.removed == []
+
+
+def test_a_failed_removal_is_listed_in_the_stop_message_and_the_loop_goes_on():
+    github = FakeGitHub([Issue(7, TODO), Issue(8, TODO)])
+    session = FakeSession(github, {7: merged_run(40), 8: merged_run(41)})
+    session.removal_fails = {7: "git worktree remove failed: fatal: contains modified files"}
+
+    stop = loop(github, session)
+
+    assert session.worked == [7, 8]
+    assert stop.endswith(
+        "Worktrees left in place:\n- #7: git worktree remove failed: fatal: contains modified files"
+    )
+
+
 def test_gives_up_waiting_for_auto_merge_after_an_hour():
     github = FakeGitHub([Issue(7, TODO), Issue(8, TODO)], blocked_by={8: (7,)})
     session = FakeSession(github, {7: (Outcome(pr=40), PullRequest(number=40), True)})
@@ -407,6 +456,18 @@ def test_an_improver_that_needs_the_owner_messages_them_and_the_loop_goes_on():
 
     assert notes[0] == "Ralph loop: the improver needs you: git fetch origin failed: offline."
     assert stop.endswith("\nImprover needs you: git fetch origin failed: offline")
+
+
+def test_an_improver_worktree_left_in_place_is_listed_in_the_stop_message():
+    github = FakeGitHub([Issue(7, TODO)])
+    session = FakeSession(github, {7: merged_run(40)})
+    session.improvement = Improvement(left_in_place="git worktree remove failed: modified files")
+
+    stop = loop(github, session)
+
+    assert stop.endswith(
+        "\nImprover worktree left in place: git worktree remove failed: modified files"
+    )
 
 
 def test_the_loop_does_not_take_a_draft_issue():

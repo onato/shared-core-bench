@@ -54,6 +54,13 @@ class ClaudeSession:
             return Outcome(pr=None, needs_human=f"the session ended without a result; see {log}")
         return outcome(text)
 
+    def remove(self, issue: int) -> str | None:
+        """What failed, or None once the issue's worktree and branch are gone."""
+        return self._git(
+            ["worktree", "remove", str(self._worktree(issue))],
+            ["branch", "-D", self._branch(issue)],  # -D: a squash merge leaves it unmerged
+        )
+
     def _branch(self, issue: int) -> str:
         return f"swilliams/{issue}-ralph"
 
@@ -68,9 +75,14 @@ class ClaudeSession:
         named = "PRs " + ", ".join(f"#{n}" for n in prs)
         prompt = (self.repo / ".ralph" / "IMPROVE.md").read_text().replace("{prs}", named)
         text, log = self._claude(prompt, worktree, "improve")
+        left = self._git(["worktree", "remove", str(worktree)])
         if text is None:
-            return Improvement(needs_human=f"the session ended without a result; see {log}")
-        return Improvement(prs=numbers("PR", text), proposals=numbers("PROPOSED", text))
+            return Improvement(
+                needs_human=f"the session ended without a result; see {log}", left_in_place=left
+            )
+        return Improvement(
+            prs=numbers("PR", text), proposals=numbers("PROPOSED", text), left_in_place=left
+        )
 
     def _add_worktree(self, worktree: Path, start: list[str]) -> str | None:
         """What failed, or None once the worktree exists."""
