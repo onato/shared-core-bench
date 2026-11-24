@@ -10,7 +10,14 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val core = KmpSharedCore.create(this, dbPath = "products.db")
-        val fetcher = OkHttpFetcher(OkHttpClient())
+        val fixtureRecords = intent.getIntExtra("fixtureRecords", 0)
+        val client =
+            if (fixtureRecords > 0) {
+                fixtureClient(fixtureRecords, seed = intent.getLongExtra("fixtureSeed", 0))
+            } else {
+                OkHttpClient()
+            }
+        val fetcher = OkHttpFetcher(client)
         setContent {
             App(
                 { productPages(core, fetcher::fetch, PAGE_SIZE, it) },
