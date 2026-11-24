@@ -42,7 +42,9 @@ kotlin {
 
 dependencies {
     implementation("bench:core-kmp")
+    implementation(project(":fixtures"))
     kover(project(":benchmark"))
+    kover(project(":fixtures"))
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.material3)
     implementation(libs.activity.compose)

@@ -1,4 +1,4 @@
-package bench.benchmark
+package bench.fixtures
 
 import kotlin.random.Random
 

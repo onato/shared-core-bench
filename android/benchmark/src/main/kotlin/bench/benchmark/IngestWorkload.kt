@@ -7,6 +7,7 @@ import bench.core.Core
 import bench.core.CoreConfig
 import bench.core.DriverFactory
 import bench.core.IngestResult
+import bench.fixtures.ProductFixtures
 
 /** Benchmark 7: ingest one generated page of [count] products into a fresh database. */
 class IngestWorkload(
