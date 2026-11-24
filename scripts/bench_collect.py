@@ -9,6 +9,7 @@ from pathlib import Path
 
 # Fingerprints of the SDK's emulator images; a physical device never carries these.
 EMULATOR_MARKERS = ("sdk_gphone", "generic", "emulator")
+NS_PER_MS = 1_000_000
 
 
 def collect(report: dict, *, core: str, storage: str, build_type: str, git_sha: str) -> list[dict]:
@@ -23,20 +24,46 @@ def collect(report: dict, *, core: str, storage: str, build_type: str, git_sha: 
         "build_type": build_type,
         "git_sha": git_sha,
     }
-    return [where | _timings(benchmark) for benchmark in report["benchmarks"]]
+    return [where | row for benchmark in report["benchmarks"] for row in _timings(benchmark)]
 
 
-def _timings(benchmark: dict) -> dict:
-    timings = benchmark["metrics"]["timeNs"]
-    runs = sorted(timings["runs"])
+def _timings(benchmark: dict) -> list[dict]:
     # androidx.benchmark prefixes each suppressed error, e.g. `EMULATOR_` or `DEBUGGABLE_`.
     name = re.sub(r"^([A-Z]+_)+", "", benchmark["name"])
+    labels = {"suite": _suite(benchmark["className"]), "n": int(re.search(r"\d+", name).group())}
+    if "timeNs" in benchmark["metrics"]:
+        return [labels | {"workload": name} | _spread(benchmark["metrics"]["timeNs"], 1)]
+    # Macrobenchmark names times `<what>Ms`; its other metrics, such as `frameCount`, are counts.
+    timed = [
+        labels | {"workload": f"{name} {metric}"} | _spread(timings, NS_PER_MS)
+        for metric, timings in benchmark["metrics"].items()
+        if metric.endswith("Ms")
+    ]
+    # Per-frame samples, pooled across runs into percentiles.
+    sampled = [
+        labels
+        | {"workload": f"{name} {metric}"}
+        | {
+            "median_ns": samples["P50"] * NS_PER_MS,
+            "p95_ns": samples["P95"] * NS_PER_MS,
+            "runs": len(samples["runs"]),
+        }
+        for metric, samples in benchmark["sampledMetrics"].items()
+    ]
+    return timed + sampled
+
+
+def _suite(class_name: str) -> str:
+    if class_name.startswith("bench.macrobenchmark."):
+        return "app"
+    return "boundary" if class_name.endswith(".BoundaryBenchmark") else "core"
+
+
+def _spread(timings: dict, to_ns: int) -> dict:
+    runs = sorted(timings["runs"])
     return {
-        "suite": "boundary" if benchmark["className"].endswith(".BoundaryBenchmark") else "core",
-        "workload": name,
-        "n": int(re.search(r"\d+", name).group()),
-        "median_ns": timings["median"],
-        "p95_ns": runs[math.ceil(0.95 * len(runs)) - 1],
+        "median_ns": timings["median"] * to_ns,
+        "p95_ns": runs[math.ceil(0.95 * len(runs)) - 1] * to_ns,
         "runs": len(runs),
     }
 
