@@ -68,28 +68,52 @@ and stores them in SQLite, and the list pages through them from the database. Pr
 13. **Checkpoint** — what was hard, what the gates caught, PR sizes; write M2's tasks.
 
 At the end of M1 there is a running app, a passing contract suite, the coverage gate, a working
-`make bench`, and every change since M0 has been reviewed.
+`make bench`, and every change since M0 has been reviewed. Done: see `docs/checkpoints/M1.md`.
+
+---
+
+## M2 — Android + KMP complete
+
+Parent #101. Drafted at the M1 checkpoint as `draft` sub-issues; `plan-approved` on #101 releases
+them to the loop. Each issue spells out its contract result shapes and rules, since M1's sessions
+lost most of their guessing to shapes the issue left open.
+
+1. **No core types past the adapter** (#102) — detekt `ForbiddenImport`, and the moves it needs.
+2. **Full product** (#103) and **derived fields** (#104) — discounted price, rating bucket, stock
+   status, all in the contract.
+3. **Summaries** (#105) — page items become list-cell summaries; **cells** (#106) and the
+   **detail screen** (#107) show them.
+4. **Search** (#108), **filters** (#109), **sort** (#110) — keyset over `(sort_key, id)`; the
+   **search box** (#111) and **filter and sort controls** (#112).
+5. **Refresh with soft delete** (#113) and **pull to refresh** (#114).
+6. **Delegated storage** — the core's port, batched (#115) and chatty (#116); the Android port on
+   `sqlite-android` (#117); the **settings picker** (#118).
+7. **Fixture mode** (#119) and **instrumented UI tests** (#120).
+8. **Benchmarks** — boundary (#121), core workloads (#122), delegated-storage rows (#123),
+   Macrobenchmark (#124).
+9. **Checkpoint** (#125).
 
 ---
 
 ## Retros
 
-Each Ralph iteration leaves a `## Retro notes` comment on its PR; the checkpoint retro reads them
-with the review threads and proposes fixes, and the human picks which become issues.
+Each Ralph iteration leaves a `## Retro notes` comment on its PR. The `retro` skill
+(`.claude/skills/retro/SKILL.md`) reads them with the review threads and failed checks: the loop's
+improver session after every 5 merged PRs, and the checkpoint at the end of each milestone, which
+writes `docs/checkpoints/<milestone>.md`.
 
 - **Default: fix at the checkpoint**, from patterns across the milestone.
 - **Fix immediately** when a gate let something bad reach `main`, or the same problem shows up
   twice in a milestone — stop the loop and fix it first.
 - **Don't fix** one-off friction or style preferences; leave them in the notes.
 - A fix is its own small PR, filed as an issue in the current milestone that blocks the next task.
+  Tightening fixes are built by the improver or the checkpoint; anything that loosens a gate or
+  changes `SPEC.md` becomes a `retro-proposal` issue for the owner.
 
 ---
 
 ## Later milestones (tasks written at each checkpoint)
 
-- **M2 — Android + KMP complete**: full product model, derived fields, search and filters, detail
-  screen, refresh with soft delete, settings picker, delegated-storage port, instrumented UI tests,
-  Macrobenchmark, full bench suite.
 - **M3 — iOS + KMP**: iOS app with the same features, XCFramework + SKIE, Swift storage port,
   XCTest benches.
 - **M4 — Android + Rust/UniFFI**: Rust core passing the contract suite, cargo-ndk, Kotlin bindings.
