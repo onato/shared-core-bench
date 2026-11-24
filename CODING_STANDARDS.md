@@ -13,6 +13,11 @@ judgement calls.
 - Behaviour shared across cores is specified once, as a golden fixture in `contract/`. A
   core-specific test is only for behaviour that exists in that core alone (bridge code, memory
   ownership, errors crossing the FFI).
+- The contract adapters (`KmpContractCore.kt` in core-kmp's tests, `SharedCoreContract.kt` in the
+  app's) mirror each other on purpose: each maps the contract's JSON onto its own build's types, and
+  the two builds share no test source set. Repeated argument parsing and string-to-enum maps between
+  them are not a finding. `contract/README.md` → "Changing a result or a required field" lists what a
+  change must touch in both.
 - Tests run against real SQLite (in-memory or a temp file), never a mocked database. Fakes are for
   the network and the clock only.
 - When fixing a defect: an API-level failing test first, then the smallest test that reproduces
@@ -30,7 +35,8 @@ green.
   passes by construction. Expected values come from an independent source: a literal, a worked
   example, the spec, a contract fixture.
 - **Horizontal slicing**: all the tests first, then all the code. One test → one implementation →
-  repeat.
+  repeat. An issue's contract cases are the exception: they are the outer loop, written together
+  before any code (`CLAUDE.md` → TDD), while its tests to write first still go one at a time.
 
 ## Coverage
 
