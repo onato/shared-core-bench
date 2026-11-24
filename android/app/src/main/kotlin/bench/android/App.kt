@@ -5,18 +5,22 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.NonSkippableComposable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -30,13 +34,17 @@ import androidx.paging.LoadState
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
+import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import bench.android.core.FetchRequest
 import bench.android.core.ProductDetail
 import bench.android.core.ProductSummary
 import bench.android.core.Query
 import bench.android.core.SharedCore
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.Locale
 
 fun productPages(
@@ -71,41 +79,71 @@ private fun ProductCell(
     )
 }
 
+// Skipping gains nothing while App, its only caller, never skips; its generated skip branches are unreachable.
+@NonSkippableComposable
+@Composable
+private fun ProductList(
+    items: LazyPagingItems<ProductSummary>,
+    emptyMessage: String,
+    listState: LazyListState,
+    onSelect: (Long) -> Unit,
+    onRefresh: () -> Unit,
+) {
+    val loadingFirstPage = items.loadState.refresh is LoadState.Loading && items.itemCount == 0
+    PullToRefreshBox(
+        isRefreshing = items.loadState.refresh is LoadState.Loading && items.itemCount > 0,
+        onRefresh = onRefresh,
+    ) {
+        LazyColumn(Modifier.fillMaxSize(), state = listState) {
+            item { Text("Products") }
+            items(items.itemCount) { index ->
+                items[index]?.let { product -> ProductCell(product, Modifier.clickable { onSelect(product.id) }) }
+            }
+            if (items.itemCount == 0 && items.loadState.append.endOfPaginationReached) {
+                item { Text(emptyMessage) }
+            }
+            if (loadingFirstPage || items.loadState.append is LoadState.Loading) {
+                item { CircularProgressIndicator() }
+            }
+            items.loadState.firstError()?.let { failure ->
+                item {
+                    Text(failure.error.message.orEmpty())
+                    Button(onClick = items::retry) { Text("Retry") }
+                }
+            }
+        }
+    }
+}
+
 // The root screen gains nothing from skipping, and its generated skip branches are unreachable in tests.
 @NonSkippableComposable
 @Composable
 fun App(
     products: (Query) -> Flow<PagingData<ProductSummary>>,
     detail: (Long) -> ProductDetail?,
+    refresh: () -> Unit,
 ) {
     var text by rememberSaveable { mutableStateOf("") }
     val items = remember(text) { products(Query(text)) }.collectAsLazyPagingItems()
     val listState = rememberLazyListState()
+    val scope = rememberCoroutineScope()
     var selected by rememberSaveable { mutableStateOf<Long?>(null) }
     when (val id = selected) {
         null -> {
             Column {
                 TextField(value = text, onValueChange = { text = it }, label = { Text("Search") }, singleLine = true)
-                LazyColumn(state = listState) {
-                    item { Text("Products") }
-                    items(items.itemCount) { index ->
-                        items[index]?.let { product ->
-                            ProductCell(product, Modifier.clickable { selected = product.id })
+                ProductList(
+                    items,
+                    emptyMessage = if (text.isEmpty()) "No products" else "No products match",
+                    listState = listState,
+                    onSelect = { selected = it },
+                    onRefresh = {
+                        scope.launch {
+                            withContext(Dispatchers.IO) { refresh() }
+                            items.refresh()
                         }
-                    }
-                    if (items.itemCount == 0 && items.loadState.append.endOfPaginationReached) {
-                        item { Text(if (text.isEmpty()) "No products" else "No products match") }
-                    }
-                    if (items.loadState.refresh is LoadState.Loading || items.loadState.append is LoadState.Loading) {
-                        item { CircularProgressIndicator() }
-                    }
-                    items.loadState.firstError()?.let { failure ->
-                        item {
-                            Text(failure.error.message.orEmpty())
-                            Button(onClick = items::retry) { Text("Retry") }
-                        }
-                    }
-                }
+                    },
+                )
             }
         }
 
