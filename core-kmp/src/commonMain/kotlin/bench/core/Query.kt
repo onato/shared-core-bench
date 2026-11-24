@@ -12,7 +12,7 @@ data class Query(
     val sort: Sort = Sort.Id,
 )
 
-/** The order a page lists products in; ties always fall back to ascending id. */
+/** The order a page lists products in; ties order by ascending id. The price sorts use the discounted price. */
 enum class Sort(
     internal val key: String,
 ) {

@@ -37,7 +37,7 @@ class Core private constructor(
         val rows =
             database.productQueries
                 .pageAfter(
-                    cursor = cursor ?: Long.MIN_VALUE,
+                    cursor = cursor,
                     text = query.text,
                     category = query.category,
                     minPrice = query.minPrice,
