@@ -9,16 +9,16 @@ import kotlin.test.assertFailsWith
 class ContractRunnerTest {
     private val dir: File = Files.createTempDirectory("contract").toFile()
 
-    private fun fixture(
+    private fun caseFile(
         name: String,
         json: String,
     ) = File(dir, name).writeText(json)
 
     @Test
-    fun eachFixtureFileBecomesOneTestNamedAfterIt() {
-        fixture("paging.json", """{"steps": []}""")
-        fixture("decoding.json", """{"steps": []}""")
-        fixture("README.md", "not a case")
+    fun eachCaseFileBecomesOneTestNamedAfterIt() {
+        caseFile("paging.json", """{"steps": []}""")
+        caseFile("decoding.json", """{"steps": []}""")
+        caseFile("README.md", "not a case")
 
         val tests = ContractRunner.cases(dir) { FakeCore() }
 
@@ -27,7 +27,7 @@ class ContractRunnerTest {
 
     @Test
     fun eachStepTypeReachesTheMatchingCoreCallAndPassesWhenResultsMatch() {
-        fixture(
+        caseFile(
             "all-steps.json",
             """
             {"steps": [
@@ -47,7 +47,7 @@ class ContractRunnerTest {
 
     @Test
     fun aStepWhoseResultDiffersFailsShowingExpectedAndActual() {
-        fixture(
+        caseFile(
             "mismatch.json",
             """
             {"steps": [
@@ -83,7 +83,7 @@ class ContractRunnerTest {
 
     @Test
     fun anUnknownStepTypeFailsNamingTheFileAndStep() {
-        fixture(
+        caseFile(
             "typo.json",
             """
             {"steps": [
