@@ -9,7 +9,7 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.longOrNull
 
-data class Product(
+data class ProductSummary(
     val id: Long,
     val title: String,
     val price: Double,

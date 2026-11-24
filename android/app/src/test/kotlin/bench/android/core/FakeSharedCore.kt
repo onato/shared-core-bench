@@ -2,8 +2,8 @@ package bench.android.core
 
 /** An in-memory [SharedCore] for app tests. */
 class FakeSharedCore(
-    stored: List<Product> = emptyList(),
-    private val remotePages: List<List<Product>> = emptyList(),
+    stored: List<ProductSummary> = emptyList(),
+    private val remotePages: List<List<ProductSummary>> = emptyList(),
     details: List<ProductDetail> = emptyList(),
 ) : SharedCore {
     private val products = stored.associateBy { it.id }.toSortedMap()

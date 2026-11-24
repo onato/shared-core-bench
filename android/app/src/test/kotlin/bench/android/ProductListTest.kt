@@ -12,7 +12,7 @@ import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeUp
 import bench.android.core.FakeSharedCore
 import bench.android.core.FetchRequest
-import bench.android.core.Product
+import bench.android.core.ProductSummary
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -25,8 +25,8 @@ class ProductListTest {
     @get:Rule
     val compose = createComposeRule()
 
-    private val mascara = Product(id = 1, title = "Essence Mascara", price = 9.99)
-    private val palette = Product(id = 2, title = "Eyeshadow Palette", price = 19.0)
+    private val mascara = ProductSummary(id = 1, title = "Essence Mascara", price = 9.99)
+    private val palette = ProductSummary(id = 2, title = "Eyeshadow Palette", price = 19.0)
 
     private fun noNetwork(request: FetchRequest): FetchResult = error("unexpected fetch of ${request.url}")
 
@@ -54,7 +54,7 @@ class ProductListTest {
 
     @Test
     fun scrollingToTheEndLoadsMoreProducts() {
-        show(FakeSharedCore(stored = (1L..30L).map { Product(id = it, title = "Product $it", price = 1.0) }))
+        show(FakeSharedCore(stored = (1L..30L).map { ProductSummary(id = it, title = "Product $it", price = 1.0) }))
 
         awaitText("Product 1")
         assertEquals(0, compose.onAllNodesWithText("Product 30").fetchSemanticsNodes().size)

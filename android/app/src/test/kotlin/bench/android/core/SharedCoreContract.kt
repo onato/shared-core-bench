@@ -68,7 +68,7 @@ class SharedCoreContract(
 
     override fun stats(args: JsonObject): JsonElement = json("productCount" to core.stats().productCount)
 
-    private fun productJson(it: Product) = json("id" to it.id, "title" to it.title, "price" to it.price)
+    private fun productJson(it: ProductSummary) = json("id" to it.id, "title" to it.title, "price" to it.price)
 
     private fun json(vararg fields: Pair<String, Any?>): JsonObject {
         val elements = fields.associate { (key, value) -> key to element(value) }

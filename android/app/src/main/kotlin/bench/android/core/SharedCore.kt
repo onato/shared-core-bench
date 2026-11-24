@@ -25,7 +25,7 @@ data class FetchRequest(
     val url: String,
 )
 
-data class Product(
+data class ProductSummary(
     val id: Long,
     val title: String,
     val price: Double,
@@ -75,7 +75,7 @@ enum class IngestFailure { UnknownRequest, InvalidJson, NotAProductPage, Storage
 
 sealed interface PageResult {
     data class Page(
-        val items: List<Product>,
+        val items: List<ProductSummary>,
         val nextCursor: Long?,
     ) : PageResult
 

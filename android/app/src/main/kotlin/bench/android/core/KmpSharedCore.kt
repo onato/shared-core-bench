@@ -6,7 +6,7 @@ import bench.core.Core
 import bench.core.CoreConfig
 import bench.core.IngestResult as CoreIngestResult
 import bench.core.PageResult as CorePageResult
-import bench.core.Product as CoreProduct
+import bench.core.ProductSummary as CoreProductSummary
 import bench.core.RatingBucket as CoreRatingBucket
 import bench.core.StockStatus as CoreStockStatus
 
@@ -75,7 +75,7 @@ class KmpSharedCore(
             CoreStockStatus.OutOfStock -> StockStatus.OutOfStock
         }
 
-    private fun product(product: CoreProduct) = Product(product.id, product.title, product.price)
+    private fun product(product: CoreProductSummary) = ProductSummary(product.id, product.title, product.price)
 
     companion object {
         fun create(

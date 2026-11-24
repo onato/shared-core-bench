@@ -97,7 +97,7 @@ class KmpContractCore(
         )
     }
 
-    private fun productJson(product: Product) =
+    private fun productJson(product: ProductSummary) =
         JsonObject(
             mapOf(
                 "id" to JsonPrimitive(product.id),

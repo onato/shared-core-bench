@@ -5,16 +5,16 @@ import androidx.paging.PagingSource.LoadResult
 import androidx.paging.testing.TestPager
 import bench.android.core.FakeSharedCore
 import bench.android.core.FetchRequest
-import bench.android.core.Product
+import bench.android.core.ProductSummary
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class ProductPagingSourceTest {
-    private val mascara = Product(id = 1, title = "Essence Mascara", price = 9.99)
-    private val palette = Product(id = 2, title = "Eyeshadow Palette", price = 19.0)
-    private val canister = Product(id = 3, title = "Powder Canister", price = 14.99)
-    private val lipstick = Product(id = 4, title = "Red Lipstick", price = 12.99)
+    private val mascara = ProductSummary(id = 1, title = "Essence Mascara", price = 9.99)
+    private val palette = ProductSummary(id = 2, title = "Eyeshadow Palette", price = 19.0)
+    private val canister = ProductSummary(id = 3, title = "Powder Canister", price = 14.99)
+    private val lipstick = ProductSummary(id = 4, title = "Red Lipstick", price = 12.99)
 
     private val fetched = mutableListOf<FetchRequest>()
     private val responses = ArrayDeque<FetchResult>()

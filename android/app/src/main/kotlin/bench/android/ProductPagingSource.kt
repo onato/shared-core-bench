@@ -5,7 +5,7 @@ import androidx.paging.PagingState
 import bench.android.core.FetchRequest
 import bench.android.core.IngestResult
 import bench.android.core.PageResult
-import bench.android.core.Product
+import bench.android.core.ProductSummary
 import bench.android.core.SharedCore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -14,14 +14,14 @@ import kotlinx.coroutines.withContext
 class ProductPagingSource(
     private val core: SharedCore,
     private val fetch: (FetchRequest) -> FetchResult,
-) : PagingSource<Long, Product>() {
-    override suspend fun load(params: LoadParams<Long>): LoadResult<Long, Product> =
+) : PagingSource<Long, ProductSummary>() {
+    override suspend fun load(params: LoadParams<Long>): LoadResult<Long, ProductSummary> =
         withContext(Dispatchers.IO) { load(params.key, params.loadSize) }
 
     private tailrec fun load(
         cursor: Long?,
         size: Int,
-    ): LoadResult<Long, Product> {
+    ): LoadResult<Long, ProductSummary> {
         // Paging rejects a non-positive page size in PagingConfig, so InvalidSize cannot come back.
         val page = core.page(cursor, size) as PageResult.Page
         val request = if (page.nextCursor == null) core.nextFetch() else null
@@ -44,7 +44,7 @@ class ProductPagingSource(
             }
         }
 
-    override fun getRefreshKey(state: PagingState<Long, Product>): Long? = null
+    override fun getRefreshKey(state: PagingState<Long, ProductSummary>): Long? = null
 }
 
 class RemoteLoadException(

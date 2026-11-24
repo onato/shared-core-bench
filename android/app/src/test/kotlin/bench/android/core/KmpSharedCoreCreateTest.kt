@@ -22,7 +22,7 @@ class KmpSharedCoreCreateTest {
         core.ingest(request.requestId, status = 200, body = body.encodeToByteArray())
 
         assertEquals(
-            PageResult.Page(listOf(Product(id = 1, title = "Essence Mascara", price = 9.99)), nextCursor = null),
+            PageResult.Page(listOf(ProductSummary(id = 1, title = "Essence Mascara", price = 9.99)), nextCursor = null),
             core.page(cursor = null, size = 20),
         )
     }
