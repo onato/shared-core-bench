@@ -45,6 +45,22 @@ adds its first fixture.
 | `detail` | `{"id": n, "title": s, "description": s, "category": s, "brand": s\|null, "price": x, "discountPercentage": x, "discountedPrice": x, "rating": x, "ratingBucket": s, "stock": n, "stockStatus": s, "thumbnail": s, "tags": [s, …]}` for the stored product with `args.id`, tags in the order ingested; `null` when there is none. Three fields are derived: `discountedPrice` is `price × (1 − discountPercentage / 100)` rounded half up to cents, computed so binary floating point cannot shift a half cent (9.99 at 7.17% → 9.27, 0.05 at 50% → 0.03); `ratingBucket` is `"excellent"` for a rating ≥ 4.5, `"good"` ≥ 4.0, `"fair"` ≥ 3.0, else `"poor"`; `stockStatus` is `"out-of-stock"` for 0, `"low-stock"` for 1–9, `"in-stock"` for 10 and more. |
 | `stats` | `{"productCount": n}` — the number of distinct products stored. |
 
+## Changing a result or a required field
+
+Runners compare whole results, and every product body must pass `ingest`, so a shape change
+reaches well past the new fixture. Count these into the issue's size before starting:
+
+- **A field added to a step's result:** every case with that step (`grep -l '"step": "detail"'
+  contract/cases/*`), the step's row above, and both contract adapters:
+  `core-kmp/src/jvmTest/kotlin/bench/core/KmpContractCore.kt` and the app's
+  `android/app/src/test/kotlin/bench/android/core/SharedCoreContract.kt`. The app runs these cases
+  through its adapter, so its own type in `android/app/src/main/kotlin/bench/android/core/`
+  (`SharedCore.kt`, mapped in `KmpSharedCore.kt`) gains the field too.
+- **A new required input field:** every product body in `contract/cases`, the core's tests that
+  ingest products (`IngestStorageTest`, `AndroidDriversTest`), the app's adapter tests
+  (`KmpSharedCore*Test`, `FakeSharedCoreTest`, `Summaries.kt`) and the benchmark's
+  `android/benchmark/src/main/kotlin/bench/benchmark/ProductFixtures.kt`.
+
 ## Runners
 
 A core's runner turns each case file into its own test, sends every step to the core and compares
