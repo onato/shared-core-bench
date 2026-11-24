@@ -1,0 +1,17 @@
+{
+  "steps": [
+    {"step": "ingest", "args": {"requestId": 1, "status": 200, "body": "{\"products\": [{\"id\": 1, \"title\": \"Red Lipstick\", \"price\": 30.0, \"description\": \"A product from the dummyjson catalogue.\", \"category\": \"beauty\", \"brand\": \"Essence\", \"discountPercentage\": 0, \"rating\": 4.5, \"stock\": 5, \"thumbnail\": \"https://cdn.dummyjson.com/products/images/beauty/thumbnail.png\", \"tags\": [\"beauty\"]}, {\"id\": 2, \"title\": \"Eyeshadow Palette\", \"price\": 12.5, \"description\": \"A product from the dummyjson catalogue.\", \"category\": \"beauty\", \"brand\": \"Essence\", \"discountPercentage\": 20, \"rating\": 4.5, \"stock\": 5, \"thumbnail\": \"https://cdn.dummyjson.com/products/images/beauty/thumbnail.png\", \"tags\": [\"beauty\"]}, {\"id\": 3, \"title\": \"Powder Canister\", \"price\": 20.0, \"description\": \"A product from the dummyjson catalogue.\", \"category\": \"beauty\", \"brand\": \"Essence\", \"discountPercentage\": 0, \"rating\": 4.5, \"stock\": 5, \"thumbnail\": \"https://cdn.dummyjson.com/products/images/beauty/thumbnail.png\", \"tags\": [\"beauty\"]}, {\"id\": 4, \"title\": \"Red Nail Polish\", \"price\": 10.0, \"description\": \"A product from the dummyjson catalogue.\", \"category\": \"beauty\", \"brand\": \"Essence\", \"discountPercentage\": 0, \"rating\": 4.5, \"stock\": 5, \"thumbnail\": \"https://cdn.dummyjson.com/products/images/beauty/thumbnail.png\", \"tags\": [\"beauty\"]}, {\"id\": 5, \"title\": \"Calvin Klein CK One\", \"price\": 25.0, \"description\": \"A product from the dummyjson catalogue.\", \"category\": \"beauty\", \"brand\": \"Essence\", \"discountPercentage\": 50, \"rating\": 4.5, \"stock\": 5, \"thumbnail\": \"https://cdn.dummyjson.com/products/images/beauty/thumbnail.png\", \"tags\": [\"beauty\"]}]}"}, "expect": {"accepted": 5, "rejected": 0}},
+    {"step": "page", "args": {"query": {"sort": "price-asc"}, "cursor": null, "size": 20},
+      "expect": {
+        "items": [
+          {"id": 2, "title": "Eyeshadow Palette", "price": 12.5, "discountedPrice": 10.0, "rating": 4.5, "thumbnail": "https://cdn.dummyjson.com/products/images/beauty/thumbnail.png"},
+          {"id": 4, "title": "Red Nail Polish", "price": 10.0, "discountedPrice": 10.0, "rating": 4.5, "thumbnail": "https://cdn.dummyjson.com/products/images/beauty/thumbnail.png"},
+          {"id": 5, "title": "Calvin Klein CK One", "price": 25.0, "discountedPrice": 12.5, "rating": 4.5, "thumbnail": "https://cdn.dummyjson.com/products/images/beauty/thumbnail.png"},
+          {"id": 3, "title": "Powder Canister", "price": 20.0, "discountedPrice": 20.0, "rating": 4.5, "thumbnail": "https://cdn.dummyjson.com/products/images/beauty/thumbnail.png"},
+          {"id": 1, "title": "Red Lipstick", "price": 30.0, "discountedPrice": 30.0, "rating": 4.5, "thumbnail": "https://cdn.dummyjson.com/products/images/beauty/thumbnail.png"}
+        ],
+        "nextCursor": null
+      }
+    }
+  ]
+}

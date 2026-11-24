@@ -39,11 +39,12 @@ class Core private constructor(
         val rows =
             database.productQueries
                 .pageAfter(
-                    cursor = cursor ?: Long.MIN_VALUE,
+                    cursor = cursor,
                     text = query.text,
                     category = query.category,
                     minPrice = query.minPrice,
                     maxPrice = query.maxPrice,
+                    sort = query.sort.key,
                     limit = size + 1L,
                 ) { id, title, price, discountedPrice, rating, thumbnail ->
                     ProductSummary(id, title, price, discountedPrice, rating, thumbnail)
