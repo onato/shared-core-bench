@@ -7,6 +7,7 @@ import bench.core.CoreConfig
 import bench.core.IngestResult as CoreIngestResult
 import bench.core.PageResult as CorePageResult
 import bench.core.ProductSummary as CoreProductSummary
+import bench.core.Query as CoreQuery
 import bench.core.RatingBucket as CoreRatingBucket
 import bench.core.StockStatus as CoreStockStatus
 
@@ -32,8 +33,9 @@ class KmpSharedCore(
     override fun page(
         cursor: Long?,
         size: Int,
+        query: Query,
     ): PageResult =
-        when (val result = core.page(cursor, size)) {
+        when (val result = core.page(cursor, size, CoreQuery(query.text))) {
             is CorePageResult.Page -> PageResult.Page(result.items.map(::summary), result.nextCursor)
             CorePageResult.InvalidSize -> PageResult.InvalidSize
         }

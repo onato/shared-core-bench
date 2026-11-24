@@ -39,4 +39,7 @@ tagsOf:
 SELECT tag FROM product_tag WHERE product_id = ? ORDER BY position;
 
 pageAfter:
-SELECT id, title, price, discount_percentage, rating, thumbnail FROM product WHERE id > ? ORDER BY id LIMIT ?;
+SELECT id, title, price, discount_percentage, rating, thumbnail FROM product
+WHERE id > :cursor
+  AND (instr(lower(title), lower(:text)) > 0 OR instr(lower(brand), lower(:text)) > 0)
+ORDER BY id LIMIT :limit;
