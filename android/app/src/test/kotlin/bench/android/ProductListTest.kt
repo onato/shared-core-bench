@@ -6,6 +6,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasProgressBarRangeInfo
 import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
@@ -36,6 +37,7 @@ class ProductListTest {
 
     private val mascara = summary(id = 1, title = "Essence Mascara", price = 9.99)
     private val palette = summary(id = 2, title = "Eyeshadow Palette", price = 19.0)
+    private val bed = summary(id = 3, title = "Annibale Colombo Bed", price = 1899.99)
 
     private fun noNetwork(request: FetchRequest): FetchResult = error("unexpected fetch of ${request.url}")
 
@@ -43,7 +45,9 @@ class ProductListTest {
         core: FakeSharedCore,
         fetch: (FetchRequest) -> FetchResult = ::noNetwork,
     ) {
-        compose.setContent { App({ productPages(core, fetch, pageSize = 2, it) }, core::detail, core::refresh) }
+        compose.setContent {
+            App({ productPages(core, fetch, pageSize = 2, it) }, core::detail, core::refresh, core::categories)
+        }
     }
 
     @Test
@@ -209,6 +213,78 @@ class ProductListTest {
         compose.onNodeWithText("Essence Mascara").assertIsDisplayed()
     }
 
+    @Test
+    fun choosingACategoryShowsOnlyItsProducts() {
+        show(FakeSharedCore(stored = listOf(mascara, bed), categoryOf = mapOf(1L to "beauty", 3L to "furniture")))
+        awaitText("Essence Mascara")
+
+        choose("Category: All", "furniture")
+
+        awaitText("Annibale Colombo Bed")
+        awaitGone("Essence Mascara")
+    }
+
+    @Test
+    fun aPriceRangeShowsOnlyTheProductsPricedInsideIt() {
+        show(FakeSharedCore(stored = listOf(mascara, palette, bed)))
+        awaitText("Essence Mascara")
+
+        type("Min price", "10")
+        type("Max price", "100")
+
+        awaitGone("Essence Mascara")
+        awaitText("Eyeshadow Palette")
+        awaitGone("Annibale Colombo Bed")
+    }
+
+    private fun type(
+        field: String,
+        text: String,
+    ) = compose.onNode(hasSetTextAction() and hasText(field)).performTextReplacement(text)
+
+    @Test
+    fun clearingTheFiltersRestoresTheFullList() {
+        show(
+            FakeSharedCore(
+                stored = listOf(mascara, palette, bed),
+                categoryOf = mapOf(1L to "beauty", 3L to "furniture"),
+            ),
+        )
+        choose("Category: All", "furniture")
+        type("Max price", "100")
+        awaitGone("Annibale Colombo Bed")
+
+        compose.onNodeWithText("Clear filters").performClick()
+
+        awaitText("Essence Mascara")
+        awaitText("Annibale Colombo Bed")
+    }
+
+    @Test
+    fun choosingPriceLowToHighReordersTheList() {
+        val lipstick = summary(id = 4, title = "Red Lipstick", price = 12.99)
+        show(FakeSharedCore(stored = listOf(bed, lipstick)))
+        awaitText("Red Lipstick")
+
+        choose("Sort: Default", "Price: low to high")
+
+        compose.waitUntil { top("Red Lipstick") < top("Annibale Colombo Bed") }
+    }
+
+    private fun top(text: String) =
+        compose
+            .onNodeWithText(text)
+            .fetchSemanticsNode()
+            .boundsInRoot.top
+
+    private fun choose(
+        menu: String,
+        option: String,
+    ) {
+        compose.onNodeWithText(menu).performClick()
+        compose.onNodeWithText(option).performClick()
+    }
+
     private fun pullDown() = compose.onNode(hasScrollAction()).performTouchInput { swipeDown() }
 
     private fun cell(
@@ -233,7 +309,7 @@ class ProductListTest {
         compose.onNodeWithText(text).assertIsDisplayed()
     }
 
-    private fun search(text: String) = compose.onNode(hasSetTextAction()).performTextReplacement(text)
+    private fun search(text: String) = type("Search", text)
 
     private fun awaitGone(text: String) {
         compose.waitUntil { compose.onAllNodesWithText(text).fetchSemanticsNodes().isEmpty() }

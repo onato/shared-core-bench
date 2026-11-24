@@ -29,3 +29,6 @@ cbff9ec8f5c178def46d936bcd7cf04491bd4e80
 
 # Structural: KmpSharedCore's mappers as file-level functions (#176)
 8bf5dd0382330b763f51061ed2c4ca6ba11e00e0
+
+# Structural: ContractRunnerTest names case files, not fixtures (#186)
+e44753dbfaa1f6f37f91481471125f0d0a381caa

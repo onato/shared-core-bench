@@ -53,6 +53,7 @@ class ProductDetailTest {
                 { productPages(core, { request -> error("unexpected fetch of ${request.url}") }, pageSize, it) },
                 core::detail,
                 core::refresh,
+                core::categories,
             )
         }
     }

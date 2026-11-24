@@ -18,6 +18,8 @@ class FakeCore : ContractCore {
 
     override fun refresh(args: JsonObject): JsonElement = echo("refresh", args)
 
+    override fun categories(args: JsonObject): JsonElement = echo("categories", args)
+
     private fun echo(
         step: String,
         args: JsonObject,

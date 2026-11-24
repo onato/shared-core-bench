@@ -28,7 +28,7 @@ Every case starts from a fresh core with an empty database, configured with the 
 
 | Field | Meaning |
 |---|---|
-| `step` | The contract call: `ingest`, `page`, `detail`, `nextFetch`, `refresh` or `stats` (see `SPEC.md`, "Shared core contract") |
+| `step` | The contract call: `ingest`, `page`, `detail`, `nextFetch`, `refresh`, `categories` or `stats` (see `SPEC.md`, "Shared core contract") |
 | `args` | The call's parameters by name; omit when it takes none. Byte arguments such as `ingest`'s `body` are UTF-8 strings. |
 | `expect` | The exact JSON the call must return; `null` for "nothing". |
 
@@ -44,6 +44,7 @@ adds its first fixture.
 | `refresh` | `null`. Starts a new walk: the pending request moves to the next id at skip 0. When the page that brings a walk to its end is stored, every product that walk did not return is soft-deleted; a walk that stops before its end deletes nothing. A soft-deleted product stays stored but drops out of `page` and `detail` until a later page returns it again. |
 | `page` | `{"items": [{"id": n, "title": s, "price": x, "discountedPrice": x, "rating": x, "thumbnail": s}, …], "nextCursor": n}` — summaries of up to `args.size` stored products that aren't soft-deleted (`discountedPrice` as in `detail`) in `args.query.sort` order, starting after `args.cursor`, the `id` of the previous page's last item (from the first product when it is `null`). With the `id` sort any cursor works; with the others it must be a stored product's `id`. `args.query` is optional, and so is each of its fields; the products kept are those every given field keeps. `text: s` keeps products whose `title` or `brand` contains `s`, ignoring ASCII case, with `%` and `_` taken literally; an empty `text` keeps every product. `category: s` keeps products whose `category` is exactly `s`. `minPrice: x` and `maxPrice: x` keep products whose `discountedPrice` is at least / at most `x`. `sort` is `"id"` (the default, ascending), `"price-asc"` or `"price-desc"` (by `discountedPrice`) or `"rating-desc"`; ties order by ascending `id`. `nextCursor` is the last item's `id` when more products follow, `null` otherwise. `{"error": "invalid-page-size"}` when `size` ≤ 0. |
 | `detail` | `{"id": n, "title": s, "description": s, "category": s, "brand": s\|null, "price": x, "discountPercentage": x, "discountedPrice": x, "rating": x, "ratingBucket": s, "stock": n, "stockStatus": s, "thumbnail": s, "tags": [s, …]}` for the stored product with `args.id`, tags in the order ingested; `null` when there is none or it is soft-deleted. Three fields are derived: `discountedPrice` is `price × (1 − discountPercentage / 100)` rounded half up to cents, computed so binary floating point cannot shift a half cent (9.99 at 7.17% → 9.27, 0.05 at 50% → 0.03); `ratingBucket` is `"excellent"` for a rating ≥ 4.5, `"good"` ≥ 4.0, `"fair"` ≥ 3.0, else `"poor"`; `stockStatus` is `"out-of-stock"` for 0, `"low-stock"` for 1–9, `"in-stock"` for 10 and more. |
+| `categories` | `[s, …]` — the distinct `category` of the stored products that aren't soft-deleted, sorted ascending by code point; `[]` when there are none. |
 | `stats` | `{"productCount": n, "deletedCount": m}` — the number of distinct products stored, soft-deleted ones included, and how many of them are soft-deleted. |
 
 ## Changing a result or a required field
