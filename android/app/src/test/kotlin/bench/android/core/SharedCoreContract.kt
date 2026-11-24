@@ -46,7 +46,21 @@ class SharedCoreContract(
 
     override fun detail(args: JsonObject): JsonElement {
         val product = core.detail(args.getValue("id").jsonPrimitive.long) ?: return JsonNull
-        return productJson(product)
+        return with(product) {
+            json(
+                "id" to id,
+                "title" to title,
+                "description" to description,
+                "category" to category,
+                "brand" to brand,
+                "price" to price,
+                "discountPercentage" to discountPercentage,
+                "rating" to rating,
+                "stock" to stock,
+                "thumbnail" to thumbnail,
+                "tags" to JsonArray(tags.map(::JsonPrimitive)),
+            )
+        }
     }
 
     override fun stats(args: JsonObject): JsonElement = json("productCount" to core.stats().productCount)

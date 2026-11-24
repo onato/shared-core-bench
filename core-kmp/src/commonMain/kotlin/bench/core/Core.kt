@@ -38,7 +38,14 @@ class Core private constructor(
         return PageResult.Page(items, nextCursor = if (rows.size > size) items.last().id else null)
     }
 
-    fun detail(id: Long): Product? = database.productQueries.byId(id, ::Product).executeAsOneOrNull()
+    fun detail(id: Long): ProductDetail? {
+        val queries = database.productQueries
+        val tags = queries.tagsOf(id).executeAsList()
+        return queries
+            .byId(id) { id, title, description, category, brand, price, discount, rating, stock, thumbnail ->
+                ProductDetail(id, title, description, category, brand, price, discount, rating, stock, thumbnail, tags)
+            }.executeAsOneOrNull()
+    }
 
     fun stats(): CoreStats = CoreStats(productCount = database.productQueries.count().executeAsOne())
 
@@ -48,12 +55,30 @@ class Core private constructor(
     private fun store(page: PageDecoding.Products): IngestResult =
         try {
             database.productQueries.transaction {
-                page.rows.forEach { database.productQueries.upsert(it.id, it.title, it.price) }
+                page.rows.forEach(::upsert)
             }
             paging.advance(page.total)
             IngestResult.Decoded(accepted = page.rows.size, rejected = page.rejected)
         } catch (_: Exception) {
             IngestResult.StorageFailed
+        }
+
+    private fun upsert(product: ProductDetail) =
+        with(product) {
+            database.productQueries.upsert(
+                id,
+                title,
+                description,
+                category,
+                brand,
+                price,
+                discountPercentage,
+                rating,
+                stock,
+                thumbnail,
+            )
+            database.productQueries.deleteTagsOf(id)
+            tags.forEachIndexed { position, tag -> database.productQueries.insertTag(id, position.toLong(), tag) }
         }
 
     companion object {

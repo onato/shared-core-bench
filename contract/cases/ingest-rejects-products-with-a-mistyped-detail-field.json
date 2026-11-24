@@ -1,0 +1,14 @@
+{
+  "steps": [
+    {
+      "step": "ingest",
+      "args": {
+        "requestId": 1,
+        "status": 200,
+        "body": "{\"products\": [{\"id\": 1, \"title\": \"Essence Mascara\", \"description\": \"Lash mascara\", \"category\": \"beauty\", \"brand\": \"Essence\", \"price\": 9.99, \"discountPercentage\": 7.5, \"rating\": 4.5, \"stock\": 5, \"thumbnail\": \"https://cdn.dummyjson.com/1.png\", \"tags\": [\"beauty\"]}, {\"id\": 2, \"title\": \"Essence Mascara\", \"description\": \"Lash mascara\", \"category\": \"beauty\", \"brand\": \"Essence\", \"price\": 9.99, \"discountPercentage\": 7.5, \"rating\": \"4.5\", \"stock\": 5, \"thumbnail\": \"https://cdn.dummyjson.com/1.png\", \"tags\": [\"beauty\"]}, {\"id\": 3, \"title\": \"Essence Mascara\", \"description\": \"Lash mascara\", \"category\": \"beauty\", \"brand\": \"Essence\", \"price\": 9.99, \"discountPercentage\": 7.5, \"rating\": 4.5, \"stock\": 5.5, \"thumbnail\": \"https://cdn.dummyjson.com/1.png\", \"tags\": [\"beauty\"]}, {\"id\": 4, \"title\": \"Essence Mascara\", \"description\": \"Lash mascara\", \"category\": \"beauty\", \"brand\": \"Essence\", \"price\": 9.99, \"discountPercentage\": null, \"rating\": 4.5, \"stock\": 5, \"thumbnail\": \"https://cdn.dummyjson.com/1.png\", \"tags\": [\"beauty\"]}, {\"id\": 5, \"title\": \"Essence Mascara\", \"description\": \"Lash mascara\", \"category\": \"beauty\", \"brand\": \"Essence\", \"price\": 9.99, \"discountPercentage\": 7.5, \"rating\": 4.5, \"stock\": 5, \"thumbnail\": \"https://cdn.dummyjson.com/1.png\", \"tags\": \"beauty\"}, {\"id\": 6, \"title\": \"Essence Mascara\", \"description\": \"Lash mascara\", \"category\": \"beauty\", \"brand\": \"Essence\", \"price\": 9.99, \"discountPercentage\": 7.5, \"rating\": 4.5, \"stock\": 5, \"thumbnail\": \"https://cdn.dummyjson.com/1.png\", \"tags\": [\"beauty\", 7]}, {\"id\": 7, \"title\": \"Essence Mascara\", \"description\": 12, \"category\": \"beauty\", \"brand\": \"Essence\", \"price\": 9.99, \"discountPercentage\": 7.5, \"rating\": 4.5, \"stock\": 5, \"thumbnail\": \"https://cdn.dummyjson.com/1.png\", \"tags\": [\"beauty\"]}, {\"id\": 8, \"title\": \"Essence Mascara\", \"description\": \"Lash mascara\", \"category\": [\"beauty\"], \"brand\": \"Essence\", \"price\": 9.99, \"discountPercentage\": 7.5, \"rating\": 4.5, \"stock\": 5, \"thumbnail\": \"https://cdn.dummyjson.com/1.png\", \"tags\": [\"beauty\"]}, {\"id\": 9, \"title\": \"Essence Mascara\", \"description\": \"Lash mascara\", \"category\": \"beauty\", \"brand\": \"Essence\", \"price\": 9.99, \"discountPercentage\": 7.5, \"rating\": 4.5, \"stock\": 5, \"thumbnail\": null, \"tags\": [\"beauty\"]}], \"total\": 194, \"skip\": 0, \"limit\": 9}"
+      },
+      "expect": { "accepted": 1, "rejected": 8 }
+    },
+    { "step": "stats", "expect": { "productCount": 1 } }
+  ]
+}

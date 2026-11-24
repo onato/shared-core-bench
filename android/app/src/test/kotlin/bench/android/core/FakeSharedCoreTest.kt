@@ -63,9 +63,23 @@ class FakeSharedCoreTest {
 
     @Test
     fun detailFindsAStoredProductByIdAndNothingForAnUnknownId() {
-        val core = FakeSharedCore(stored = listOf(mascara, palette))
+        val paletteDetail =
+            ProductDetail(
+                id = 2,
+                title = "Eyeshadow Palette",
+                description = "Twelve shades",
+                category = "beauty",
+                brand = "Glamour Beauty",
+                price = 19.5,
+                discountPercentage = 5.5,
+                rating = 3.5,
+                stock = 44,
+                thumbnail = "https://cdn.dummyjson.com/2.png",
+                tags = listOf("beauty", "eyeshadow"),
+            )
+        val core = FakeSharedCore(details = listOf(paletteDetail))
 
-        assertEquals(palette, core.detail(id = 2))
+        assertEquals(paletteDetail, core.detail(id = 2))
         assertEquals(null, core.detail(id = 3))
     }
 }

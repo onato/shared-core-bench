@@ -1,0 +1,22 @@
+{
+  "steps": [
+    {
+      "step": "ingest",
+      "args": {
+        "requestId": 1,
+        "status": 200,
+        "body": "{\"products\": [{\"id\": 16, \"title\": \"Apple\", \"description\": \"Fresh and crisp apples.\", \"category\": \"groceries\", \"price\": 1.99, \"discountPercentage\": 1.5, \"rating\": 4.19, \"stock\": 8, \"tags\": [\"fruits\"], \"thumbnail\": \"https://cdn.dummyjson.com/products/images/groceries/apple.png\"}], \"total\": 194, \"skip\": 0, \"limit\": 1}"
+      },
+      "expect": { "accepted": 1, "rejected": 0 }
+    },
+    {
+      "step": "detail",
+      "args": { "id": 16 },
+      "expect": {
+        "id": 16, "title": "Apple", "description": "Fresh and crisp apples.", "category": "groceries", "brand": null,
+        "price": 1.99, "discountPercentage": 1.5, "rating": 4.19, "stock": 8,
+        "thumbnail": "https://cdn.dummyjson.com/products/images/groceries/apple.png", "tags": ["fruits"]
+      }
+    }
+  ]
+}

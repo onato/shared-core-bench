@@ -15,7 +15,7 @@ interface SharedCore {
         size: Int,
     ): PageResult
 
-    fun detail(id: Long): Product?
+    fun detail(id: Long): ProductDetail?
 
     fun stats(): CoreStats
 }
@@ -29,6 +29,20 @@ data class Product(
     val id: Long,
     val title: String,
     val price: Double,
+)
+
+data class ProductDetail(
+    val id: Long,
+    val title: String,
+    val description: String,
+    val category: String,
+    val brand: String?,
+    val price: Double,
+    val discountPercentage: Double,
+    val rating: Double,
+    val stock: Long,
+    val thumbnail: String,
+    val tags: List<String>,
 )
 
 data class CoreStats(
