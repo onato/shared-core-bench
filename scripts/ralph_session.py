@@ -115,11 +115,12 @@ def final_result(log: Path) -> str | None:
 
 
 def outcome(text: str) -> Outcome:
-    pr = re.search(r"^PR: #(\d+)\s*$", text, re.MULTILINE)
+    prs = numbers("PR", text)
     human = re.search(r"^NEEDS_HUMAN: (.+?)\s*$", text, re.MULTILINE)
     return Outcome(
-        pr=int(pr.group(1)) if pr else None,
+        pr=prs[0] if prs else None,
         needs_human=human.group(1) if human else None,
+        also=prs[1:],
     )
 
 

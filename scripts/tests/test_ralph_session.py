@@ -153,6 +153,15 @@ def test_a_needs_human_marker_is_reported_to_the_loop_as_its_reason(tmp_path):
     assert outcome == Outcome(pr=53, needs_human="the spec doesn't say which SQLite version to pin")
 
 
+def test_the_first_pr_line_is_the_issues_pr_and_the_rest_are_other_prs_it_opened(tmp_path):
+    text = "Done.\nPR: #130\nPR: #126\nPR: #127\n"
+    _, claude = session(tmp_path, FakeProcesses(result(text)))
+
+    outcome = claude.work(Issue(18, "In progress"))
+
+    assert outcome == Outcome(pr=130, also=(126, 127))
+
+
 def test_a_session_that_ends_without_a_result_needs_a_human_and_points_at_its_log(tmp_path):
     repo, claude = session(tmp_path, FakeProcesses({"type": "system"}, exit=1))
 
