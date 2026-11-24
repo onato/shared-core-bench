@@ -1,0 +1,45 @@
+{
+  "steps": [
+    {
+      "step": "ingest",
+      "args": { "requestId": 1, "status": 200, "body": "{\"products\": [{\"id\": 1, \"title\": \"Product 1\", \"description\": \"A product\", \"category\": \"misc\", \"brand\": \"Acme\", \"price\": 10.0, \"discountPercentage\": 0.0, \"rating\": 4.2, \"stock\": 0, \"thumbnail\": \"https://cdn.dummyjson.com/1.png\", \"tags\": [\"misc\"]}, {\"id\": 2, \"title\": \"Product 2\", \"description\": \"A product\", \"category\": \"misc\", \"brand\": \"Acme\", \"price\": 10.0, \"discountPercentage\": 0.0, \"rating\": 4.2, \"stock\": 1, \"thumbnail\": \"https://cdn.dummyjson.com/2.png\", \"tags\": [\"misc\"]}, {\"id\": 3, \"title\": \"Product 3\", \"description\": \"A product\", \"category\": \"misc\", \"brand\": \"Acme\", \"price\": 10.0, \"discountPercentage\": 0.0, \"rating\": 4.2, \"stock\": 9, \"thumbnail\": \"https://cdn.dummyjson.com/3.png\", \"tags\": [\"misc\"]}, {\"id\": 4, \"title\": \"Product 4\", \"description\": \"A product\", \"category\": \"misc\", \"brand\": \"Acme\", \"price\": 10.0, \"discountPercentage\": 0.0, \"rating\": 4.2, \"stock\": 10, \"thumbnail\": \"https://cdn.dummyjson.com/4.png\", \"tags\": [\"misc\"]}], \"total\": 4, \"skip\": 0, \"limit\": 4}" },
+      "expect": { "accepted": 4, "rejected": 0 }
+    },
+    {
+      "step": "detail", "args": { "id": 1 },
+      "expect": {
+        "id": 1, "title": "Product 1", "description": "A product", "category": "misc", "brand": "Acme",
+        "price": 10.0, "discountPercentage": 0.0, "discountedPrice": 10.0,
+        "rating": 4.2, "ratingBucket": "good", "stock": 0, "stockStatus": "out-of-stock",
+        "thumbnail": "https://cdn.dummyjson.com/1.png", "tags": ["misc"]
+      }
+    },
+    {
+      "step": "detail", "args": { "id": 2 },
+      "expect": {
+        "id": 2, "title": "Product 2", "description": "A product", "category": "misc", "brand": "Acme",
+        "price": 10.0, "discountPercentage": 0.0, "discountedPrice": 10.0,
+        "rating": 4.2, "ratingBucket": "good", "stock": 1, "stockStatus": "low-stock",
+        "thumbnail": "https://cdn.dummyjson.com/2.png", "tags": ["misc"]
+      }
+    },
+    {
+      "step": "detail", "args": { "id": 3 },
+      "expect": {
+        "id": 3, "title": "Product 3", "description": "A product", "category": "misc", "brand": "Acme",
+        "price": 10.0, "discountPercentage": 0.0, "discountedPrice": 10.0,
+        "rating": 4.2, "ratingBucket": "good", "stock": 9, "stockStatus": "low-stock",
+        "thumbnail": "https://cdn.dummyjson.com/3.png", "tags": ["misc"]
+      }
+    },
+    {
+      "step": "detail", "args": { "id": 4 },
+      "expect": {
+        "id": 4, "title": "Product 4", "description": "A product", "category": "misc", "brand": "Acme",
+        "price": 10.0, "discountPercentage": 0.0, "discountedPrice": 10.0,
+        "rating": 4.2, "ratingBucket": "good", "stock": 10, "stockStatus": "in-stock",
+        "thumbnail": "https://cdn.dummyjson.com/4.png", "tags": ["misc"]
+      }
+    }
+  ]
+}

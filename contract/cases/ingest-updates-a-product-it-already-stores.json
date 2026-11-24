@@ -24,7 +24,8 @@
       "args": { "id": 1 },
       "expect": {
         "id": 1, "title": "Essence Mascara Lash Princess", "description": "A product from the dummyjson catalogue.",
-        "category": "beauty", "brand": "Essence", "price": 8.49, "discountPercentage": 7.5, "rating": 4.5, "stock": 5,
+        "category": "beauty", "brand": "Essence", "price": 8.49, "discountPercentage": 7.5, "discountedPrice": 7.85,
+        "rating": 4.5, "ratingBucket": "excellent", "stock": 5, "stockStatus": "low-stock",
         "thumbnail": "https://cdn.dummyjson.com/products/images/beauty/thumbnail.png", "tags": ["beauty"]
       }
     }

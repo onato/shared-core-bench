@@ -14,7 +14,8 @@
       "args": { "id": 16 },
       "expect": {
         "id": 16, "title": "Apple", "description": "Fresh and crisp apples.", "category": "groceries", "brand": null,
-        "price": 1.99, "discountPercentage": 1.5, "rating": 4.19, "stock": 8,
+        "price": 1.99, "discountPercentage": 1.5, "discountedPrice": 1.96,
+        "rating": 4.19, "ratingBucket": "good", "stock": 8, "stockStatus": "low-stock",
         "thumbnail": "https://cdn.dummyjson.com/products/images/groceries/apple.png", "tags": ["fruits"]
       }
     }
