@@ -67,6 +67,8 @@ refresh(): void                        // invalidates and resets remote paging s
 stats(): CoreStats                     // row counts, last sync, timings
 ```
 
+Each call's JSON result shape and error codes are in `contract/README.md`.
+
 `Page` = `{ items: [ProductSummary], nextCursor? }`. Summaries are small (id, title, price,
 discountedPrice, rating, thumbnail) — the shape a list cell needs — so pages stay cheap to cross.
 
@@ -85,8 +87,8 @@ discountedPrice, rating, thumbnail) — the shape a list cell needs — so pages
 | | KMP | UniFFI (Rust) | Lua |
 |---|---|---|---|
 | Language | Kotlin 2.x, common code | Rust stable | Lua 5.4 |
-| JSON | kotlinx.serialization | serde / serde_json | lua-cjson (C); pure-Lua dkjson as a second data point |
-| SQLite | SQLDelight (or Room KMP) | rusqlite, `bundled` feature | lsqlite3 binding over SQLite |
+| JSON | kotlinx.serialization (`JsonElement` tree, no generated serializers) | serde / serde_json | lua-cjson (C); pure-Lua dkjson as a second data point |
+| SQLite | SQLDelight | rusqlite, `bundled` feature | lsqlite3 binding over SQLite |
 | iOS bridge | K/N framework via ObjC (+ SKIE) | UniFFI Swift bindings (C ABI) | Hand-written C + Swift wrapper |
 | Android bridge | none — JVM library | UniFFI Kotlin bindings (JNA) | Hand-written JNI + Kotlin wrapper |
 | Paging on Android UI | AndroidX Paging 3 `PagingSource` wrapping `page()` | same | same |
@@ -178,12 +180,15 @@ shared-core-bench/
   scripts/             # coverage-gate, bench-collect, report builder
   contract/            # the API above, golden fixtures, expected outputs
   core-kmp/            # Kotlin Multiplatform library; its own Gradle build with its own wrapper
+                       #   contract-runner/: the JVM fixture runner the app's tests reuse
   core-rust/           # Rust crate + uniffi.toml
   core-lua/            # Lua sources + C/JNI/Swift bridge
-  fixtures/            # deterministic data generator + local fixture server
+  fixtures/            # deterministic data generator + local fixture server (M1's generator is
+                       #   android/benchmark's ProductFixtures, until another core needs it)
   ios/                 # SwiftUI app, backend picker, benchmark screen
   android/             # Compose app, backend picker, benchmark screen; its own Gradle build
   report/              # CSV results + generated report
+  docs/checkpoints/    # one retro per milestone
 ```
 
 Each core and app builds from its own directory, so the root holds only docs, the Makefile and
@@ -210,7 +215,7 @@ make bench-report                                  # HTML report from saved resu
   Macrobenchmark module for startup and scrolling, run with `connectedReleaseAndroidTest` on
   `ANDROID_SERIAL`. Emulator runs need `androidx.benchmark.suppressErrors=EMULATOR` and are labelled
   as emulator results.
-- `scripts/bench-collect` gathers both platforms' output into `report/results/<timestamp>/` in one
+- `scripts/bench_collect.py` gathers both platforms' output into `report/results/<timestamp>/` in one
   schema (platform, device, OS, core, storage, suite, workload, N, median, p95, runs, git SHA), and
   prints a table grouped by workload with each core side by side, plus overhead over the embedded
   baseline for the delegated-storage rows.
@@ -277,7 +282,8 @@ Rules for the sequence:
 
 ## Prerequisites on this Mac
 
-Present: Xcode, Android SDK + NDK, Lua 5.4 (Homebrew).
+Present: Xcode, Android SDK + NDK, Lua 5.4 (Homebrew). The newest Android platform installed is
+SDK 36, so Android dependencies must accept `compileSdk` 36.
 Missing: Rust toolchain (`rustup`, plus `aarch64-apple-ios`, `aarch64-apple-ios-sim`,
 `aarch64-linux-android`, `x86_64-linux-android` targets and `cargo-ndk`), and a standalone Kotlin
 toolchain is not needed (Gradle brings it).
