@@ -21,6 +21,9 @@ What to do:
    the work can't be divided, usually because it is mostly boilerplate, open the PR anyway. Give it
    the lines breakdown in its Size section, and stop with NEEDS_HUMAN so the owner can decide on
    the `size-approved` label.
+   Changing a path in `.github/protected-paths` (the gates, the review prompt, coverage config,
+   `.claude/`, these instructions) works the same way: keep that change in a PR of its own, say
+   in the body why it is needed, and stop with NEEDS_HUMAN for the `gate-approved` label.
 5. Push, open the PR with the `pr` skill (body says `Closes #{issue}`), then turn on auto-merge:
    `gh pr merge <n> --auto --squash`. Don't merge it yourself, and never push to `main`.
 6. Wait for CI and the Claude review (`gh pr checks <n> --watch`). Fix what they report with new

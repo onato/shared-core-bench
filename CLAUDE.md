@@ -26,8 +26,11 @@ code to make that test pass. Tick it only when it passes along with every other 
 - An oversized PR is the exception, for work that can't be divided, usually because it is mostly
   boilerplate. Give a breakdown in the PR's Size section (tests, production code, build/config), and
   wait for the owner. `pr-size` passes it only once the owner adds the `size-approved` label.
+- A PR touching a path in `.github/protected-paths` (the gates and what they read) passes
+  `protected-paths` only once the owner adds the `gate-approved` label. Keep such changes in a PR
+  of their own and say why in the body.
 - `main` is protected: never push to it; every change merges through a PR that passes CI, the size
-  check and the Claude review. Address review comments with new commits, not force pushes.
+  check, the protected-paths check and the Claude review. Address review comments with new commits, not force pushes.
 
 # TDD and Tidy First
 
