@@ -14,8 +14,8 @@
       "args": { "cursor": 2, "size": 2 },
       "expect": {
         "items": [
-          { "id": 3, "title": "Powder Canister", "price": 14.99 },
-          { "id": 4, "title": "Red Nail Polish", "price": 8.99 }
+          { "id": 3, "title": "Powder Canister", "price": 14.99, "discountedPrice": 13.87, "rating": 4.5, "thumbnail": "https://cdn.dummyjson.com/products/images/beauty/thumbnail.png" },
+          { "id": 4, "title": "Red Nail Polish", "price": 8.99, "discountedPrice": 8.32, "rating": 4.5, "thumbnail": "https://cdn.dummyjson.com/products/images/beauty/thumbnail.png" }
         ],
         "nextCursor": null
       }
@@ -25,7 +25,7 @@
       "args": { "cursor": 3, "size": 2 },
       "expect": {
         "items": [
-          { "id": 4, "title": "Red Nail Polish", "price": 8.99 }
+          { "id": 4, "title": "Red Nail Polish", "price": 8.99, "discountedPrice": 8.32, "rating": 4.5, "thumbnail": "https://cdn.dummyjson.com/products/images/beauty/thumbnail.png" }
         ],
         "nextCursor": null
       }

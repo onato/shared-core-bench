@@ -14,8 +14,8 @@
       "args": { "cursor": null, "size": 2 },
       "expect": {
         "items": [
-          { "id": 1, "title": "Essence Mascara", "price": 9.99 },
-          { "id": 2, "title": "Eyeshadow Palette", "price": 19.99 }
+          { "id": 1, "title": "Essence Mascara", "price": 9.99, "discountedPrice": 9.24, "rating": 4.5, "thumbnail": "https://cdn.dummyjson.com/products/images/beauty/thumbnail.png" },
+          { "id": 2, "title": "Eyeshadow Palette", "price": 19.99, "discountedPrice": 18.49, "rating": 4.5, "thumbnail": "https://cdn.dummyjson.com/products/images/beauty/thumbnail.png" }
         ],
         "nextCursor": 2
       }
@@ -25,8 +25,8 @@
       "args": { "cursor": 2, "size": 2 },
       "expect": {
         "items": [
-          { "id": 3, "title": "Powder Canister", "price": 14.99 },
-          { "id": 4, "title": "Red Nail Polish", "price": 8.99 }
+          { "id": 3, "title": "Powder Canister", "price": 14.99, "discountedPrice": 13.87, "rating": 4.5, "thumbnail": "https://cdn.dummyjson.com/products/images/beauty/thumbnail.png" },
+          { "id": 4, "title": "Red Nail Polish", "price": 8.99, "discountedPrice": 8.32, "rating": 4.5, "thumbnail": "https://cdn.dummyjson.com/products/images/beauty/thumbnail.png" }
         ],
         "nextCursor": 4
       }

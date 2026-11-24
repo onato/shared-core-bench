@@ -30,7 +30,7 @@ class SharedCoreContract(
         val cursor = args["cursor"]?.jsonPrimitive?.longOrNull
         return when (val result = core.page(cursor, args.getValue("size").jsonPrimitive.int)) {
             is PageResult.Page -> {
-                json("items" to JsonArray(result.items.map(::productJson)), "nextCursor" to result.nextCursor)
+                json("items" to JsonArray(result.items.map(::summaryJson)), "nextCursor" to result.nextCursor)
             }
 
             PageResult.InvalidSize -> {
@@ -68,7 +68,17 @@ class SharedCoreContract(
 
     override fun stats(args: JsonObject): JsonElement = json("productCount" to core.stats().productCount)
 
-    private fun productJson(it: ProductSummary) = json("id" to it.id, "title" to it.title, "price" to it.price)
+    private fun summaryJson(summary: ProductSummary) =
+        with(summary) {
+            json(
+                "id" to id,
+                "title" to title,
+                "price" to price,
+                "discountedPrice" to discountedPrice,
+                "rating" to rating,
+                "thumbnail" to thumbnail,
+            )
+        }
 
     private fun json(vararg fields: Pair<String, Any?>): JsonObject {
         val elements = fields.associate { (key, value) -> key to element(value) }

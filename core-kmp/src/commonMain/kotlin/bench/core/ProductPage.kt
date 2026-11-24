@@ -13,6 +13,9 @@ data class ProductSummary(
     val id: Long,
     val title: String,
     val price: Double,
+    val discountedPrice: Double,
+    val rating: Double,
+    val thumbnail: String,
 )
 
 internal sealed interface PageDecoding {

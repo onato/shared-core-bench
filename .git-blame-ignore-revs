@@ -17,3 +17,6 @@ edab63c142cc66464150440033ae6dc757927015
 
 # Structural: extract the worktree and claude steps of a loop session (#91)
 be156a7a7aff6dd29d6d6093d058c616ba7ccb69
+
+# Structural: page items are ProductSummary (#142)
+cbff9ec8f5c178def46d936bcd7cf04491bd4e80
