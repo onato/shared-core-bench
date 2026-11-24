@@ -43,8 +43,7 @@ class ClaudeSession:
     now: Callable[[], datetime]
 
     def work(self, issue: Issue) -> Outcome:
-        branch = f"swilliams/{issue.number}-ralph"
-        worktree = self.repo.parent / f"shared-core-bench-{issue.number}"
+        branch, worktree = self._branch(issue.number), self._worktree(issue.number)
         failed = self._add_worktree(worktree, ["-b", branch, "origin/main"])
         if failed:
             return Outcome(pr=None, needs_human=failed)
@@ -55,6 +54,19 @@ class ClaudeSession:
             return Outcome(pr=None, needs_human=f"the session ended without a result; see {log}")
         return outcome(text)
 
+    def remove(self, issue: int) -> str | None:
+        """What failed, or None once the issue's worktree and branch are gone."""
+        return self._git(
+            ["worktree", "remove", str(self._worktree(issue))],
+            ["branch", "-D", self._branch(issue)],  # -D: a squash merge leaves it unmerged
+        )
+
+    def _branch(self, issue: int) -> str:
+        return f"swilliams/{issue}-ralph"
+
+    def _worktree(self, issue: int) -> Path:
+        return self.repo.parent / f"shared-core-bench-{issue}"
+
     def improve(self, prs: tuple[int, ...]) -> Improvement:
         worktree = self.repo.parent / f"shared-core-bench-improve-{self.now():%Y%m%d-%H%M%S}"
         failed = self._add_worktree(worktree, ["--detach", "origin/main"])
@@ -63,13 +75,22 @@ class ClaudeSession:
         named = "PRs " + ", ".join(f"#{n}" for n in prs)
         prompt = (self.repo / ".ralph" / "IMPROVE.md").read_text().replace("{prs}", named)
         text, log = self._claude(prompt, worktree, "improve")
+        left = self._git(["worktree", "remove", str(worktree)])
         if text is None:
-            return Improvement(needs_human=f"the session ended without a result; see {log}")
-        return Improvement(prs=numbers("PR", text), proposals=numbers("PROPOSED", text))
+            return Improvement(
+                needs_human=f"the session ended without a result; see {log}", left_in_place=left
+            )
+        return Improvement(
+            prs=numbers("PR", text), proposals=numbers("PROPOSED", text), left_in_place=left
+        )
 
     def _add_worktree(self, worktree: Path, start: list[str]) -> str | None:
         """What failed, or None once the worktree exists."""
-        for step in (["fetch", "origin"], ["worktree", "add", str(worktree), *start]):
+        return self._git(["fetch", "origin"], ["worktree", "add", str(worktree), *start])
+
+    def _git(self, *steps: list[str]) -> str | None:
+        """What failed, stopping at the first step to fail, or None once all have run."""
+        for step in steps:
             done = self.run(["git", "-C", str(self.repo), *step], capture_output=True, text=True)
             if done.returncode != 0:
                 return f"git {' '.join(step[:2])} failed: {done.stderr.strip()}"
