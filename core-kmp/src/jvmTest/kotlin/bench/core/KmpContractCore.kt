@@ -6,6 +6,7 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.double
 import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -73,7 +74,12 @@ class KmpContractCore(
 
     private fun query(args: JsonObject): Query {
         val query = args["query"]?.jsonObject ?: return Query()
-        return Query(text = query.getValue("text").jsonPrimitive.content)
+        return Query(
+            text = query["text"]?.jsonPrimitive?.content.orEmpty(),
+            category = query["category"]?.jsonPrimitive?.content,
+            minPrice = query["minPrice"]?.jsonPrimitive?.double,
+            maxPrice = query["maxPrice"]?.jsonPrimitive?.double,
+        )
     }
 
     override fun nextFetch(args: JsonObject): JsonElement {

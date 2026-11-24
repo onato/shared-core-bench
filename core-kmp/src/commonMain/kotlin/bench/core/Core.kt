@@ -39,9 +39,12 @@ class Core private constructor(
                 .pageAfter(
                     cursor = cursor ?: Long.MIN_VALUE,
                     text = query.text,
+                    category = query.category,
+                    minPrice = query.minPrice,
+                    maxPrice = query.maxPrice,
                     limit = size + 1L,
-                ) { id, title, price, discount, rating, thumbnail ->
-                    ProductSummary(id, title, price, discountedPrice(price, discount), rating, thumbnail)
+                ) { id, title, price, discountedPrice, rating, thumbnail ->
+                    ProductSummary(id, title, price, discountedPrice, rating, thumbnail)
                 }.executeAsList()
         val items = rows.take(size)
         return PageResult.Page(items, nextCursor = if (rows.size > size) items.last().id else null)
@@ -82,6 +85,7 @@ class Core private constructor(
                 brand,
                 price,
                 discountPercentage,
+                discountedPrice,
                 rating,
                 stock,
                 thumbnail,

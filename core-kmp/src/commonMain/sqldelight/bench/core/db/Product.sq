@@ -6,6 +6,7 @@ CREATE TABLE product (
     brand TEXT,
     price REAL NOT NULL,
     discount_percentage REAL NOT NULL,
+    discounted_price REAL NOT NULL,
     rating REAL NOT NULL,
     stock INTEGER NOT NULL,
     thumbnail TEXT NOT NULL
@@ -20,8 +21,8 @@ CREATE TABLE product_tag (
 
 upsert:
 INSERT OR REPLACE INTO product (
-    id, title, description, category, brand, price, discount_percentage, rating, stock, thumbnail
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+    id, title, description, category, brand, price, discount_percentage, discounted_price, rating, stock, thumbnail
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 deleteTagsOf:
 DELETE FROM product_tag WHERE product_id = ?;
@@ -33,13 +34,17 @@ count:
 SELECT count(*) FROM product;
 
 byId:
-SELECT * FROM product WHERE id = ?;
+SELECT id, title, description, category, brand, price, discount_percentage, rating, stock, thumbnail
+FROM product WHERE id = ?;
 
 tagsOf:
 SELECT tag FROM product_tag WHERE product_id = ? ORDER BY position;
 
 pageAfter:
-SELECT id, title, price, discount_percentage, rating, thumbnail FROM product
+SELECT id, title, price, discounted_price, rating, thumbnail FROM product
 WHERE id > :cursor
   AND (instr(lower(title), lower(:text)) > 0 OR instr(lower(brand), lower(:text)) > 0)
+  AND (:category IS NULL OR category = :category)
+  AND (:minPrice IS NULL OR discounted_price >= :minPrice)
+  AND (:maxPrice IS NULL OR discounted_price <= :maxPrice)
 ORDER BY id LIMIT :limit;

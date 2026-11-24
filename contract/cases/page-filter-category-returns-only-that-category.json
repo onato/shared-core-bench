@@ -1,0 +1,24 @@
+{
+  "steps": [
+    {
+      "step": "ingest",
+      "args": {
+        "requestId": 1,
+        "status": 200,
+        "body": "{\"products\": [{\"id\": 1, \"title\": \"Essence Mascara Lash Princess\", \"price\": 9.99, \"description\": \"A product from the dummyjson catalogue.\", \"category\": \"beauty\", \"brand\": \"Essence\", \"discountPercentage\": 0, \"rating\": 4.5, \"stock\": 5, \"thumbnail\": \"https://cdn.dummyjson.com/products/images/beauty/thumbnail.png\", \"tags\": [\"beauty\"]}, {\"id\": 2, \"title\": \"Calvin Klein CK One\", \"price\": 49.99, \"description\": \"A product from the dummyjson catalogue.\", \"category\": \"fragrances\", \"brand\": \"Calvin Klein\", \"discountPercentage\": 0, \"rating\": 4.5, \"stock\": 5, \"thumbnail\": \"https://cdn.dummyjson.com/products/images/fragrances/thumbnail.png\", \"tags\": [\"fragrances\"]}, {\"id\": 3, \"title\": \"Powder Canister\", \"price\": 14.99, \"description\": \"A product from the dummyjson catalogue.\", \"category\": \"beauty\", \"brand\": \"Glamour Beauty\", \"discountPercentage\": 0, \"rating\": 4.5, \"stock\": 5, \"thumbnail\": \"https://cdn.dummyjson.com/products/images/beauty/thumbnail.png\", \"tags\": [\"beauty\"]}, {\"id\": 4, \"title\": \"Annibale Colombo Bed\", \"price\": 1899.99, \"description\": \"A product from the dummyjson catalogue.\", \"category\": \"furniture\", \"brand\": \"Annibale Colombo\", \"discountPercentage\": 0, \"rating\": 4.5, \"stock\": 5, \"thumbnail\": \"https://cdn.dummyjson.com/products/images/furniture/thumbnail.png\", \"tags\": [\"furniture\"]}]}"
+      },
+      "expect": { "accepted": 4, "rejected": 0 }
+    },
+    {
+      "step": "page",
+      "args": { "query": {"category": "beauty"}, "cursor": null, "size": 20 },
+      "expect": {
+        "items": [
+          {"id": 1, "title": "Essence Mascara Lash Princess", "price": 9.99, "discountedPrice": 9.99, "rating": 4.5, "thumbnail": "https://cdn.dummyjson.com/products/images/beauty/thumbnail.png"},
+          {"id": 3, "title": "Powder Canister", "price": 14.99, "discountedPrice": 14.99, "rating": 4.5, "thumbnail": "https://cdn.dummyjson.com/products/images/beauty/thumbnail.png"}
+        ],
+        "nextCursor": null
+      }
+    }
+  ]
+}
