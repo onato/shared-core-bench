@@ -36,6 +36,8 @@ What to do:
    prevented it.
 
 Your final message is read by the loop. End it with these lines, exactly:
-- `PR: #<number>` once a PR exists.
+- `PR: #<number>` once a PR exists. If you opened other PRs too, such as a checkpoint's fixes, add a
+  `PR: #<number>` line for each after the issue's own, so the loop keeps them up to date with
+  `main` and waits for them to merge.
 - `NEEDS_HUMAN: <one-line reason>` when you stopped because something needs the owner: a decision
   the issue doesn't make, a failing check you can't fix, missing access, or a PR that won't fit.
