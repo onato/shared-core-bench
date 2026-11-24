@@ -70,6 +70,14 @@ code. Each fix becomes a small PR of its own, never part of a feature PR.
   raising the size limit, adding a coverage exclusion, weakening a review rule and changing the
   loop's stop conditions all count as loosening.
 
+At a checkpoint:
+
+- `SPEC.md` may record decisions that merged PRs already made, such as a library choice, a
+  result shape or an SDK level. Any change to what is still to be built or measured stays a
+  `retro-proposal`.
+- The milestone is ending, so its fix issues go under the next milestone's parent as `draft`
+  sub-issues, ahead of its first task.
+
 Changes to paths in `.github/protected-paths`, including this skill, need the owner's
 `gate-approved` label to merge, whichever way they go. Say in the PR why the change is needed.
 
