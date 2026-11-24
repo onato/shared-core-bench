@@ -14,6 +14,12 @@ interface StoragePort {
         generation: Long,
     )
 
+    /** Writes one product, marked as seen by the walk of [generation]. */
+    fun upsertOne(
+        item: ProductDetail,
+        generation: Long,
+    )
+
     fun markMissingDeleted(generation: Long)
 
     /** Up to [size] products after [cursor] under [query]'s filters and sort. */

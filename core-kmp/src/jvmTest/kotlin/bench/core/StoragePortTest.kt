@@ -31,6 +31,38 @@ class StoragePortTest {
         assertEquals(CoreStats(productCount = 0, deletedCount = 0), core.stats())
     }
 
+    @Test
+    fun ingestingAPageOf20ThroughTheChattyVariantMakes20UpsertOneCallsAndNoUpsertCall() {
+        val calls = mutableListOf<String>()
+        val counting =
+            object : StoragePort by port {
+                override fun upsert(
+                    items: List<ProductDetail>,
+                    generation: Long,
+                ) {
+                    calls += "upsert"
+                    port.upsert(items, generation)
+                }
+
+                override fun upsertOne(
+                    item: ProductDetail,
+                    generation: Long,
+                ) {
+                    calls += "upsertOne"
+                    port.upsertOne(item, generation)
+                }
+            }
+        val core = Core.create(CoreConfig(dbPath = ":memory:"), counting, PortCalls.CHATTY)
+
+        core.ingest(
+            requestId = 1,
+            status = 200,
+            body = """{"products": [${(1..20).joinToString { product(it) }}], "total": 20}""".encodeToByteArray(),
+        )
+
+        assertEquals(List(20) { "upsertOne" }, calls)
+    }
+
     private fun product(id: Int) =
         """
         {"id": $id, "title": "Essence Mascara", "description": "Lash mascara", "category": "beauty",

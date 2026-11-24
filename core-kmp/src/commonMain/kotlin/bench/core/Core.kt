@@ -5,6 +5,7 @@ import bench.core.db.ProductDatabase
 class Core private constructor(
     val config: CoreConfig,
     private val storage: StoragePort,
+    private val calls: PortCalls,
 ) {
     private val paging = RemotePaging(config.baseUrl, config.pageSize)
 
@@ -53,7 +54,10 @@ class Core private constructor(
     private fun store(page: PageDecoding.Products): IngestResult =
         try {
             storage.transaction {
-                storage.upsert(page.rows, paging.generation)
+                when (calls) {
+                    PortCalls.BATCHED -> storage.upsert(page.rows, paging.generation)
+                    PortCalls.CHATTY -> page.rows.forEach { storage.upsertOne(it, paging.generation) }
+                }
                 if (paging.isLastPage(page.total)) storage.markMissingDeleted(paging.generation)
             }
             paging.advance(page.total)
@@ -73,6 +77,7 @@ class Core private constructor(
         fun create(
             config: CoreConfig,
             port: StoragePort,
-        ): Core = Core(config, port)
+            calls: PortCalls = PortCalls.BATCHED,
+        ): Core = Core(config, port, calls)
     }
 }

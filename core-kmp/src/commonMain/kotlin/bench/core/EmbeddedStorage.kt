@@ -12,12 +12,12 @@ internal class EmbeddedStorage(
     override fun upsert(
         items: List<ProductDetail>,
         generation: Long,
-    ) = items.forEach { upsert(it, generation) }
+    ) = items.forEach { upsertOne(it, generation) }
 
-    private fun upsert(
-        product: ProductDetail,
+    override fun upsertOne(
+        item: ProductDetail,
         generation: Long,
-    ) = with(product) {
+    ) = with(item) {
         queries.upsert(
             id,
             title,
