@@ -2,7 +2,7 @@ import json
 import subprocess
 from datetime import datetime
 
-from ralph import Issue, Outcome
+from ralph import Improvement, Issue, Outcome
 from ralph_session import ClaudeSession
 
 
@@ -66,6 +66,7 @@ def session(tmp_path, processes):
     repo = tmp_path / "checkout"
     (repo / ".ralph").mkdir(parents=True)
     (repo / ".ralph" / "PROMPT.md").write_text("Work on issue #{issue} on branch {branch}.\n")
+    (repo / ".ralph" / "IMPROVE.md").write_text("Review {prs}.\n")
     return repo, ClaudeSession(
         repo=repo,
         tokens=FakeTokens(),
@@ -184,3 +185,41 @@ def test_a_session_that_ends_without_a_result_needs_a_human_and_points_at_its_lo
 
     log = repo / ".ralph" / "logs" / "20261123-010203-9.log"
     assert outcome == Outcome(pr=None, needs_human=f"the session ended without a result; see {log}")
+
+
+def test_the_improver_reviews_the_merged_prs_in_a_detached_worktree_of_main(tmp_path):
+    processes = FakeProcesses(result("Done.\nPR: #63\nPR: #64\nPROPOSED: #65\n"))
+    repo, claude = session(tmp_path, processes)
+
+    improvement = claude.improve((60, 61, 62))
+
+    worktree = tmp_path / "shared-core-bench-improve-20261123-010203"
+    assert improvement == Improvement(prs=(63, 64), proposals=(65,))
+    assert [args for args, _ in processes.calls[:2]] == [
+        ["git", "-C", str(repo), "fetch", "origin"],
+        ["git", "-C", str(repo), "worktree", "add", str(worktree), "--detach", "origin/main"],
+    ]
+    args, kwargs = processes.claude()
+    assert args[2] == "Review PRs #60, #61, #62.\n"
+    assert kwargs["cwd"] == worktree
+    assert (repo / ".ralph" / "logs" / "20261123-010203-improve.log").exists()
+
+
+def test_an_improver_without_a_worktree_needs_a_human_and_starts_no_claude(tmp_path):
+    processes = FakeProcesses(result("PR: #63"))
+    processes.fails = {"fetch": subprocess.CompletedProcess([], 128, "", "fatal: offline\n")}
+    _, claude = session(tmp_path, processes)
+
+    improvement = claude.improve((60,))
+
+    assert improvement == Improvement(needs_human="git fetch origin failed: fatal: offline")
+    assert [args[0] for args, _ in processes.calls] == ["git"]
+
+
+def test_an_improver_that_ends_without_a_result_needs_a_human_and_points_at_its_log(tmp_path):
+    repo, claude = session(tmp_path, FakeProcesses({"type": "system"}, exit=1))
+
+    improvement = claude.improve((60,))
+
+    log = repo / ".ralph" / "logs" / "20261123-010203-improve.log"
+    assert improvement == Improvement(needs_human=f"the session ended without a result; see {log}")
