@@ -4,7 +4,7 @@ import bench.core.db.ProductDatabase
 
 class Core private constructor(
     val config: CoreConfig,
-    private val database: ProductDatabase,
+    private val storage: EmbeddedStorage,
 ) {
     private val paging = RemotePaging(config.baseUrl, config.pageSize)
 
@@ -36,72 +36,30 @@ class Core private constructor(
     ): PageResult {
         if (size <= 0) return PageResult.InvalidSize
         // One row past the page tells whether another page follows.
-        val rows =
-            database.productQueries
-                .pageAfter(
-                    cursor = cursor,
-                    text = query.text,
-                    category = query.category,
-                    minPrice = query.minPrice,
-                    maxPrice = query.maxPrice,
-                    sort = query.sort.key,
-                    limit = size + 1L,
-                ) { id, title, price, discountedPrice, rating, thumbnail ->
-                    ProductSummary(id, title, price, discountedPrice, rating, thumbnail)
-                }.executeAsList()
+        val rows = storage.query(query, cursor, size + 1)
         val items = rows.take(size)
         return PageResult.Page(items, nextCursor = if (rows.size > size) items.last().id else null)
     }
 
-    fun detail(id: Long): ProductDetail? {
-        val queries = database.productQueries
-        val tags = queries.tagsOf(id).executeAsList()
-        return queries
-            .byId(id) { id, title, description, category, brand, price, discount, rating, stock, thumbnail ->
-                ProductDetail(id, title, description, category, brand, price, discount, rating, stock, thumbnail, tags)
-            }.executeAsOneOrNull()
-    }
+    fun detail(id: Long): ProductDetail? = storage.get(id)
 
-    fun categories(): List<String> = database.productQueries.categories().executeAsList()
+    fun categories(): List<String> = storage.categories()
 
-    fun stats(): CoreStats =
-        with(database.productQueries) {
-            CoreStats(productCount = count().executeAsOne(), deletedCount = deletedCount().executeAsOne())
-        }
+    fun stats(): CoreStats = storage.stats()
 
     // Drivers throw platform exceptions (java.sql.SQLException, android.database.SQLException)
     // with no common supertype, so common code can only catch Exception.
     @Suppress("TooGenericExceptionCaught")
     private fun store(page: PageDecoding.Products): IngestResult =
         try {
-            database.productQueries.transaction {
-                page.rows.forEach(::upsert)
-                if (paging.isLastPage(page.total)) database.productQueries.softDeleteUnseenBefore(paging.generation)
+            storage.transaction {
+                storage.upsert(page.rows, paging.generation)
+                if (paging.isLastPage(page.total)) storage.markMissingDeleted(paging.generation)
             }
             paging.advance(page.total)
             IngestResult.Decoded(accepted = page.rows.size, rejected = page.rejected)
         } catch (_: Exception) {
             IngestResult.StorageFailed
-        }
-
-    private fun upsert(product: ProductDetail) =
-        with(product) {
-            database.productQueries.upsert(
-                id,
-                title,
-                description,
-                category,
-                brand,
-                price,
-                discountPercentage,
-                discountedPrice,
-                rating,
-                stock,
-                thumbnail,
-                paging.generation,
-            )
-            database.productQueries.deleteTagsOf(id)
-            tags.forEachIndexed { position, tag -> database.productQueries.insertTag(id, position.toLong(), tag) }
         }
 
     companion object {
@@ -110,6 +68,6 @@ class Core private constructor(
         fun create(
             config: CoreConfig,
             drivers: DriverFactory,
-        ): Core = Core(config, ProductDatabase(drivers.open(config.dbPath)))
+        ): Core = Core(config, EmbeddedStorage(ProductDatabase(drivers.open(config.dbPath))))
     }
 }
