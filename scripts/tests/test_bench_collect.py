@@ -9,7 +9,11 @@ PIXEL = {
     "version": {"sdk": 36},
 }
 TIMINGS = {"median": 300, "runs": [500, 100, 300, 200, 400]}
-INGEST = {"name": "ingest1000Products", "metrics": {"timeNs": TIMINGS}}
+INGEST = {
+    "name": "ingest1000Products",
+    "className": "bench.benchmark.IngestBenchmark",
+    "metrics": {"timeNs": TIMINGS},
+}
 
 
 def androidx_report(build=PIXEL, benchmark=INGEST):
@@ -28,6 +32,13 @@ def test_each_benchmark_becomes_one_row_with_its_timings():
     assert [row[k] for k in ("suite", "workload", "n", "median_ns", "p95_ns", "runs")] == [
         "core", "ingest1000Products", 1000, 300, 500, 5,
     ]  # fmt: skip
+
+
+def test_boundary_benchmarks_are_the_boundary_suite_with_their_size_as_n():
+    boundary = {"name": "bytesIn1024Bytes", "className": "bench.benchmark.BoundaryBenchmark"}
+    [row] = collect(androidx_report(benchmark=INGEST | boundary))
+
+    assert [row[k] for k in ("suite", "workload", "n")] == ["boundary", "bytesIn1024Bytes", 1024]
 
 
 def test_rows_record_device_os_core_storage_build_type_and_git_sha():
