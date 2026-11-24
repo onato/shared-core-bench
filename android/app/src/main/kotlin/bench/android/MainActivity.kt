@@ -11,7 +11,14 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         val core = KmpSharedCore.create(this, dbPath = "products.db")
         val fetcher = OkHttpFetcher(OkHttpClient())
-        setContent { App({ productPages(core, fetcher::fetch, PAGE_SIZE, it) }, core::detail, core::refresh) }
+        setContent {
+            App(
+                { productPages(core, fetcher::fetch, PAGE_SIZE, it) },
+                core::detail,
+                core::refresh,
+                core::categories,
+            )
+        }
     }
 
     private companion object {

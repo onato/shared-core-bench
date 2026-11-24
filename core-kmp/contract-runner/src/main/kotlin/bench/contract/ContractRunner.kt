@@ -58,6 +58,7 @@ object ContractRunner {
             "detail" -> core.detail(args)
             "stats" -> core.stats(args)
             "refresh" -> core.refresh(args)
+            "categories" -> core.categories(args)
             else -> null
         }
 

@@ -62,6 +62,8 @@ class Core private constructor(
             }.executeAsOneOrNull()
     }
 
+    fun categories(): List<String> = database.productQueries.categories().executeAsList()
+
     fun stats(): CoreStats =
         with(database.productQueries) {
             CoreStats(productCount = count().executeAsOne(), deletedCount = deletedCount().executeAsOne())

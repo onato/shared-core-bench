@@ -22,5 +22,10 @@ of these traps cost a session several runs:
   #151 measured them taking the app from 100% to 86%. A whole screen takes
   `@NonSkippableComposable`, as `App` and `ProductDetailScreen` do. Smaller pieces stay inline in
   their screen.
+- **A lambda or bound reference written in a composable adds a branch only a changed capture
+  reaches.** `{ state.value = it }` or `holder::clear` passed to a control is remembered against
+  what it captures, and tests never recompose with a new capture. Pass a function-typed property
+  of a remembered holder, a top-level `::function`, or `MutableState`'s `component2()` instead, as
+  `Filters.kt` does (#112).
 - **Assert on text only the new screen shows.** The detail screen repeats the product's title,
   so a test that taps a product and waits for its title passes before navigation exists (#151).

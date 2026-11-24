@@ -20,6 +20,9 @@ interface SharedCore {
 
     fun stats(): CoreStats
 
+    /** The categories of the products a page can show, sorted. */
+    fun categories(): List<String>
+
     /** Starts the remote walk again from the first page. */
     fun refresh()
 }
