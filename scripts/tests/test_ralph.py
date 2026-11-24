@@ -12,6 +12,7 @@ from ralph import (
     REQUIRED_WORKFLOWS,
     TODO,
     GitHubError,
+    Improvement,
     Issue,
     Live,
     Outcome,
@@ -76,6 +77,14 @@ class FakeSession:
         self.worked = []
         self.status_at_start = []
         self.usage = None
+        self.improved = []  # (the PRs it was given, how many issues had been worked by then)
+        self.improvement = Improvement()
+
+    def improve(self, prs):
+        self.improved.append((prs, len(self.worked)))
+        for number in self.improvement.prs:
+            self.github.prs[number] = PullRequest(number=number, merged=True)
+        return self.improvement
 
     def weekly_usage(self):
         return self.usage
@@ -329,6 +338,60 @@ def test_the_stop_message_lists_stuck_issues_and_prs_without_retro_notes():
         "- #8: needs a human: a secret: the API key\n"
         "Missing retro notes: PR #42"
     )
+
+
+def test_after_five_merged_prs_an_improver_session_runs_before_the_next_issue():
+    github = FakeGitHub([Issue(n, TODO) for n in range(1, 8)])
+    session = FakeSession(github, {n: merged_run(40 + n) for n in range(1, 8)})
+
+    loop(github, session)
+
+    assert session.worked == [1, 2, 3, 4, 5, 6, 7]
+    assert session.improved[0] == ((41, 42, 43, 44, 45), 5)
+
+
+def test_with_nothing_left_to_take_an_improver_reviews_the_rest_before_the_loop_stops():
+    github = FakeGitHub([Issue(7, TODO), Issue(8, TODO)], blocked_by={8: (7,)})
+    session = FakeSession(github, {7: pending_run(40), 8: merged_run(41)})
+    clock = Clock()
+    clock.on_sleep = lambda: github.merge(7, 40)
+
+    stop = loop(github, session, clock=clock)
+
+    assert session.improved == [((40, 41), 2)]
+    assert stop == "Ralph loop stopped: milestone complete."
+
+
+def test_the_improvers_prs_and_proposals_are_reported_and_each_proposal_messages_the_owner():
+    github = FakeGitHub([Issue(7, TODO)])
+    session = FakeSession(github, {7: merged_run(40)})
+    session.improvement = Improvement(prs=(50,), proposals=(51, 52))
+    notes = []
+
+    stop = loop(github, session, notes)
+
+    assert notes == [
+        "Ralph loop: the improver proposes #51; it needs your decision.",
+        "Ralph loop: the improver proposes #52; it needs your decision.",
+        stop,
+    ]
+    assert stop == (
+        "Ralph loop stopped: milestone complete.\n"
+        "Improver PRs: PR #50\n"
+        "Improver proposals: #51, #52"
+    )
+
+
+def test_an_improver_that_needs_the_owner_messages_them_and_the_loop_goes_on():
+    github = FakeGitHub([Issue(7, TODO)])
+    session = FakeSession(github, {7: merged_run(40)})
+    session.improvement = Improvement(needs_human="git fetch origin failed: offline")
+    notes = []
+
+    stop = loop(github, session, notes)
+
+    assert notes[0] == "Ralph loop: the improver needs you: git fetch origin failed: offline."
+    assert stop.endswith("\nImprover needs you: git fetch origin failed: offline")
 
 
 def test_stops_before_any_session_when_a_required_board_workflow_is_off():
