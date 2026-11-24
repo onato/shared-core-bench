@@ -1,4 +1,4 @@
-package bench.benchmark
+package bench.fixtures
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
