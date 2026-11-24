@@ -196,6 +196,19 @@ class ProductListTest {
         awaitText("Essence Mascara")
     }
 
+    @Test
+    fun aFailedRefreshShowsTheErrorWithRetryAndKeepsTheProductsShown() {
+        val responses = ArrayDeque(listOf(FetchResult.Response(200, ByteArray(0)), FetchResult.NetworkError("offline")))
+        show(FakeSharedCore(remotePages = listOf(listOf(mascara))), fetch = { responses.removeFirst() })
+        awaitText("Essence Mascara")
+
+        pullDown()
+
+        awaitText("Network error: offline")
+        compose.onNodeWithText("Retry").assertIsDisplayed()
+        compose.onNodeWithText("Essence Mascara").assertIsDisplayed()
+    }
+
     private fun pullDown() = compose.onNode(hasScrollAction()).performTouchInput { swipeDown() }
 
     private fun cell(
