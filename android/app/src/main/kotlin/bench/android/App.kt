@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -34,7 +33,6 @@ import androidx.paging.LoadState
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
-import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import bench.android.core.FetchRequest
 import bench.android.core.ProductDetail
@@ -79,42 +77,6 @@ private fun ProductCell(
     )
 }
 
-// Skipping gains nothing while App, its only caller, never skips; its generated skip branches are unreachable.
-@NonSkippableComposable
-@Composable
-private fun ProductList(
-    items: LazyPagingItems<ProductSummary>,
-    emptyMessage: String,
-    listState: LazyListState,
-    onSelect: (Long) -> Unit,
-    onRefresh: () -> Unit,
-) {
-    val loadingFirstPage = items.loadState.refresh is LoadState.Loading && items.itemCount == 0
-    PullToRefreshBox(
-        isRefreshing = items.loadState.refresh is LoadState.Loading && items.itemCount > 0,
-        onRefresh = onRefresh,
-    ) {
-        LazyColumn(Modifier.fillMaxSize(), state = listState) {
-            item { Text("Products") }
-            items(items.itemCount) { index ->
-                items[index]?.let { product -> ProductCell(product, Modifier.clickable { onSelect(product.id) }) }
-            }
-            if (items.itemCount == 0 && items.loadState.append.endOfPaginationReached) {
-                item { Text(emptyMessage) }
-            }
-            if (loadingFirstPage || items.loadState.append is LoadState.Loading) {
-                item { CircularProgressIndicator() }
-            }
-            items.loadState.firstError()?.let { failure ->
-                item {
-                    Text(failure.error.message.orEmpty())
-                    Button(onClick = items::retry) { Text("Retry") }
-                }
-            }
-        }
-    }
-}
-
 // The root screen gains nothing from skipping, and its generated skip branches are unreachable in tests.
 @NonSkippableComposable
 @Composable
@@ -132,18 +94,37 @@ fun App(
         null -> {
             Column {
                 TextField(value = text, onValueChange = { text = it }, label = { Text("Search") }, singleLine = true)
-                ProductList(
-                    items,
-                    emptyMessage = if (text.isEmpty()) "No products" else "No products match",
-                    listState = listState,
-                    onSelect = { selected = it },
+                PullToRefreshBox(
+                    isRefreshing = items.loadState.refresh is LoadState.Loading && items.itemCount > 0,
                     onRefresh = {
                         scope.launch {
                             withContext(Dispatchers.IO) { refresh() }
                             items.refresh()
                         }
                     },
-                )
+                ) {
+                    LazyColumn(Modifier.fillMaxSize(), state = listState) {
+                        item { Text("Products") }
+                        items(items.itemCount) { index ->
+                            items[index]?.let { product ->
+                                ProductCell(product, Modifier.clickable { selected = product.id })
+                            }
+                        }
+                        if (items.itemCount == 0 && items.loadState.append.endOfPaginationReached) {
+                            item { Text(if (text.isEmpty()) "No products" else "No products match") }
+                        }
+                        val loadingFirstPage = items.loadState.refresh is LoadState.Loading && items.itemCount == 0
+                        if (loadingFirstPage || items.loadState.append is LoadState.Loading) {
+                            item { CircularProgressIndicator() }
+                        }
+                        items.loadState.firstError()?.let { failure ->
+                            item {
+                                Text(failure.error.message.orEmpty())
+                                Button(onClick = items::retry) { Text("Retry") }
+                            }
+                        }
+                    }
+                }
             }
         }
 
