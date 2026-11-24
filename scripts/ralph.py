@@ -4,7 +4,7 @@ import argparse
 import subprocess
 import sys
 from collections.abc import Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Protocol
 
 from ralph_token import TokenError
@@ -71,6 +71,7 @@ class ReadsBoard(Protocol):
 
 class GitHub(ReadsBoard, Protocol):
     def pull_request(self, number: int) -> PullRequest: ...
+    def has_open_pr(self, issue: int) -> bool: ...  # one closes it or is on its branch
     def set_status(self, issue: int, status: str) -> None: ...
     def update_branch(self, number: int) -> None: ...
     def comment(self, issue: int, body: str) -> str: ...  # the comment's URL
@@ -158,6 +159,7 @@ class _Loop:
         while True:
             issues = self.github.milestone_issues(self.milestone)
             self.move_closed_to_done(issues)
+            issues = self.release_in_review(issues)
             stop = self.step(next_issue(issues))
             if stop is not None:
                 return self.stop_message(stop.headline)
@@ -232,6 +234,35 @@ class _Loop:
         for closed in [i for i in issues if not i.is_open and i.status != DONE]:
             self.github.set_status(closed.number, DONE)
             self.fixed.append(closed.number)
+
+    def release_in_review(self, issues: list[Issue]) -> list[Issue]:
+        """Moves back to Todo each In-review issue nothing holds; the ones stuck this run stay."""
+        released = []
+        for issue in issues:
+            if self.nothing_holds(issue) and self.cleared(issue.number):
+                self.github.set_status(issue.number, TODO)
+                self.github.comment(
+                    issue.number, "Moved back to Todo by the Ralph loop: nothing holds it any more."
+                )
+                issue = replace(issue, status=TODO)
+            released.append(issue)
+        return released
+
+    def cleared(self, issue: int) -> bool:
+        """Whether the issue's leftover worktree and branch are gone, so a session can start."""
+        if failed := self.session.remove(issue):
+            self.left_in_place[issue] = failed
+            return False
+        return True
+
+    def nothing_holds(self, issue: Issue) -> bool:
+        return (
+            issue.is_open
+            and issue.status == IN_REVIEW
+            and not issue.open_blockers
+            and issue.number not in self.stuck
+            and not self.github.has_open_pr(issue.number)
+        )
 
     def wait_for_merges(self, stop: Stop) -> Stop | None:
         """`stop` once this run's PRs have merged; until then wait, as one may unblock an issue."""
