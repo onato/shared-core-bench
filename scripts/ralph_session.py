@@ -46,19 +46,29 @@ class ClaudeSession:
     def work(self, issue: Issue) -> Outcome:
         branch = f"swilliams/{issue.number}-ralph"
         worktree = self.repo.parent / f"shared-core-bench-{issue.number}"
-        for step in (
-            ["fetch", "origin"],
-            ["worktree", "add", str(worktree), "-b", branch, "origin/main"],
-        ):
-            done = self.run(["git", "-C", str(self.repo), *step], capture_output=True, text=True)
-            if done.returncode != 0:
-                failed = f"git {' '.join(step[:2])} failed: {done.stderr.strip()}"
-                return Outcome(pr=None, needs_human=failed)
+        failed = self._add_worktree(worktree, ["-b", branch, "origin/main"])
+        if failed:
+            return Outcome(pr=None, needs_human=failed)
         prompt = (self.repo / ".ralph" / "PROMPT.md").read_text()
         prompt = prompt.replace("{issue}", str(issue.number)).replace("{branch}", branch)
+        text, log = self._claude(prompt, worktree, str(issue.number))
+        if text is None:
+            return Outcome(pr=None, needs_human=f"the session ended without a result; see {log}")
+        return outcome(text)
+
+    def _add_worktree(self, worktree: Path, start: list[str]) -> str | None:
+        """What failed, or None once the worktree exists."""
+        for step in (["fetch", "origin"], ["worktree", "add", str(worktree), *start]):
+            done = self.run(["git", "-C", str(self.repo), *step], capture_output=True, text=True)
+            if done.returncode != 0:
+                return f"git {' '.join(step[:2])} failed: {done.stderr.strip()}"
+        return None
+
+    def _claude(self, prompt: str, worktree: Path, name: str) -> tuple[str | None, Path]:
+        """The session's final result, if it reached one, and its log."""
         logs = self.repo / ".ralph" / "logs"
         logs.mkdir(exist_ok=True)
-        log = logs / f"{self.now():%Y%m%d-%H%M%S}-{issue.number}.log"
+        log = logs / f"{self.now():%Y%m%d-%H%M%S}-{name}.log"
         with log.open("w") as out:
             self.run(
                 [
@@ -78,10 +88,7 @@ class ClaudeSession:
                 text=True,
             )
         self._weekly = weekly_usage(log, self._weekly)
-        text = final_result(log)
-        if text is None:
-            return Outcome(pr=None, needs_human=f"the session ended without a result; see {log}")
-        return outcome(text)
+        return final_result(log), log
 
     def weekly_usage(self) -> float | None:
         """The weekly limit used, 0–1, as the last session saw it; None before any has run."""
