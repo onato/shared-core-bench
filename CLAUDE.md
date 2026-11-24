@@ -42,7 +42,7 @@ that test pass. Tick an item only when it passes along with every other non-benc
 
 Two loops, as in *Growing Object-Oriented Software, Guided by Tests*:
 
-- **Outer loop: contract cases.** The issue's "Contract cases" are acceptance tests: fixtures in
+- **Outer loop: contract cases.** The issue's "Contract cases" are acceptance tests: case files in
   `contract/cases/` that every core must pass, Rust and Lua included. Write them all first, before
   any production code, and run them: they fail together because the feature doesn't exist yet.
   That one red run is their evidence. A case that turns green partway through the inner loop is

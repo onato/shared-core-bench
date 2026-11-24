@@ -27,8 +27,8 @@ learned.
 
   ```markdown
   ## Goal
-  ## Contract cases            ← fixtures in contract/cases/, all written first, red together
-  - [ ] Fixture: `<case>` — <the behaviour it pins>
+  ## Contract cases            ← files in contract/cases/, all written first, red together
+  - [ ] `<case>.json` — <the behaviour it pins>
   ## Tests to write first      ← unit, app and UI tests, one at a time, each red before its code
   - [ ] <behaviour>
   ## Done when
