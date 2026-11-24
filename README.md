@@ -53,3 +53,7 @@ Parts of the agent instructions are adapted from MIT-licensed work. The notices 
   Summary visuals comes from Dex Horthy's `show-me` skill
   ([humanlayer/skills](https://github.com/humanlayer/skills)). Our version adds `Closes #`,
   red/green test evidence, coverage and the size budget, and drops the `GLOSSARY.md` reference.
+- **`.claude/skills/retro`:** from Matt Pocock's `retro` skill (`skills/engineering/retro`): its
+  categories of environment fixes and the rule that mechanical mistakes get checks, not
+  standards. Our version adds the loop's sources and the split between tightening fixes and
+  `retro-proposal` issues.
