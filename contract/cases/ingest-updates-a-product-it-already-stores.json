@@ -18,7 +18,7 @@
       },
       "expect": { "accepted": 1, "rejected": 0 }
     },
-    { "step": "stats", "expect": { "productCount": 2 } },
+    { "step": "stats", "expect": { "productCount": 2, "deletedCount": 0 } },
     {
       "step": "detail",
       "args": { "id": 1 },

@@ -9,6 +9,6 @@
       },
       "expect": { "accepted": 2, "rejected": 1 }
     },
-    { "step": "stats", "expect": { "productCount": 2 } }
+    { "step": "stats", "expect": { "productCount": 2, "deletedCount": 0 } }
   ]
 }

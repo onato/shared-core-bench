@@ -13,4 +13,6 @@ interface ContractCore {
     fun detail(args: JsonObject): JsonElement
 
     fun stats(args: JsonObject): JsonElement
+
+    fun refresh(args: JsonObject): JsonElement
 }

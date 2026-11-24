@@ -10,6 +10,8 @@ class Core private constructor(
 
     fun nextFetch(): FetchRequest? = paging.next()
 
+    fun refresh() = paging.restart()
+
     fun ingest(
         requestId: Long,
         status: Int,
@@ -59,7 +61,10 @@ class Core private constructor(
             }.executeAsOneOrNull()
     }
 
-    fun stats(): CoreStats = CoreStats(productCount = database.productQueries.count().executeAsOne())
+    fun stats(): CoreStats =
+        with(database.productQueries) {
+            CoreStats(productCount = count().executeAsOne(), deletedCount = deletedCount().executeAsOne())
+        }
 
     // Drivers throw platform exceptions (java.sql.SQLException, android.database.SQLException)
     // with no common supertype, so common code can only catch Exception.
@@ -68,6 +73,7 @@ class Core private constructor(
         try {
             database.productQueries.transaction {
                 page.rows.forEach(::upsert)
+                if (paging.isLastPage(page.total)) database.productQueries.softDeleteUnseenBefore(paging.generation)
             }
             paging.advance(page.total)
             IngestResult.Decoded(accepted = page.rows.size, rejected = page.rejected)
@@ -89,6 +95,7 @@ class Core private constructor(
                 rating,
                 stock,
                 thumbnail,
+                paging.generation,
             )
             database.productQueries.deleteTagsOf(id)
             tags.forEachIndexed { position, tag -> database.productQueries.insertTag(id, position.toLong(), tag) }
