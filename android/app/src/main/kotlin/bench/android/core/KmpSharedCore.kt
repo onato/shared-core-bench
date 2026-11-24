@@ -9,6 +9,7 @@ import bench.core.PageResult as CorePageResult
 import bench.core.ProductSummary as CoreProductSummary
 import bench.core.Query as CoreQuery
 import bench.core.RatingBucket as CoreRatingBucket
+import bench.core.Sort as CoreSort
 import bench.core.StockStatus as CoreStockStatus
 
 class KmpSharedCore(
@@ -40,7 +41,13 @@ class KmpSharedCore(
             CorePageResult.InvalidSize -> PageResult.InvalidSize
         }
 
-    private fun coreQuery(query: Query) = with(query) { CoreQuery(text, category, minPrice, maxPrice) }
+    private fun coreQuery(query: Query) = with(query) { CoreQuery(text, category, minPrice, maxPrice, coreSort(sort)) }
+
+    private fun coreSort(sort: Sort) =
+        when (sort) {
+            Sort.Id -> CoreSort.Id
+            Sort.PriceAsc -> CoreSort.PriceAsc
+        }
 
     override fun detail(id: Long): ProductDetail? =
         core.detail(id)?.run {

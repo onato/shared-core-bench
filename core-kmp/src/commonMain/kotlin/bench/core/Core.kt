@@ -42,6 +42,7 @@ class Core private constructor(
                     category = query.category,
                     minPrice = query.minPrice,
                     maxPrice = query.maxPrice,
+                    sort = query.sort.key,
                     limit = size + 1L,
                 ) { id, title, price, discountedPrice, rating, thumbnail ->
                     ProductSummary(id, title, price, discountedPrice, rating, thumbnail)
