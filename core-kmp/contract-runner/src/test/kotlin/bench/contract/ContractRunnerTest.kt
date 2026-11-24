@@ -35,7 +35,8 @@ class ContractRunnerTest {
               {"step": "page", "args": {"size": 20}, "expect": {"step": "page", "args": {"size": 20}}},
               {"step": "nextFetch", "expect": {"step": "nextFetch", "args": {}}},
               {"step": "detail", "args": {"id": 1}, "expect": {"step": "detail", "args": {"id": 1}}},
-              {"step": "stats", "expect": {"step": "stats", "args": {}}}
+              {"step": "stats", "expect": {"step": "stats", "args": {}}},
+              {"step": "refresh", "expect": {"step": "refresh", "args": {}}}
             ]}
             """,
         )

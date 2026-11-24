@@ -25,6 +25,6 @@ class IngestWorkloadTest {
     fun eachFreshCoreStartsFromAnEmptyDatabase() {
         workload.ingestInto(workload.freshCore())
 
-        assertEquals(CoreStats(productCount = 0), workload.freshCore().stats())
+        assertEquals(CoreStats(productCount = 0, deletedCount = 0), workload.freshCore().stats())
     }
 }

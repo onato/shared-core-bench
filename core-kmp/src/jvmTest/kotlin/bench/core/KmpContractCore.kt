@@ -123,7 +123,17 @@ class KmpContractCore(
 
     override fun stats(args: JsonObject): JsonElement {
         val stats = core.stats()
-        return JsonObject(mapOf("productCount" to JsonPrimitive(stats.productCount)))
+        return JsonObject(
+            mapOf(
+                "productCount" to JsonPrimitive(stats.productCount),
+                "deletedCount" to JsonPrimitive(stats.deletedCount),
+            ),
+        )
+    }
+
+    override fun refresh(args: JsonObject): JsonElement {
+        core.refresh()
+        return JsonNull
     }
 
     private companion object {

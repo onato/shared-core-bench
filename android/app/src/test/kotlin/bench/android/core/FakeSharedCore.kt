@@ -46,7 +46,11 @@ class FakeSharedCore(
 
     override fun detail(id: Long): ProductDetail? = details[id]
 
-    override fun stats(): CoreStats = CoreStats(productCount = products.size.toLong())
+    override fun stats(): CoreStats = CoreStats(productCount = products.size.toLong(), deletedCount = 0)
+
+    override fun refresh() {
+        fetched = 0
+    }
 
     private companion object {
         val SUCCESS = 200..299
