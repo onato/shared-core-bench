@@ -21,7 +21,7 @@ Closes #<issue>
 
 ## Evidence
 
-- **Before:** <the new tests failing — test names and the failure line>
+- **Before:** <the contract cases failing together in one run, then each new test failing before its own code — test names and the failure line>
   **After:** <the same tests passing; `make coverage` result per module>
 
 ## Merge Danger
@@ -58,9 +58,10 @@ boundaries needed to make the point; usually one or two visuals, rarely more.
 
 ## Evidence
 
-Concrete proof the change works, before and after. For this repo the before is the red run: the
-tests written first, failing for the expected reason. The after is the same tests green plus the
-coverage gate. Screenshots for visible UI changes when a device is available.
+Concrete proof the change works, before and after. For this repo the before is two kinds of red
+run (see `CLAUDE.md` → TDD): the issue's contract cases failing together before any production
+code, and each test from the issue's list failing for the expected reason before its own code. The
+after is all of them green plus the coverage gate. Screenshots for visible UI changes when a device is available.
 
 ## Merge Danger
 

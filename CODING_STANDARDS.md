@@ -30,7 +30,8 @@ green.
   passes by construction. Expected values come from an independent source: a literal, a worked
   example, the spec, a contract fixture.
 - **Horizontal slicing**: all the tests first, then all the code. One test → one implementation →
-  repeat.
+  repeat. An issue's contract cases are the exception: they are the outer loop, written together
+  before any code (`CLAUDE.md` → TDD), while its tests to write first still go one at a time.
 
 ## Coverage
 
