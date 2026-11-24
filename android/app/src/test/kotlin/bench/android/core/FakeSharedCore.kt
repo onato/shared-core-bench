@@ -38,7 +38,8 @@ class FakeSharedCore(
         size: Int,
         query: Query,
     ): PageResult {
-        val after = products.values.filter { cursor == null || it.id > cursor }
+        val matching = products.values.filter { it.title.contains(query.text, ignoreCase = true) }
+        val after = matching.filter { cursor == null || it.id > cursor }
         val items = after.take(size)
         return PageResult.Page(items, nextCursor = if (after.size > size) items.last().id else null)
     }

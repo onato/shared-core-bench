@@ -3,6 +3,7 @@ package bench.android
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -10,6 +11,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.NonSkippableComposable
 import androidx.compose.runtime.getValue
@@ -32,6 +34,7 @@ import androidx.paging.compose.collectAsLazyPagingItems
 import bench.android.core.FetchRequest
 import bench.android.core.ProductDetail
 import bench.android.core.ProductSummary
+import bench.android.core.Query
 import bench.android.core.SharedCore
 import kotlinx.coroutines.flow.Flow
 import java.util.Locale
@@ -40,7 +43,8 @@ fun productPages(
     core: SharedCore,
     fetch: (FetchRequest) -> FetchResult,
     pageSize: Int,
-): Flow<PagingData<ProductSummary>> = Pager(PagingConfig(pageSize)) { ProductPagingSource(core, fetch) }.flow
+    query: Query,
+): Flow<PagingData<ProductSummary>> = Pager(PagingConfig(pageSize)) { ProductPagingSource(core, fetch, query) }.flow
 
 private fun CombinedLoadStates.firstError() = listOf(refresh, append).filterIsInstance<LoadState.Error>().firstOrNull()
 
@@ -71,29 +75,35 @@ private fun ProductCell(
 @NonSkippableComposable
 @Composable
 fun App(
-    products: Flow<PagingData<ProductSummary>>,
+    products: (Query) -> Flow<PagingData<ProductSummary>>,
     detail: (Long) -> ProductDetail?,
 ) {
-    val items = products.collectAsLazyPagingItems()
+    var text by rememberSaveable { mutableStateOf("") }
+    val items = remember(text) { products(Query(text)) }.collectAsLazyPagingItems()
     val listState = rememberLazyListState()
     var selected by rememberSaveable { mutableStateOf<Long?>(null) }
     when (val id = selected) {
         null -> {
-            LazyColumn(state = listState) {
-                item { Text("Products") }
-                items(items.itemCount) { index ->
-                    items[index]?.let { product -> ProductCell(product, Modifier.clickable { selected = product.id }) }
-                }
-                if (items.itemCount == 0 && items.loadState.append.endOfPaginationReached) {
-                    item { Text("No products") }
-                }
-                if (items.loadState.refresh is LoadState.Loading || items.loadState.append is LoadState.Loading) {
-                    item { CircularProgressIndicator() }
-                }
-                items.loadState.firstError()?.let { failure ->
-                    item {
-                        Text(failure.error.message.orEmpty())
-                        Button(onClick = items::retry) { Text("Retry") }
+            Column {
+                TextField(value = text, onValueChange = { text = it }, label = { Text("Search") }, singleLine = true)
+                LazyColumn(state = listState) {
+                    item { Text("Products") }
+                    items(items.itemCount) { index ->
+                        items[index]?.let { product ->
+                            ProductCell(product, Modifier.clickable { selected = product.id })
+                        }
+                    }
+                    if (items.itemCount == 0 && items.loadState.append.endOfPaginationReached) {
+                        item { Text(if (text.isEmpty()) "No products" else "No products match") }
+                    }
+                    if (items.loadState.refresh is LoadState.Loading || items.loadState.append is LoadState.Loading) {
+                        item { CircularProgressIndicator() }
+                    }
+                    items.loadState.firstError()?.let { failure ->
+                        item {
+                            Text(failure.error.message.orEmpty())
+                            Button(onClick = items::retry) { Text("Retry") }
+                        }
                     }
                 }
             }

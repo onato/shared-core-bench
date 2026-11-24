@@ -49,7 +49,10 @@ class ProductDetailTest {
         pageSize: Int = 2,
     ) {
         compose.setContent {
-            App(productPages(core, { error("unexpected fetch of ${it.url}") }, pageSize), core::detail)
+            App(
+                { productPages(core, { request -> error("unexpected fetch of ${request.url}") }, pageSize, it) },
+                core::detail,
+            )
         }
     }
 
