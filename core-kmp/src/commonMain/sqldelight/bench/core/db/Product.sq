@@ -51,10 +51,27 @@ tagsOf:
 SELECT tag FROM product_tag WHERE product_id = ? ORDER BY position;
 
 pageAfter:
-SELECT id, title, price, discounted_price, rating, thumbnail FROM product
-WHERE id > :cursor AND deleted = 0
+WITH keyed AS (
+  SELECT *, CASE :sort
+      WHEN 'price-asc' THEN discounted_price
+      WHEN 'price-desc' THEN -discounted_price
+      WHEN 'rating-desc' THEN -rating
+      ELSE id
+    END AS sort_key
+  FROM product
+),
+-- Under the id sort the cursor is its own key, so it needn't be a stored id.
+after AS (
+  SELECT coalesce((SELECT sort_key FROM keyed WHERE id = :cursor), CASE :sort WHEN 'id' THEN :cursor END)
+    AS cursor_key
+)
+SELECT id, title, price, discounted_price, rating, thumbnail FROM keyed
+WHERE (:cursor IS NULL OR sort_key > (SELECT cursor_key FROM after)
+    OR (sort_key = (SELECT cursor_key FROM after) AND id > :cursor))
+  AND deleted = 0
   AND (instr(lower(title), lower(:text)) > 0 OR instr(lower(brand), lower(:text)) > 0)
   AND (:category IS NULL OR category = :category)
   AND (:minPrice IS NULL OR discounted_price >= :minPrice)
   AND (:maxPrice IS NULL OR discounted_price <= :maxPrice)
-ORDER BY id LIMIT :limit;
+ORDER BY sort_key, id
+LIMIT :limit;

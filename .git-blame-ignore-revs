@@ -26,3 +26,6 @@ cbff9ec8f5c178def46d936bcd7cf04491bd4e80
 
 # Structural: ProductFixtures in a fixtures module the app and benchmarks share (#167)
 084b6c18d1e5f277db8b7b98e3a6a11f04281d8e
+
+# Structural: KmpSharedCore's mappers as file-level functions (#176)
+8bf5dd0382330b763f51061ed2c4ca6ba11e00e0
