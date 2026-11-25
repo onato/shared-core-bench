@@ -68,6 +68,17 @@ class SqliteStoragePortTest {
     }
 
     @Test
+    fun categoriesTheDriverFailsComeBackAsAStorageError() {
+        val path = File(Files.createTempDirectory("port").toFile(), "products.db").path
+        val filePort = SqliteStoragePort.open(path)
+        BundledSQLiteDriver().open(path).use { it.execSQL("DROP TABLE product") }
+
+        val result = filePort.categories()
+
+        assertEquals(StorageError("android.database.SQLException"), result)
+    }
+
+    @Test
     fun aCommitThatFailsKeepsNoneOfTheTransactionsWritesAndTheNextOneCommits() {
         val path = File(Files.createTempDirectory("port").toFile(), "products.db").path
         val filePort = SqliteStoragePort.open(path)

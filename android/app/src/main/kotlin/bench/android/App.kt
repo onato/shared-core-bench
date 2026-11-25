@@ -34,6 +34,7 @@ import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import androidx.paging.compose.collectAsLazyPagingItems
+import bench.android.core.CategoriesResult
 import bench.android.core.DetailResult
 import bench.android.core.FetchRequest
 import bench.android.core.ProductDetail
@@ -85,7 +86,7 @@ fun App(
     products: (Query) -> Flow<PagingData<ProductSummary>>,
     detail: (Long) -> DetailResult,
     refresh: () -> Unit,
-    categories: () -> List<String>,
+    categories: () -> CategoriesResult,
 ) {
     var text by rememberSaveable { mutableStateOf("") }
     val filters = rememberFilters()

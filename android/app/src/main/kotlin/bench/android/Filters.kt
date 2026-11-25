@@ -17,6 +17,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import bench.android.core.CategoriesResult
 import bench.android.core.Query
 import bench.android.core.Sort
 
@@ -53,6 +54,15 @@ fun rememberFilters(): Filters {
 
 private fun categoryName(category: String) = category
 
+// Built outside the composable, which would otherwise wrap the lambda in a remember branch the gate counts.
+private fun namesOf(categories: () -> CategoriesResult): () -> List<String> =
+    {
+        when (val result = categories()) {
+            is CategoriesResult.Categories -> result.names
+            CategoriesResult.StorageFailed -> emptyList()
+        }
+    }
+
 private fun sortName(sort: Sort) = SORT_NAMES.getValue(sort)
 
 private val SORT_NAMES =
@@ -68,7 +78,7 @@ private val SORT_NAMES =
 @Composable
 fun FilterControls(
     filters: Filters,
-    categories: () -> List<String>,
+    categories: () -> CategoriesResult,
 ) {
     Column {
         Row {
@@ -76,7 +86,8 @@ fun FilterControls(
             PriceField("Max price", filters.maxPrice, Modifier.weight(1f))
         }
         Row {
-            Choice("Category: ${filters.category.value ?: "All"}", categories, ::categoryName, filters.chooseCategory)
+            val label = "Category: ${filters.category.value ?: "All"}"
+            Choice(label, namesOf(categories), ::categoryName, filters.chooseCategory)
             Choice("Sort: ${sortName(filters.sort.value)}", Sort::entries, ::sortName, filters.chooseSort)
             TextButton(onClick = filters.clear) { Text("Clear filters") }
         }

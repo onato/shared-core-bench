@@ -146,7 +146,11 @@ class KmpContractCore(
         return JsonNull
     }
 
-    override fun categories(args: JsonObject): JsonElement = JsonArray(core.categories().map(::JsonPrimitive))
+    override fun categories(args: JsonObject): JsonElement =
+        when (val result = core.categories()) {
+            is CategoriesResult.Categories -> JsonArray(result.names.map(::JsonPrimitive))
+            CategoriesResult.StorageFailed -> errorResult("storage-failed")
+        }
 
     private companion object {
         val SORTS =

@@ -76,6 +76,17 @@ class StoragePortTest {
     }
 
     @Test
+    fun categoriesThatReturnAStorageErrorAreStorageFailedCategories() {
+        val failingItsCategories =
+            object : StoragePort by port {
+                override fun categories(): StorageResult<List<String>> = StorageError("disk full")
+            }
+        val core = Core.create(CoreConfig(dbPath = ":memory:"), failingItsCategories)
+
+        assertEquals(CategoriesResult.StorageFailed, core.categories())
+    }
+
+    @Test
     fun ingestingAPageOf20ThroughTheChattyVariantMakes20UpsertOneCallsAndNoUpsertCall() {
         val calls = mutableListOf<String>()
         val counting =

@@ -55,7 +55,11 @@ class Core private constructor(
             is Stored -> product.value?.let(DetailResult::Found) ?: DetailResult.NotFound
         }
 
-    fun categories(): List<String> = storage.categories()
+    fun categories(): CategoriesResult =
+        when (val names = storage.categories()) {
+            is StorageError -> CategoriesResult.StorageFailed
+            is Stored -> CategoriesResult.Categories(names.value)
+        }
 
     fun stats(): CoreStats = storage.stats()
 
