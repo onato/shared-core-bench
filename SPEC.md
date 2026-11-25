@@ -74,6 +74,7 @@ ingest(requestId, status, body: bytes): IngestResult   // decode â†’ validate â†
 page(query: Query, cursor: Cursor?, size: Int): Page   // reads only from the DB
 detail(id): Product?
 refresh(): void                        // invalidates and resets remote paging state
+categories(): [String]                 // distinct categories of the stored products
 stats(): CoreStats                     // row counts, last sync, timings
 ```
 
