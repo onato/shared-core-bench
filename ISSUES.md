@@ -39,7 +39,7 @@ learned.
 
   Either list may be `none` (say why). Order the tests to write first so each one needs code the
   earlier ones didn't: a test the previous step already satisfies belongs in no list.
-- **Before filing an issue**, check these four things. Each one cost a session time when an issue
+- **Before filing an issue**, check these five things. Each one cost a session time when an issue
   left it out:
   - **Where the code goes.** Name the module, and check that the module can depend on what the
     code uses. An Android library can't depend on `:app`, so #123 had to be split partway
@@ -55,6 +55,11 @@ learned.
     reads, and its session had to split it into three issues before writing code. For each
     caller that puts something on screen, add a test to write first for what the user sees when
     the call fails. #234 and #235 had to guess this.
+  - **Which test goes red first.** When the UI that shows a result already exists (an error row,
+    a Retry button), list the screen test before the fix underneath it, so the screen test fails
+    until that fix lands, and say in the issue that the UI exists. #242 listed the paging-source
+    fix first, its screen tests then passed on their first run, and the session had to rerun them
+    against `main` to show them red (#249).
 - Hierarchy uses GitHub sub-issues: one parent issue per milestone, tasks as its sub-issues, and
   GitHub issue dependencies ("blocked by") for order.
 - Board: https://github.com/users/onato/projects/2
