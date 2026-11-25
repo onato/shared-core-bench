@@ -163,6 +163,17 @@ def test_each_session_starts_fresh_even_when_the_loop_runs_inside_claude_code(tm
     assert env["PATH"] == "/usr/bin"
 
 
+def test_a_session_finds_simpool_on_its_path(tmp_path):
+    processes = FakeProcesses(result("PR: #52"))
+    _, claude = session(tmp_path, processes)
+    claude.environ = {"PATH": "/usr/bin", "HOME": "/Users/owner"}
+
+    claude.work(Issue(7, "In progress"), nothing)
+
+    env = processes.claude()[1]["env"]
+    assert env["PATH"] == "/Users/owner/.claude/skills/sim-pool/scripts:/usr/bin"
+
+
 def test_a_worktree_that_cannot_be_made_needs_a_human_and_starts_no_claude(tmp_path):
     processes = FakeProcesses(result("PR: #52"))
     error = "fatal: a branch named 'swilliams/7-ralph' already exists\n"
