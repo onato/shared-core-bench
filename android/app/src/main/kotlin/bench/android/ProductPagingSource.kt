@@ -24,12 +24,17 @@ class ProductPagingSource(
         cursor: Long?,
         size: Int,
     ): LoadResult<Long, ProductSummary> {
+        val result = core.page(cursor, size, query)
+        if (result == PageResult.StorageFailed) return LoadResult.Error(StorageReadException())
         // Paging rejects a non-positive page size in PagingConfig, so InvalidSize cannot come back.
-        val page = core.page(cursor, size, query) as PageResult.Page
+        val page = result as PageResult.Page
         val request = if (page.nextCursor == null) core.nextFetch() else null
-        if (request == null) return page.toLoadResult()
-        val failure = fetchAndIngest(request)
-        return if (failure != null) LoadResult.Error(failure) else load(cursor, size)
+        val failure = request?.let(::fetchAndIngest)
+        return when {
+            request == null -> page.toLoadResult()
+            failure != null -> LoadResult.Error(failure)
+            else -> load(cursor, size)
+        }
     }
 
     private fun fetchAndIngest(request: FetchRequest): RemoteLoadException? =
@@ -52,5 +57,7 @@ class ProductPagingSource(
 class RemoteLoadException(
     message: String,
 ) : Exception(message)
+
+class StorageReadException : Exception("Couldn't load products")
 
 private fun PageResult.Page.toLoadResult() = PagingSource.LoadResult.Page(items, prevKey = null, nextKey = nextCursor)

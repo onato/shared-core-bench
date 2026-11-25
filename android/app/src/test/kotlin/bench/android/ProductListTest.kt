@@ -91,6 +91,31 @@ class ProductListTest {
     }
 
     @Test
+    fun aFirstPageWhoseStorageReadFailsShowsCouldNotLoadWithRetry() {
+        val core = FakeSharedCore(stored = listOf(mascara))
+        core.storageFailing = true
+        show(core)
+
+        awaitText("Couldn't load products")
+        compose.onNodeWithText("Retry").assertIsDisplayed()
+        assertEquals(0, compose.onAllNodes(spinner).fetchSemanticsNodes().size)
+    }
+
+    @Test
+    fun retryingOnceStorageRecoversShowsTheProducts() {
+        val core = FakeSharedCore(stored = listOf(mascara))
+        core.storageFailing = true
+        show(core)
+        awaitText("Couldn't load products")
+
+        core.storageFailing = false
+        compose.onNodeWithText("Retry").performClick()
+
+        awaitText("Essence Mascara")
+        awaitGone("Couldn't load products")
+    }
+
+    @Test
     fun anEmptyCatalogueSaysThereAreNoProducts() {
         show(FakeSharedCore())
 
