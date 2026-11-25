@@ -21,7 +21,7 @@ interface SharedCore {
     fun stats(): CoreStats
 
     /** The categories of the products a page can show, sorted. */
-    fun categories(): List<String>
+    fun categories(): CategoriesResult
 
     /** Starts the remote walk again from the first page. */
     fun refresh()
@@ -82,6 +82,14 @@ sealed interface DetailResult {
     data object NotFound : DetailResult
 
     data object StorageFailed : DetailResult
+}
+
+sealed interface CategoriesResult {
+    data class Categories(
+        val names: List<String>,
+    ) : CategoriesResult
+
+    data object StorageFailed : CategoriesResult
 }
 
 enum class RatingBucket { Excellent, Good, Fair, Poor }

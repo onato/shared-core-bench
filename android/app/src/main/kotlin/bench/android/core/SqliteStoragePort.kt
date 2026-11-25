@@ -109,8 +109,10 @@ class SqliteStoragePort private constructor(
             )
         }
 
-    override fun categories(): List<String> =
-        run("SELECT DISTINCT category FROM product WHERE deleted = 0 ORDER BY category") { rows { text() } }
+    override fun categories(): StorageResult<List<String>> =
+        catching {
+            Stored(run("SELECT DISTINCT category FROM product WHERE deleted = 0 ORDER BY category") { rows { text() } })
+        }
 
     override fun stats(): CoreStats =
         CoreStats(

@@ -68,7 +68,7 @@ class FakeSharedCore(
     override fun stats(): CoreStats =
         CoreStats(productCount = products.size.toLong(), deletedCount = deleted.size.toLong())
 
-    override fun categories(): List<String> = categoryOf.values.distinct().sorted()
+    override fun categories(): CategoriesResult = CategoriesResult.Categories(categoryOf.values.distinct().sorted())
 
     override fun refresh() {
         fetched = 0

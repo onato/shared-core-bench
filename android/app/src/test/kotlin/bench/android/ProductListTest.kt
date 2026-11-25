@@ -16,6 +16,7 @@ import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeDown
 import androidx.compose.ui.test.swipeUp
 import androidx.compose.ui.text.style.TextDecoration
+import bench.android.core.CategoriesResult
 import bench.android.core.FakeSharedCore
 import bench.android.core.FetchRequest
 import bench.android.core.ProductSummary
@@ -43,10 +44,11 @@ class ProductListTest {
 
     private fun show(
         core: FakeSharedCore,
+        categories: () -> CategoriesResult = core::categories,
         fetch: (FetchRequest) -> FetchResult = ::noNetwork,
     ) {
         compose.setContent {
-            App({ productPages(core, fetch, pageSize = 2, it) }, core::detail, core::refresh, core::categories)
+            App({ productPages(core, fetch, pageSize = 2, it) }, core::detail, core::refresh, categories)
         }
     }
 
@@ -222,6 +224,20 @@ class ProductListTest {
 
         awaitText("Annibale Colombo Bed")
         awaitGone("Essence Mascara")
+    }
+
+    @Test
+    fun aCategoryMenuWhoseReadFailsOffersNoCategoriesAndKeepsTheList() {
+        show(
+            FakeSharedCore(stored = listOf(mascara), categoryOf = mapOf(1L to "beauty")),
+            categories = { CategoriesResult.StorageFailed },
+        )
+        awaitText("Essence Mascara")
+
+        compose.onNodeWithText("Category: All").performClick()
+
+        awaitText("Essence Mascara")
+        assertEquals(0, compose.onAllNodesWithText("beauty").fetchSemanticsNodes().size)
     }
 
     @Test

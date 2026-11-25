@@ -10,6 +10,7 @@ import bench.core.CoreConfig
 import bench.core.DriverFactory
 import bench.core.PortCalls
 import java.io.File
+import bench.core.CategoriesResult as CoreCategoriesResult
 import bench.core.DetailResult as CoreDetailResult
 import bench.core.IngestResult as CoreIngestResult
 import bench.core.PageResult as CorePageResult
@@ -91,7 +92,11 @@ class KmpSharedCore(
 
     override fun refresh() = core.refresh()
 
-    override fun categories() = core.categories()
+    override fun categories(): CategoriesResult =
+        when (val result = core.categories()) {
+            is CoreCategoriesResult.Categories -> CategoriesResult.Categories(result.names)
+            CoreCategoriesResult.StorageFailed -> CategoriesResult.StorageFailed
+        }
 
     companion object {
         fun create(

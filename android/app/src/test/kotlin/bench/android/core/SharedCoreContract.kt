@@ -96,7 +96,11 @@ class SharedCoreContract(
         return JsonNull
     }
 
-    override fun categories(args: JsonObject): JsonElement = JsonArray(core.categories().map(::JsonPrimitive))
+    override fun categories(args: JsonObject): JsonElement =
+        when (val result = core.categories()) {
+            is CategoriesResult.Categories -> JsonArray(result.names.map(::JsonPrimitive))
+            CategoriesResult.StorageFailed -> json("error" to "storage-failed")
+        }
 
     private fun summaryJson(summary: ProductSummary) =
         with(summary) {

@@ -96,7 +96,7 @@ internal class EmbeddedStorage(
             )
         }
 
-    override fun categories(): List<String> = queries.categories().executeAsList()
+    override fun categories(): StorageResult<List<String>> = catching { Stored(queries.categories().executeAsList()) }
 
     override fun stats(): CoreStats =
         with(queries) {
