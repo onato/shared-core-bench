@@ -25,6 +25,24 @@ class IngestStorageTest {
         assertEquals(CoreStats(productCount = 0, deletedCount = 0), core.stats())
     }
 
+    @Test
+    fun aDriverFailureComesBackFromTheEmbeddedStorageAsAStorageError() {
+        val port = jdbcTestPort(dbPath)
+        failInsertsOf(id = 2)
+        val mascara =
+            ProductDetail(2, "Mascara", "Lash", "beauty", null, 9.99, 7.5, 4.5, 5, "https://cdn/2.png", listOf())
+
+        val result = port.upsertOne(mascara, generation = 1)
+
+        assertEquals(
+            StorageError(
+                "org.sqlite.SQLiteException: [SQLITE_CONSTRAINT_TRIGGER] A RAISE function within a trigger fired, " +
+                    "causing the SQL statement to abort (simulated storage failure)",
+            ),
+            result,
+        )
+    }
+
     private fun product(id: Int) =
         """
         {"id": $id, "title": "Essence Mascara", "description": "Lash mascara", "category": "beauty",

@@ -1,6 +1,7 @@
 package bench.android.core
 
 import androidx.sqlite.SQLiteConnection
+import androidx.sqlite.SQLiteException
 import androidx.sqlite.SQLiteStatement
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.sqlite.execSQL
@@ -9,44 +10,62 @@ import bench.core.ProductDetail
 import bench.core.ProductSummary
 import bench.core.Query
 import bench.core.Sort
+import bench.core.StorageError
 import bench.core.StoragePort
+import bench.core.StorageResult
+import bench.core.Stored
 
 /** The app's [StoragePort]: the core's schema and SQL (`Product.sq`) on the bundled SQLite. */
 class SqliteStoragePort private constructor(
     private val connection: SQLiteConnection,
 ) : StoragePort {
-    @Suppress("TooGenericExceptionCaught") // Rolls back whatever the block throws, then rethrows it.
-    override fun transaction(block: () -> Unit) {
-        connection.execSQL("BEGIN")
-        try {
-            block()
-        } catch (failure: Throwable) {
-            connection.execSQL("ROLLBACK")
-            throw failure
+    override fun transaction(block: () -> StorageResult<Unit>): StorageResult<Unit> =
+        catching {
+            connection.execSQL("BEGIN")
+            val result = block()
+            val committed =
+                if (result is StorageError) {
+                    result
+                } else {
+                    catching {
+                        connection.execSQL("COMMIT")
+                        result
+                    }
+                }
+            // A failed COMMIT, such as one blocked by a reader, leaves the transaction open.
+            if (committed is StorageError) connection.execSQL("ROLLBACK")
+            committed
         }
-        connection.execSQL("COMMIT")
-    }
 
     override fun upsert(
         items: List<ProductDetail>,
         generation: Long,
-    ) = items.forEach { upsertOne(it, generation) }
+    ): StorageResult<Unit> =
+        catching {
+            items.forEach { item ->
+                with(item) {
+                    val row =
+                        listOf(id, title, description, category, brand, price, discountPercentage, discountedPrice)
+                    run(UPSERT, row + listOf(rating, stock, thumbnail, generation)) { step() }
+                    run("DELETE FROM product_tag WHERE product_id = ?", listOf(id)) { step() }
+                    tags.forEachIndexed { position, tag ->
+                        run(INSERT_TAG, listOf(id, position.toLong(), tag)) { step() }
+                    }
+                }
+            }
+            Stored(Unit)
+        }
 
     override fun upsertOne(
         item: ProductDetail,
         generation: Long,
-    ) = with(item) {
-        val row = listOf(id, title, description, category, brand, price, discountPercentage, discountedPrice, rating)
-        run(UPSERT, row + listOf(stock, thumbnail, generation)) { step() }
-        run("DELETE FROM product_tag WHERE product_id = ?", listOf(id)) { step() }
-        tags.forEachIndexed { position, tag ->
-            run(INSERT_TAG, listOf(id, position.toLong(), tag)) { step() }
-        }
-    }
+    ) = upsert(listOf(item), generation)
 
-    override fun markMissingDeleted(generation: Long) {
-        run("UPDATE product SET deleted = 1 WHERE seen_generation < ?", listOf(generation)) { step() }
-    }
+    override fun markMissingDeleted(generation: Long): StorageResult<Unit> =
+        catching {
+            run("UPDATE product SET deleted = 1 WHERE seen_generation < ?", listOf(generation)) { step() }
+            Stored(Unit)
+        }
 
     override fun query(
         query: Query,
@@ -110,6 +129,13 @@ class SqliteStoragePort private constructor(
         }
     }
 }
+
+private inline fun catching(write: () -> StorageResult<Unit>): StorageResult<Unit> =
+    try {
+        write()
+    } catch (failure: SQLiteException) {
+        StorageError(failure.toString())
+    }
 
 private fun SQLiteStatement.bind(
     index: Int,
