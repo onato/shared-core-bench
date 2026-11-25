@@ -1,0 +1,6 @@
+root = true
+
+# detekt's MaxLineLength is 120; ktlint_official would otherwise allow 140, so ktlintFormat
+# would leave lines that detekt rejects.
+[*.{kt,kts}]
+max_line_length = 120
