@@ -10,6 +10,9 @@ class FakeSharedCore(
     details: List<ProductDetail> = emptyList(),
     private val categoryOf: Map<Long, String> = emptyMap(),
 ) : SharedCore {
+    /** While set, every [page] read fails as a storage error would. */
+    @Volatile var storageFailing = false
+
     private val products = stored.associateBy { it.id }.toSortedMap()
     private val details = details.associateBy { it.id }
     private var fetched = 0
@@ -49,6 +52,7 @@ class FakeSharedCore(
         size: Int,
         query: Query,
     ): PageResult {
+        if (storageFailing) return PageResult.StorageFailed
         val matching =
             products.values.filter {
                 it.id !in deleted &&
