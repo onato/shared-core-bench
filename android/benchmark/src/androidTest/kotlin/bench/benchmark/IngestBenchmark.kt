@@ -3,7 +3,6 @@ package bench.benchmark
 import androidx.benchmark.junit4.BenchmarkRule
 import androidx.benchmark.junit4.measureRepeated
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import androidx.test.platform.app.InstrumentationRegistry
 import bench.core.IngestResult
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -16,7 +15,7 @@ class IngestBenchmark {
     @get:Rule
     val benchmark = BenchmarkRule()
 
-    private val cores = EmbeddedCores(InstrumentationRegistry.getInstrumentation().targetContext)
+    private val cores = benchCores()
 
     @Test
     fun ingest100Products() = measure(100)

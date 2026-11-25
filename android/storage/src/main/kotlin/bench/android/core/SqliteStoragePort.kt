@@ -18,7 +18,8 @@ import bench.core.Stored
 /** The app's [StoragePort]: the core's schema and SQL (`Product.sq`) on the bundled SQLite. */
 class SqliteStoragePort private constructor(
     private val connection: SQLiteConnection,
-) : StoragePort {
+) : StoragePort,
+    AutoCloseable by connection {
     override fun transaction(block: () -> StorageResult<Unit>): StorageResult<Unit> =
         catching {
             connection.execSQL("BEGIN")

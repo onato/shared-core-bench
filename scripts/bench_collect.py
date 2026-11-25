@@ -128,8 +128,12 @@ def main(argv: list[str]) -> int:
         for source in sorted(args.output.rglob("*benchmarkData.json"))
         for row in collect(json.loads(source.read_text()), git_sha=args.git_sha, **labels)
     ]
+    results = args.out / "results.json"
+    # Each storage variant is its own run; they share one results file so the table compares them.
+    if results.exists():
+        rows = json.loads(results.read_text()) + rows
     args.out.mkdir(parents=True, exist_ok=True)
-    (args.out / "results.json").write_text(json.dumps(rows, indent=2) + "\n")
+    results.write_text(json.dumps(rows, indent=2) + "\n")
     print(table(rows), end="")
     return 0
 
