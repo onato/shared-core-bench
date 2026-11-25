@@ -43,7 +43,9 @@ learned.
   left it out:
   - **Where the code goes.** Name the module, and check that the module can depend on what the
     code uses. An Android library can't depend on `:app`, so #123 had to be split partway
-    through (#216, #217).
+    through (#216, #217). If the code it changes is at a detekt size limit (`android/README.md`
+    lists them), say where the new branch or function goes: #249 and #250 found `ReturnCount`
+    and `LongMethod` mid-change.
   - **What it waits for.** List under `Blocked by` every issue whose change one of these tests
     needs, including a doc line the test reads. #213 left out #214 and its session sat idle.
   - **How it can fail.** A failure path gets one test for each way it can fail (the block returns
