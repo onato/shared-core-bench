@@ -20,6 +20,8 @@ class ProductPagingSource(
     override suspend fun load(params: LoadParams<Long>): LoadResult<Long, ProductSummary> =
         withContext(Dispatchers.IO) { load(params.key, params.loadSize) }
 
+    // The storage-failure guard is a third return; folding the fetch tail to avoid it would restructure that tail.
+    @Suppress("ReturnCount")
     private tailrec fun load(
         cursor: Long?,
         size: Int,
@@ -29,12 +31,9 @@ class ProductPagingSource(
         // Paging rejects a non-positive page size in PagingConfig, so InvalidSize cannot come back.
         val page = result as PageResult.Page
         val request = if (page.nextCursor == null) core.nextFetch() else null
-        val failure = request?.let(::fetchAndIngest)
-        return when {
-            request == null -> page.toLoadResult()
-            failure != null -> LoadResult.Error(failure)
-            else -> load(cursor, size)
-        }
+        if (request == null) return page.toLoadResult()
+        val failure = fetchAndIngest(request)
+        return if (failure != null) LoadResult.Error(failure) else load(cursor, size)
     }
 
     private fun fetchAndIngest(request: FetchRequest): RemoteLoadException? =
