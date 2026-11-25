@@ -13,7 +13,7 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.long
 import kotlinx.serialization.json.longOrNull
 
-/** Speaks the contract fixtures' JSON to any [SharedCore]. */
+/** Speaks the contract cases' JSON to any [SharedCore]. */
 class SharedCoreContract(
     private val core: SharedCore,
 ) : ContractCore {

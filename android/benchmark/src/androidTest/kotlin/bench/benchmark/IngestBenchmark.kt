@@ -5,34 +5,36 @@ import androidx.benchmark.junit4.measureRepeated
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import bench.core.IngestResult
-import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
+/** SPEC.md benchmark 7; each name ends in the number of products ingested. */
 @RunWith(AndroidJUnit4::class)
 class IngestBenchmark {
     @get:Rule
     val benchmark = BenchmarkRule()
 
-    private val workload =
-        IngestWorkload(InstrumentationRegistry.getInstrumentation().targetContext, count = PRODUCTS, seed = SEED)
-
-    @After
-    fun closeWorkload() = workload.close()
+    @Test
+    fun ingest100Products() = measure(100)
 
     @Test
-    fun ingest1000Products() {
-        assertEquals(IngestResult.Decoded(accepted = PRODUCTS, rejected = 0), workload.ingestInto(workload.freshCore()))
-        benchmark.measureRepeated {
-            val core = runWithMeasurementDisabled { workload.freshCore() }
-            workload.ingestInto(core)
+    fun ingest1000Products() = measure(1_000)
+
+    @Test
+    fun ingest10000Products() = measure(10_000)
+
+    private fun measure(products: Int) =
+        IngestWorkload(InstrumentationRegistry.getInstrumentation().targetContext, products, SEED).use { workload ->
+            assertEquals(IngestResult.Decoded(products, rejected = 0), workload.ingestInto(workload.freshCore()))
+            benchmark.measureRepeated {
+                val core = runWithMeasurementDisabled { workload.freshCore() }
+                workload.ingestInto(core)
+            }
         }
-    }
 
     private companion object {
-        const val PRODUCTS = 1_000
         const val SEED = 17L
     }
 }

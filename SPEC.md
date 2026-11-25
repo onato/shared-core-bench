@@ -188,9 +188,9 @@ shared-core-bench/
   ISSUES.md            # delivery milestones, PR gates, workflow
   Makefile             # test, lint, coverage, bench, bench-report
   scripts/             # coverage-gate, bench-collect, report builder
-  contract/            # the API above, golden fixtures, expected outputs
+  contract/            # the API above, contract cases with expected outputs
   core-kmp/            # Kotlin Multiplatform library; its own Gradle build with its own wrapper
-                       #   contract-runner/: the JVM fixture runner the app's tests reuse
+                       #   contract-runner/: the JVM case runner the app's tests reuse
   core-rust/           # Rust crate + uniffi.toml
   core-lua/            # Lua sources + C/JNI/Swift bridge
   fixtures/            # deterministic data generator + local fixture server (M1's generator is
@@ -246,8 +246,8 @@ previews, each listed with a reason.
 | ios | `xcodebuild -enableCodeCoverage YES` + `xccov`, checked by `scripts/coverage-gate` |
 | android | Kover for unit/Robolectric tests, JaCoCo for instrumented tests, merged |
 
-- **Contract tests**: one suite of golden fixtures (`contract/`) with expected outputs; each core runs
-  them natively (Kotlin tests, `cargo test`, busted for Lua). The same fixtures run again through
+- **Contract tests**: one suite of contract cases (`contract/cases/`) with expected outputs; each core runs
+  them natively (Kotlin tests, `cargo test`, busted for Lua). The same cases run again through
   the Swift and Kotlin wrappers to prove the bridges, not just the cores.
 - **Storage port**: the contract suite runs a second time with each core wired to the native
   storage ports, and must produce identical results to the embedded run.
@@ -264,7 +264,7 @@ suite, the benchmark harness and the app; each later one plugs a new core or pla
 exists, so the remaining unknowns are the bridge and the core, not the app.
 
 0. **Foundations**: `git init`, Makefile with `test`, `lint` and `coverage` gates,
-   `contract/` golden fixtures, fixture generator and local fixture server.
+   `contract/` cases, fixture generator and local fixture server.
 1. **Android + KMP**: no boundary, the shortest path to a working app.
    - Full Android app: paged list (Paging 3), detail, refresh, search, backend picker.
    - KMP core passes the contract suite (JVM tests).
@@ -284,7 +284,7 @@ Rules for the sequence:
 - **The app talks to an app-level core interface, never to a core's types.** On Android a Kotlin
   `SharedCore` interface, on iOS a Swift protocol; each core gets an adapter behind it. Otherwise the
   KMP-first build bakes KMP types into the app, and every later core is forced to mimic them.
-- **The contract stays core-neutral.** Golden fixtures are JSON in/JSON out, not Kotlin types, so
+- **The contract stays core-neutral.** Contract cases are JSON in/JSON out, not Kotlin types, so
   later cores can't fail a test because of how Kotlin happened to model something.
 - **Every combination ends with a checkpoint**: run its benchmarks, write down what was learned,
   update `SPEC.md` and write the next milestone's issues, and decide whether to continue —
