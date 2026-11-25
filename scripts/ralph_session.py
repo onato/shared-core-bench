@@ -9,7 +9,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import Protocol
 
-from ralph import POLL_SECONDS, Improvement, Issue, Outcome
+import blame_ignore_revs
+from ralph import POLL_SECONDS, Improvement, Issue, Outcome, PullRequest
+
+IGNORE_REVS = ".git-blame-ignore-revs"
 
 BOT = "onato-agent[bot]"
 BOT_EMAIL = "359795497+onato-agent[bot]@users.noreply.github.com"  # the bot's GitHub user id
@@ -64,6 +67,74 @@ class ClaudeSession:
         if self._git(exists):
             return None
         return self._git(["branch", "-D", branch])  # -D: a squash merge leaves it unmerged
+
+    def update(self, pr: PullRequest) -> str | None:
+        """Merges `main` into the PR's branch and pushes it as the bot; what failed, if it didn't.
+
+        Done here rather than through GitHub's update-branch, so the merge can add the
+        `.git-blame-ignore-revs` entries it makes necessary.
+        """
+        worktree = self.repo.parent / f"shared-core-bench-update-{pr.number}"
+        failed = self._add_worktree(worktree, ["--detach", f"origin/{pr.branch}"])
+        if failed:
+            return failed
+        env = self.tokens.session_env({**own_environ(self.environ), **BOT_GIT})
+        failed = (
+            self._merge_main(worktree, env)
+            or self._list_structural(worktree, env)
+            or self._git_in(worktree, env, ["push", "origin", f"HEAD:refs/heads/{pr.branch}"])
+        )
+        # --force: after a failed merge the worktree holds its conflicts, which nothing needs.
+        left = self._git(["worktree", "remove", "--force", str(worktree)])
+        return failed or left
+
+    def _merge_main(self, worktree: Path, env: dict[str, str]) -> str | None:
+        """A conflict only in the ignore list takes `main`'s side; the missing entries follow."""
+        if not self._git_in(worktree, env, ["merge", "--no-edit", "origin/main"]):
+            return None
+        conflicted = self.run(
+            ["git", "-C", str(worktree), "diff", "--name-only", "--diff-filter=U"],
+            capture_output=True,
+            text=True,
+        ).stdout.split()
+        if conflicted != [IGNORE_REVS]:
+            return f"merging main conflicts in {', '.join(conflicted)}"
+        return self._git_in(
+            worktree,
+            env,
+            ["checkout", "--theirs", IGNORE_REVS],
+            ["add", IGNORE_REVS],
+            ["commit", "--no-edit"],
+        )
+
+    def _list_structural(self, worktree: Path, env: dict[str, str]) -> str | None:
+        """Commits the `Structural:` merges `.git-blame-ignore-revs` doesn't list yet, if any."""
+        log = self.run(
+            ["git", "-C", str(worktree), "log", "--format=%H %s", "HEAD"],
+            capture_output=True,
+            text=True,
+        ).stdout
+        revs = worktree / IGNORE_REVS
+        missing = blame_ignore_revs.missing(log, revs.read_text())
+        if not missing:
+            return None
+        entries = "".join(f"\n# {line[41:]}\n{line[:40]}\n" for line in missing)
+        revs.write_text(revs.read_text() + entries)
+        return self._git_in(
+            worktree,
+            env,
+            ["add", IGNORE_REVS],
+            ["commit", "-m", "Ignore main's new structural commits in git blame"],
+        )
+
+    def _git_in(self, worktree: Path, env: dict[str, str], *steps: list[str]) -> str | None:
+        for step in steps:
+            done = self.run(
+                ["git", "-C", str(worktree), *step], capture_output=True, text=True, env=env
+            )
+            if done.returncode != 0:
+                return f"git {' '.join(step[:2])} failed: {done.stderr.strip()}"
+        return None
 
     def _branch(self, issue: int) -> str:
         return f"swilliams/{issue}-ralph"
