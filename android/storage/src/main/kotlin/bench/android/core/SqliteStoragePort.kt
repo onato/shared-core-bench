@@ -71,43 +71,58 @@ class SqliteStoragePort private constructor(
         query: Query,
         cursor: Long?,
         size: Int,
-    ): List<ProductSummary> =
-        with(query) {
-            run(PAGE_AFTER, listOf(cursor, sortKey(sort), text, category, minPrice, maxPrice, size.toLong())) {
-                rows { ProductSummary(long(), text(), double(), double(), double(), text()) }
-            }
+    ): StorageResult<List<ProductSummary>> =
+        catching {
+            Stored(
+                with(query) {
+                    run(PAGE_AFTER, listOf(cursor, sortKey(sort), text, category, minPrice, maxPrice, size.toLong())) {
+                        rows { ProductSummary(long(), text(), double(), double(), double(), text()) }
+                    }
+                },
+            )
         }
 
-    override fun get(id: Long): ProductDetail? {
-        val tags =
-            run("SELECT tag FROM product_tag WHERE product_id = ? ORDER BY position", listOf(id)) { rows { text() } }
-        return run(BY_ID, listOf(id)) {
-            rows {
-                ProductDetail(
-                    long(),
-                    text(),
-                    text(),
-                    text(),
-                    optionalText(),
-                    double(),
-                    double(),
-                    double(),
-                    long(),
-                    text(),
-                    tags,
-                )
-            }.singleOrNull()
+    override fun get(id: Long): StorageResult<ProductDetail?> =
+        catching {
+            val tags =
+                run("SELECT tag FROM product_tag WHERE product_id = ? ORDER BY position", listOf(id)) {
+                    rows { text() }
+                }
+            Stored(
+                run(BY_ID, listOf(id)) {
+                    rows {
+                        ProductDetail(
+                            long(),
+                            text(),
+                            text(),
+                            text(),
+                            optionalText(),
+                            double(),
+                            double(),
+                            double(),
+                            long(),
+                            text(),
+                            tags,
+                        )
+                    }.singleOrNull()
+                },
+            )
         }
-    }
 
-    override fun categories(): List<String> =
-        run("SELECT DISTINCT category FROM product WHERE deleted = 0 ORDER BY category") { rows { text() } }
+    override fun categories(): StorageResult<List<String>> =
+        catching {
+            Stored(run("SELECT DISTINCT category FROM product WHERE deleted = 0 ORDER BY category") { rows { text() } })
+        }
 
-    override fun stats(): CoreStats =
-        CoreStats(
-            productCount = count("SELECT count(*) FROM product"),
-            deletedCount = count("SELECT count(*) FROM product WHERE deleted = 1"),
-        )
+    override fun stats(): StorageResult<CoreStats> =
+        catching {
+            Stored(
+                CoreStats(
+                    productCount = count("SELECT count(*) FROM product"),
+                    deletedCount = count("SELECT count(*) FROM product WHERE deleted = 1"),
+                ),
+            )
+        }
 
     private fun count(sql: String): Long = run(sql) { rows { long() }.single() }
 
@@ -130,9 +145,9 @@ class SqliteStoragePort private constructor(
     }
 }
 
-private inline fun catching(write: () -> StorageResult<Unit>): StorageResult<Unit> =
+private inline fun <T> catching(call: () -> StorageResult<T>): StorageResult<T> =
     try {
-        write()
+        call()
     } catch (failure: SQLiteException) {
         StorageError(failure.toString())
     }

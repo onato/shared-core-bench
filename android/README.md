@@ -30,6 +30,21 @@ of these traps cost a session several runs:
 - **Assert on text only the new screen shows.** The detail screen repeats the product's title,
   so a test that taps a product and waits for its title passes before navigation exists (#151).
 
+## Build and test traps outside Compose
+
+- **No `BundledSQLiteDriver` under Robolectric.** Its native library loads once per JVM. Once
+  another Robolectric class has loaded it, the next one fails with `UnsatisfiedLinkError: …
+  already loaded in another classloader`. A custom runner can pass when its class runs alone and
+  still fail in the full suite. Make the code take a database path and a `DriverFactory`, as
+  `AndroidCores` does, and test it with a plain JUnit class (`AndroidCoresTest`, on `JvmDrivers`)
+  (#215).
+- **The app can't call the core's `inline` functions.** `core-kmp` builds for JVM 21 and `app`
+  builds for JVM 11, so `:app:compileDebugKotlin` fails with `Cannot inline bytecode built with
+  JVM target 21`. Use a non-inline function in the app (#221).
+- **detekt fails a class at 11 functions** (`TooManyFunctions`, in both `android/` and
+  `core-kmp/`). `Core` and `SqliteStoragePort` are close to it. Plan where a new function goes,
+  such as a file-level function or a small helper type, before adding one (#221).
+
 ## Running the benchmarks
 
 `make bench SUITE=core ANDROID_SERIAL=<serial>` builds the release benchmark APK, runs the

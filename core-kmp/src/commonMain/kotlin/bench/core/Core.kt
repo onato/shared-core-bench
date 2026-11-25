@@ -37,16 +37,35 @@ class Core private constructor(
     ): PageResult {
         if (size <= 0) return PageResult.InvalidSize
         // One row past the page tells whether another page follows.
-        val rows = storage.query(query, cursor, size + 1)
-        val items = rows.take(size)
-        return PageResult.Page(items, nextCursor = if (rows.size > size) items.last().id else null)
+        return when (val rows = storage.query(query, cursor, size + 1)) {
+            is StorageError -> {
+                PageResult.StorageFailed
+            }
+
+            is Stored -> {
+                val items = rows.value.take(size)
+                PageResult.Page(items, nextCursor = if (rows.value.size > size) items.last().id else null)
+            }
+        }
     }
 
-    fun detail(id: Long): ProductDetail? = storage.get(id)
+    fun detail(id: Long): DetailResult =
+        when (val product = storage.get(id)) {
+            is StorageError -> DetailResult.StorageFailed
+            is Stored -> product.value?.let(DetailResult::Found) ?: DetailResult.NotFound
+        }
 
-    fun categories(): List<String> = storage.categories()
+    fun categories(): CategoriesResult =
+        when (val names = storage.categories()) {
+            is StorageError -> CategoriesResult.StorageFailed
+            is Stored -> CategoriesResult.Categories(names.value)
+        }
 
-    fun stats(): CoreStats = storage.stats()
+    fun stats(): StatsResult =
+        when (val stats = storage.stats()) {
+            is StorageError -> StatsResult.StorageFailed
+            is Stored -> StatsResult.Stats(stats.value)
+        }
 
     private fun store(page: PageDecoding.Products): IngestResult =
         when (storage.transaction { write(page) }) {

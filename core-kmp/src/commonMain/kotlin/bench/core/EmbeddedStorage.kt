@@ -55,42 +55,63 @@ internal class EmbeddedStorage(
         query: Query,
         cursor: Long?,
         size: Int,
-    ): List<ProductSummary> =
-        queries
-            .pageAfter(
-                cursor = cursor,
-                text = query.text,
-                category = query.category,
-                minPrice = query.minPrice,
-                maxPrice = query.maxPrice,
-                sort = query.sort.key,
-                limit = size.toLong(),
-            ) { id, title, price, discountedPrice, rating, thumbnail ->
-                ProductSummary(id, title, price, discountedPrice, rating, thumbnail)
-            }.executeAsList()
+    ): StorageResult<List<ProductSummary>> =
+        catching {
+            Stored(
+                queries
+                    .pageAfter(
+                        cursor = cursor,
+                        text = query.text,
+                        category = query.category,
+                        minPrice = query.minPrice,
+                        maxPrice = query.maxPrice,
+                        sort = query.sort.key,
+                        limit = size.toLong(),
+                    ) { id, title, price, discountedPrice, rating, thumbnail ->
+                        ProductSummary(id, title, price, discountedPrice, rating, thumbnail)
+                    }.executeAsList(),
+            )
+        }
 
-    override fun get(id: Long): ProductDetail? {
-        val tags = queries.tagsOf(id).executeAsList()
-        return queries
-            .byId(id) { id, title, description, category, brand, price, discount, rating, stock, thumbnail ->
-                ProductDetail(id, title, description, category, brand, price, discount, rating, stock, thumbnail, tags)
-            }.executeAsOneOrNull()
-    }
+    override fun get(id: Long): StorageResult<ProductDetail?> =
+        catching {
+            val tags = queries.tagsOf(id).executeAsList()
+            Stored(
+                queries
+                    .byId(id) { id, title, description, category, brand, price, discount, rating, stock, thumbnail ->
+                        ProductDetail(
+                            id,
+                            title,
+                            description,
+                            category,
+                            brand,
+                            price,
+                            discount,
+                            rating,
+                            stock,
+                            thumbnail,
+                            tags,
+                        )
+                    }.executeAsOneOrNull(),
+            )
+        }
 
-    override fun categories(): List<String> = queries.categories().executeAsList()
+    override fun categories(): StorageResult<List<String>> = catching { Stored(queries.categories().executeAsList()) }
 
-    override fun stats(): CoreStats =
-        with(queries) {
-            CoreStats(productCount = count().executeAsOne(), deletedCount = deletedCount().executeAsOne())
+    override fun stats(): StorageResult<CoreStats> =
+        catching {
+            with(queries) {
+                Stored(CoreStats(productCount = count().executeAsOne(), deletedCount = deletedCount().executeAsOne()))
+            }
         }
 }
 
 // Drivers throw platform exceptions (java.sql.SQLException, android.database.SQLException)
 // with no common supertype, so common code can only catch Exception.
 @Suppress("TooGenericExceptionCaught")
-private inline fun catching(write: () -> StorageResult<Unit>): StorageResult<Unit> =
+private inline fun <T> catching(call: () -> StorageResult<T>): StorageResult<T> =
     try {
-        write()
+        call()
     } catch (failure: Exception) {
         StorageError(failure.toString())
     }

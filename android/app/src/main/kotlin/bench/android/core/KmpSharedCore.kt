@@ -10,12 +10,16 @@ import bench.core.CoreConfig
 import bench.core.DriverFactory
 import bench.core.PortCalls
 import java.io.File
+import bench.core.CategoriesResult as CoreCategoriesResult
+import bench.core.DetailResult as CoreDetailResult
 import bench.core.IngestResult as CoreIngestResult
 import bench.core.PageResult as CorePageResult
+import bench.core.ProductDetail as CoreProductDetail
 import bench.core.ProductSummary as CoreProductSummary
 import bench.core.Query as CoreQuery
 import bench.core.RatingBucket as CoreRatingBucket
 import bench.core.Sort as CoreSort
+import bench.core.StatsResult as CoreStatsResult
 import bench.core.StockStatus as CoreStockStatus
 
 class KmpSharedCore(
@@ -45,6 +49,7 @@ class KmpSharedCore(
         when (val result = core.page(cursor, size, coreQuery(query))) {
             is CorePageResult.Page -> PageResult.Page(result.items.map(::summary), result.nextCursor)
             CorePageResult.InvalidSize -> PageResult.InvalidSize
+            CorePageResult.StorageFailed -> PageResult.StorageFailed
         }
 
     private fun coreQuery(query: Query) = with(query) { CoreQuery(text, category, minPrice, maxPrice, coreSort(sort)) }
@@ -57,8 +62,15 @@ class KmpSharedCore(
             Sort.RatingDesc -> CoreSort.RatingDesc
         }
 
-    override fun detail(id: Long): ProductDetail? =
-        core.detail(id)?.run {
+    override fun detail(id: Long): DetailResult =
+        when (val result = core.detail(id)) {
+            is CoreDetailResult.Found -> DetailResult.Found(detailOf(result.product))
+            CoreDetailResult.NotFound -> DetailResult.NotFound
+            CoreDetailResult.StorageFailed -> DetailResult.StorageFailed
+        }
+
+    private fun detailOf(product: CoreProductDetail) =
+        with(product) {
             ProductDetail(
                 id,
                 title,
@@ -77,11 +89,19 @@ class KmpSharedCore(
             )
         }
 
-    override fun stats(): CoreStats = with(core.stats()) { CoreStats(productCount, deletedCount) }
+    override fun stats(): StatsResult =
+        when (val result = core.stats()) {
+            is CoreStatsResult.Stats -> StatsResult.Stats(with(result.stats) { CoreStats(productCount, deletedCount) })
+            CoreStatsResult.StorageFailed -> StatsResult.StorageFailed
+        }
 
     override fun refresh() = core.refresh()
 
-    override fun categories() = core.categories()
+    override fun categories(): CategoriesResult =
+        when (val result = core.categories()) {
+            is CoreCategoriesResult.Categories -> CategoriesResult.Categories(result.names)
+            CoreCategoriesResult.StorageFailed -> CategoriesResult.StorageFailed
+        }
 
     companion object {
         fun create(

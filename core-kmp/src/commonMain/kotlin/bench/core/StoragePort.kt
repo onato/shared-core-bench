@@ -2,9 +2,9 @@ package bench.core
 
 /**
  * Storage the app owns, over the embedded schema and SQL. The core keeps every decision and only
- * asks the port to run statements. A write fails by returning a [StorageError], never by throwing;
- * [transaction] rolls back everything the block wrote and returns the error when the block returns one
- * or the commit fails.
+ * asks the port to run statements. Every method fails by returning a [StorageError], never by
+ * throwing; [transaction] rolls back everything the block wrote and returns the error when the block
+ * returns one or the commit fails.
  */
 interface StoragePort {
     fun transaction(block: () -> StorageResult<Unit>): StorageResult<Unit>
@@ -28,11 +28,11 @@ interface StoragePort {
         query: Query,
         cursor: Long?,
         size: Int,
-    ): List<ProductSummary>
+    ): StorageResult<List<ProductSummary>>
 
-    fun get(id: Long): ProductDetail?
+    fun get(id: Long): StorageResult<ProductDetail?>
 
-    fun categories(): List<String>
+    fun categories(): StorageResult<List<String>>
 
-    fun stats(): CoreStats
+    fun stats(): StorageResult<CoreStats>
 }
