@@ -32,8 +32,8 @@ class FakeGitHub:
         self.prs = {}
         self.moves = []
         self.comments = []
-        self.updates = []
-        self.update_fails = []  # errors the next updates raise, one each
+        self.updates = []  # PRs brought up to date with main, in order
+        self.pr_fails = []  # errors the next PR reads raise, one each
         self.workflows = {name: True for name in REQUIRED_WORKFLOWS}
         self.approved = False  # the owner's plan-approved label on the milestone's parent
         self.undrafted = []
@@ -61,6 +61,8 @@ class FakeGitHub:
         ]
 
     def pull_request(self, number):
+        if self.pr_fails:
+            raise GitHubError(self.pr_fails.pop(0))
         return self.prs[number]
 
     def has_open_pr(self, issue):
@@ -73,12 +75,6 @@ class FakeGitHub:
     def comment(self, issue, body):
         self.comments.append((issue, body))
         return f"https://github.com/onato/shared-core-bench/issues/{issue}#issuecomment-1"
-
-    def update_branch(self, pr):
-        if self.update_fails:
-            raise GitHubError(self.update_fails.pop(0))
-        self.updates.append(pr)
-        self.prs[pr] = replace(self.prs[pr], behind=False)
 
     def merge(self, issue, pr):
         self.issues[issue] = replace(self.issues[issue], is_open=False, status="Done")
@@ -97,6 +93,7 @@ class FakeSession:
         self.improvement = Improvement()
         self.removed = []
         self.removal_fails = {}  # issue → what failed
+        self.update_fails = {}  # PR → why it couldn't be brought up to date
         self.while_running = {}  # issue → what happens on GitHub while its session runs
         # issue → the PRs updated by the time its session ended; "improve" → one list per run
         self.updates_at_end = {}
@@ -104,6 +101,13 @@ class FakeSession:
     def remove(self, issue):
         self.removed.append(issue)
         return self.removal_fails.get(issue)
+
+    def update(self, pr):
+        if failed := self.update_fails.get(pr.number):
+            return failed
+        self.github.updates.append(pr.number)
+        self.github.prs[pr.number] = replace(pr, behind=False)
+        return None
 
     def improve(self, prs, while_running):
         self.improved.append((prs, len(self.worked)))
@@ -316,11 +320,7 @@ def test_a_github_error_while_a_session_runs_is_listed_in_the_stop_message_and_i
     github = FakeGitHub([Issue(7, TODO), Issue(8, TODO), Issue(9, TODO)])
     session = FakeSession(github, {7: pending_run(40), 8: merged_run(41), 9: merged_run(42)})
 
-    def falls_behind_and_update_fails():
-        github.prs[40] = PullRequest(40, behind=True)
-        github.update_fails = ["gh api pulls/40/update-branch failed: HTTP 502"]
-
-    session.while_running = {8: falls_behind_and_update_fails}
+    session.while_running = {8: lambda: github.pr_fails.append("gh api graphql failed: HTTP 502")}
     clock = Clock()
     clock.on_sleep = lambda: github.merge(7, 40)
 
@@ -330,7 +330,7 @@ def test_a_github_error_while_a_session_runs_is_listed_in_the_stop_message_and_i
     assert stop == (
         "Ralph loop stopped: milestone complete.\n"
         "GitHub errors while a session ran:\n"
-        "- gh api pulls/40/update-branch failed: HTTP 502"
+        "- gh api graphql failed: HTTP 502"
     )
 
 
@@ -346,6 +346,38 @@ def test_at_the_iteration_cap_the_loop_waits_for_its_open_prs_before_stopping():
     assert github.updates == [40]
     assert clock.sleeps == [60]
     assert stop.startswith("Ralph loop stopped: iteration cap (1) reached.\n")
+
+
+def test_a_pr_that_cannot_be_brought_up_to_date_puts_its_issue_in_review_and_is_not_waited_for():
+    github = FakeGitHub([Issue(7, TODO), Issue(8, TODO)])
+    session = FakeSession(github, {7: pending_run(40, behind=True), 8: merged_run(41)})
+    session.update_fails = {40: "merging main conflicts in b.txt"}
+    clock = Clock()
+    notes = []
+
+    stop = loop(github, session, notes=notes, clock=clock)
+
+    reason = "PR #40 can't be brought up to date with main: merging main conflicts in b.txt"
+    assert (7, IN_REVIEW) in github.moves
+    assert github.comments == [(7, f"Moved to In review by the Ralph loop: {reason}.")]
+    assert f"- #7: {reason}" in stop.splitlines()
+    assert clock.sleeps == []
+
+
+def test_a_pr_with_no_issue_of_its_own_that_cannot_be_updated_is_reported_and_not_waited_for():
+    github = FakeGitHub([Issue(18, TODO)])
+    github.prs[127] = PullRequest(number=127, behind=True)
+    session = FakeSession(github, {18: (Outcome(pr=130, also=(127,)), PullRequest(130), False)})
+    session.update_fails = {127: "merging main conflicts in b.txt"}
+    clock = Clock()
+    notes = []
+
+    stop = loop(github, session, notes=notes, clock=clock)
+
+    reason = "PR #127 can't be brought up to date with main: merging main conflicts in b.txt"
+    assert f"Ralph loop: {reason}." in notes
+    assert stop.splitlines()[-2:] == ["Not brought up to date:", f"- {reason}"]
+    assert clock.sleeps == []
 
 
 def test_other_prs_a_session_opened_are_brought_up_to_date_and_waited_for():
