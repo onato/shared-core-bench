@@ -191,7 +191,7 @@ class ClaudeSession:
                     "--verbose",
                 ],
                 cwd=worktree,
-                env=self.tokens.session_env({**own_environ(self.environ), **BOT_GIT}),
+                env=self.tokens.session_env({**with_simpool(own_environ(self.environ)), **BOT_GIT}),
                 stdout=out,
                 stderr=subprocess.STDOUT,
                 text=True,
@@ -216,6 +216,15 @@ def events(log: Path) -> list[dict]:
 def own_environ(environ: dict[str, str]) -> dict[str, str]:
     """Without the CLAUDE* variables a Claude Code parent sets, which make `claude` a child."""
     return {k: v for k, v in environ.items() if not k.startswith("CLAUDE")}
+
+
+def with_simpool(environ: dict[str, str]) -> dict[str, str]:
+    """`CLAUDE.md` has sessions lease devices with `simpool`, which the sim-pool skill keeps
+    off the default PATH."""
+    if "HOME" not in environ:
+        return environ
+    scripts = f"{environ['HOME']}/.claude/skills/sim-pool/scripts"
+    return {**environ, "PATH": f"{scripts}:{environ['PATH']}"}
 
 
 def final_result(log: Path) -> str | None:
