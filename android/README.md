@@ -55,5 +55,9 @@ it took about 13 minutes (#202), most of it in the two 10 000-row paging benchma
   should print the model within a second or two. When adb itself is wedged, Gradle fails with
   `TimeoutException getting properties for device` on every emulator, so the run never starts
   (#122). Restart the adb server or lease another emulator rather than retrying the bench.
+- `STORAGE` picks the storage variants (`all`, the default, runs every one). Each variant is its
+  own instrumentation run, passing `storage=<variant>` to the benchmarks; `batched` and `chatty`
+  run only `IngestBenchmark` and `CatalogueBenchmark`, on the app's `SqliteStoragePort`. All runs
+  land in one results file, and the table adds each delegated row's overhead over embedded.
 - Results land in `report/results/<timestamp>/results.json`, which is gitignored; paste the
   printed table into the PR.
