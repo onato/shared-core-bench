@@ -65,7 +65,7 @@ and stores them in SQLite, and the list pages through them from the database. Pr
 1. **KMP module and CI** — Gradle KMP (jvm, android; ios target added in M3), Kover 100% gate,
    ktlint, detekt, `make test/lint/coverage` for it, CI workflow; one trivial test to prove the gate
    fails when coverage drops.
-2. **Contract format** — JSON fixture format, runner on the JVM, first fixture: decode a page.
+2. **Contract format** — JSON case format, runner on the JVM, first contract case: decode a page.
 3. **Decode products** — minimal fields; malformed items are skipped and counted, not fatal.
 4. **Store products** — SQLDelight schema, upsert by id inside one transaction.
 5. **Read a page** — `page(cursor, size)`, keyset paging by id.
