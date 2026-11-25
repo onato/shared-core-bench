@@ -58,22 +58,26 @@ coverage-android:
 	$(ANDROID_GRADLE) :app:koverXmlReportApp :app:koverVerifyApp :app:koverLogApp
 
 BENCH_UNSUPPORTED = $(strip $(filter-out all android,$(PLATFORM)) $(filter-out all kmp,$(CORE)) \
-	$(filter-out all embedded,$(STORAGE)) $(filter-out all core boundary,$(SUITE)))
+	$(filter-out all embedded,$(STORAGE)) $(filter-out all core boundary app,$(SUITE)))
 
 BOUNDARY_BENCHMARK = bench.benchmark.BoundaryBenchmark
 BENCH_SUITE_core = -Pandroid.testInstrumentationRunnerArguments.notClass=$(BOUNDARY_BENCHMARK)
 BENCH_SUITE_boundary = -Pandroid.testInstrumentationRunnerArguments.class=$(BOUNDARY_BENCHMARK)
+# SUITE=app is the Macrobenchmark module, run against the app's `benchmark` build; the rest are microbenchmarks.
+BENCH_MODULE = $(if $(filter app,$(SUITE)),macrobenchmark,benchmark)
+BENCH_TASK = $(if $(filter app,$(SUITE)),connectedBenchmarkAndroidTest,connectedReleaseAndroidTest)
+BENCH_OUTPUT = build/outputs/connected_android_test_additional_output
 
-bench: ## Run benchmarks on ANDROID_SERIAL and print the table (android, kmp, embedded, core|boundary so far)
+bench: ## Run benchmarks on ANDROID_SERIAL and print the table (android, kmp, embedded; core|boundary, or app alone)
 	@test -z "$(BENCH_UNSUPPORTED)" || { echo "bench: not implemented: $(BENCH_UNSUPPORTED)" >&2; exit 1; }
 	@test -n "$(ANDROID_SERIAL)" || { echo "bench: set ANDROID_SERIAL to a simpool lease" >&2; exit 1; }
-	rm -rf android/benchmark/build/outputs/connected_android_test_additional_output
-	ANDROID_SERIAL=$(ANDROID_SERIAL) $(ANDROID_GRADLE) :benchmark:connectedReleaseAndroidTest \
+	rm -rf android/$(BENCH_MODULE)/$(BENCH_OUTPUT)
+	ANDROID_SERIAL=$(ANDROID_SERIAL) $(ANDROID_GRADLE) :$(BENCH_MODULE):$(BENCH_TASK) \
 		-Pandroid.testInstrumentationRunnerArguments.androidx.benchmark.suppressErrors=EMULATOR \
 		$(BENCH_SUITE_$(SUITE))
 	uv run python scripts/bench_collect.py --core kmp --storage embedded --build-type release \
 		--git-sha $$(git rev-parse --short HEAD) --out report/results/$$(date +%Y%m%dT%H%M%S) \
-		android/benchmark/build/outputs/connected_android_test_additional_output
+		android/$(BENCH_MODULE)/$(BENCH_OUTPUT)
 
 bench-report: ## Not implemented yet
 	@echo "$@: not implemented" >&2; exit 1

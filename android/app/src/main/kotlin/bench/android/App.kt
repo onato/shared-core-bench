@@ -1,6 +1,7 @@
 package bench.android
 
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.ReportDrawnWhen
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -92,6 +93,7 @@ fun App(
     val filters = rememberFilters()
     val query = filters.query(text)
     val items = remember(query) { products(query) }.collectAsLazyPagingItems()
+    ReportDrawnWhen { items.itemCount > 0 }
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
     var selected by rememberSaveable { mutableStateOf<Long?>(null) }
