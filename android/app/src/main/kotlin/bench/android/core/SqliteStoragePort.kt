@@ -82,27 +82,32 @@ class SqliteStoragePort private constructor(
             )
         }
 
-    override fun get(id: Long): ProductDetail? {
-        val tags =
-            run("SELECT tag FROM product_tag WHERE product_id = ? ORDER BY position", listOf(id)) { rows { text() } }
-        return run(BY_ID, listOf(id)) {
-            rows {
-                ProductDetail(
-                    long(),
-                    text(),
-                    text(),
-                    text(),
-                    optionalText(),
-                    double(),
-                    double(),
-                    double(),
-                    long(),
-                    text(),
-                    tags,
-                )
-            }.singleOrNull()
+    override fun get(id: Long): StorageResult<ProductDetail?> =
+        catching {
+            val tags =
+                run("SELECT tag FROM product_tag WHERE product_id = ? ORDER BY position", listOf(id)) {
+                    rows { text() }
+                }
+            Stored(
+                run(BY_ID, listOf(id)) {
+                    rows {
+                        ProductDetail(
+                            long(),
+                            text(),
+                            text(),
+                            text(),
+                            optionalText(),
+                            double(),
+                            double(),
+                            double(),
+                            long(),
+                            text(),
+                            tags,
+                        )
+                    }.singleOrNull()
+                },
+            )
         }
-    }
 
     override fun categories(): List<String> =
         run("SELECT DISTINCT category FROM product WHERE deleted = 0 ORDER BY category") { rows { text() } }

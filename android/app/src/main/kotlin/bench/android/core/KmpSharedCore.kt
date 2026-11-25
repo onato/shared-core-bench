@@ -10,8 +10,10 @@ import bench.core.CoreConfig
 import bench.core.DriverFactory
 import bench.core.PortCalls
 import java.io.File
+import bench.core.DetailResult as CoreDetailResult
 import bench.core.IngestResult as CoreIngestResult
 import bench.core.PageResult as CorePageResult
+import bench.core.ProductDetail as CoreProductDetail
 import bench.core.ProductSummary as CoreProductSummary
 import bench.core.Query as CoreQuery
 import bench.core.RatingBucket as CoreRatingBucket
@@ -58,8 +60,15 @@ class KmpSharedCore(
             Sort.RatingDesc -> CoreSort.RatingDesc
         }
 
-    override fun detail(id: Long): ProductDetail? =
-        core.detail(id)?.run {
+    override fun detail(id: Long): DetailResult =
+        when (val result = core.detail(id)) {
+            is CoreDetailResult.Found -> DetailResult.Found(detailOf(result.product))
+            CoreDetailResult.NotFound -> DetailResult.NotFound
+            CoreDetailResult.StorageFailed -> DetailResult.StorageFailed
+        }
+
+    private fun detailOf(product: CoreProductDetail) =
+        with(product) {
             ProductDetail(
                 id,
                 title,

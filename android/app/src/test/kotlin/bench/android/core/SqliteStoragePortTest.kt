@@ -25,7 +25,7 @@ class SqliteStoragePortTest {
         port.transaction { port.upsertOne(product(id = 2), generation = 1) }
 
         assertEquals(StorageError("disk full"), failed)
-        assertEquals(listOf(null, 2L), listOf(port.get(1)?.id, port.get(2)?.id))
+        assertEquals(listOf(null, 2L), listOf(port.storedId(1), port.storedId(2)))
         assertEquals(CoreStats(productCount = 1, deletedCount = 0), port.stats())
     }
 
@@ -57,6 +57,17 @@ class SqliteStoragePortTest {
     }
 
     @Test
+    fun aGetTheDriverFailsComesBackAsAStorageError() {
+        val path = File(Files.createTempDirectory("port").toFile(), "products.db").path
+        val filePort = SqliteStoragePort.open(path)
+        BundledSQLiteDriver().open(path).use { it.execSQL("DROP TABLE product_tag") }
+
+        val result = filePort.get(1)
+
+        assertEquals(StorageError("android.database.SQLException"), result)
+    }
+
+    @Test
     fun aCommitThatFailsKeepsNoneOfTheTransactionsWritesAndTheNextOneCommits() {
         val path = File(Files.createTempDirectory("port").toFile(), "products.db").path
         val filePort = SqliteStoragePort.open(path)
@@ -73,8 +84,10 @@ class SqliteStoragePortTest {
         val next = filePort.transaction { filePort.upsertOne(product(id = 3), generation = 1) }
 
         assertEquals(listOf(StorageError("android.database.SQLException"), Stored(Unit)), listOf(failed, next))
-        assertEquals(listOf(1L, null, 3L), listOf(1L, 2L, 3L).map { filePort.get(it)?.id })
+        assertEquals(listOf(1L, null, 3L), listOf(1L, 2L, 3L).map { filePort.storedId(it) })
     }
+
+    private fun SqliteStoragePort.storedId(id: Long) = (get(id) as Stored).value?.id
 
     private fun product(id: Long) =
         ProductDetail(id, "Mascara", "Lash mascara", "beauty", null, 9.99, 7.5, 4.5, 5, "https://cdn/1.png", listOf())

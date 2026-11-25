@@ -82,7 +82,7 @@ class FakeSharedCoreTest {
             )
         val core = FakeSharedCore(details = listOf(paletteDetail))
 
-        assertEquals(paletteDetail, core.detail(id = 2))
-        assertEquals(null, core.detail(id = 3))
+        assertEquals(DetailResult.Found(paletteDetail), core.detail(id = 2))
+        assertEquals(DetailResult.NotFound, core.detail(id = 3))
     }
 }

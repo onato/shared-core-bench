@@ -58,6 +58,23 @@ class IngestStorageTest {
         )
     }
 
+    @Test
+    fun aGetTheDriverFailsComesBackFromTheEmbeddedStorageAsAStorageError() {
+        val port = jdbcTestPort(dbPath)
+        DriverManager.getConnection("jdbc:sqlite:$dbPath").use {
+            it.createStatement().execute("DROP TABLE product_tag")
+        }
+
+        val result = port.get(1)
+
+        assertEquals(
+            StorageError(
+                "org.sqlite.SQLiteException: [SQLITE_ERROR] SQL error or missing database (no such table: product_tag)",
+            ),
+            result,
+        )
+    }
+
     private fun product(id: Int) =
         """
         {"id": $id, "title": "Essence Mascara", "description": "Lash mascara", "category": "beauty",

@@ -65,6 +65,17 @@ class StoragePortTest {
     }
 
     @Test
+    fun aGetThatReturnsAStorageErrorIsAStorageFailedDetail() {
+        val failingItsGet =
+            object : StoragePort by port {
+                override fun get(id: Long): StorageResult<ProductDetail?> = StorageError("disk full")
+            }
+        val core = Core.create(CoreConfig(dbPath = ":memory:"), failingItsGet)
+
+        assertEquals(DetailResult.StorageFailed, core.detail(id = 1))
+    }
+
+    @Test
     fun ingestingAPageOf20ThroughTheChattyVariantMakes20UpsertOneCallsAndNoUpsertCall() {
         val calls = mutableListOf<String>()
         val counting =

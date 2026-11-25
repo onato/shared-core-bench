@@ -73,13 +73,28 @@ internal class EmbeddedStorage(
             )
         }
 
-    override fun get(id: Long): ProductDetail? {
-        val tags = queries.tagsOf(id).executeAsList()
-        return queries
-            .byId(id) { id, title, description, category, brand, price, discount, rating, stock, thumbnail ->
-                ProductDetail(id, title, description, category, brand, price, discount, rating, stock, thumbnail, tags)
-            }.executeAsOneOrNull()
-    }
+    override fun get(id: Long): StorageResult<ProductDetail?> =
+        catching {
+            val tags = queries.tagsOf(id).executeAsList()
+            Stored(
+                queries
+                    .byId(id) { id, title, description, category, brand, price, discount, rating, stock, thumbnail ->
+                        ProductDetail(
+                            id,
+                            title,
+                            description,
+                            category,
+                            brand,
+                            price,
+                            discount,
+                            rating,
+                            stock,
+                            thumbnail,
+                            tags,
+                        )
+                    }.executeAsOneOrNull(),
+            )
+        }
 
     override fun categories(): List<String> = queries.categories().executeAsList()
 
