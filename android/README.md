@@ -27,6 +27,9 @@ of these traps cost a session several runs:
   what it captures, and tests never recompose with a new capture. Pass a function-typed property
   of a remembered holder, a top-level `::function`, or `MutableState`'s `component2()` instead, as
   `Filters.kt` does (#112).
+- **An exhaustive `when` over a sealed result in a composable leaves an uncovered line.** Kotlin
+  adds a `NoWhenBranchMatchedException` throw that no test reaches, and Kover doesn't filter it
+  under the Compose compiler. Make the last branch `else`, as `LoadedProductDetail` does (#243).
 - **Assert on text only the new screen shows.** The detail screen repeats the product's title,
   so a test that taps a product and waits for its title passes before navigation exists (#151).
 
