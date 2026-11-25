@@ -172,12 +172,13 @@ def commit(**checks):
     return {"commit": {"statusCheckRollup": {"contexts": {"nodes": [*runs, {}]}}}}
 
 
-def pr_reply(merged=False, comments=(), commits=(), merge_state="CLEAN"):
+def pr_reply(merged=False, comments=(), commits=(), merge_state="CLEAN", head=""):
     return {
         "repository": {
             "pullRequest": {
                 "merged": merged,
                 "mergeStateStatus": merge_state,
+                "headRefName": head,
                 "comments": {"nodes": [{"body": body} for body in comments]},
                 "commits": {"nodes": list(commits)},
             }
@@ -225,14 +226,37 @@ def test_pull_request_says_whether_it_is_behind_main(state, behind):
     assert "mergeStateStatus" in sent_query(gh.calls[0])
 
 
-def test_update_branch_brings_the_pr_up_to_date_with_a_merge_through_gh():
-    gh = FakeGh("{}")
+def test_pull_request_names_its_branch():
+    gh = FakeGh(pr_reply(head="swilliams/54-ralph", commits=[commit()]))
 
-    adapter(gh).update_branch(54)
+    assert adapter(gh).pull_request(54).branch == "swilliams/54-ralph"
+    assert "headRefName" in sent_query(gh.calls[0])
 
-    assert gh.calls == [
-        (["api", "-X", "PUT", "repos/onato/shared-core-bench/pulls/54/update-branch"], None)
-    ]
+
+def open_pr_reply(closing=(), on_branch=0):
+    return {
+        "repository": {
+            "issue": {"closedByPullRequestsReferences": {"nodes": [{"state": s} for s in closing]}},
+            "pullRequests": {"totalCount": on_branch},
+        }
+    }
+
+
+@pytest.mark.parametrize(
+    ("reply", "held"),
+    [
+        (open_pr_reply(), False),
+        (open_pr_reply(closing=["MERGED", "CLOSED"]), False),
+        (open_pr_reply(closing=["MERGED", "OPEN"]), True),
+        (open_pr_reply(on_branch=1), True),
+    ],
+    ids=["none", "only merged or closed", "an open one closes it", "one is on its branch"],
+)
+def test_an_issue_has_an_open_pr_when_one_closes_it_or_is_on_its_branch(reply, held):
+    gh = FakeGh(reply)
+
+    assert adapter(gh).has_open_pr(119) is held
+    assert {"number=119", "branch=swilliams/119-ralph"} <= set(sent_variables(gh.calls[0]))
 
 
 def test_comment_posts_the_body_on_the_issue_under_the_agent_marker():

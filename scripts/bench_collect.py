@@ -9,6 +9,7 @@ from pathlib import Path
 
 # Fingerprints of the SDK's emulator images; a physical device never carries these.
 EMULATOR_MARKERS = ("sdk_gphone", "generic", "emulator")
+NS_PER_MS = 1_000_000
 
 
 def collect(report: dict, *, core: str, storage: str, build_type: str, git_sha: str) -> list[dict]:
@@ -23,7 +24,13 @@ def collect(report: dict, *, core: str, storage: str, build_type: str, git_sha: 
         "build_type": build_type,
         "git_sha": git_sha,
     }
-    return [where | _timings(benchmark) for benchmark in report["benchmarks"]]
+    return [
+        where | row
+        for benchmark in report["benchmarks"]
+        for row in (
+            [_timings(benchmark)] if "timeNs" in benchmark["metrics"] else _app_timings(benchmark)
+        )
+    ]
 
 
 def _timings(benchmark: dict) -> dict:
@@ -39,6 +46,37 @@ def _timings(benchmark: dict) -> dict:
         "p95_ns": runs[math.ceil(0.95 * len(runs)) - 1],
         "runs": len(runs),
     }
+
+
+def _app_timings(benchmark: dict) -> list[dict]:
+    """Macrobenchmark results: one row per metric in ms, as `<name> <metric>`."""
+    name = re.sub(r"^([A-Z]+_)+", "", benchmark["name"])
+    labels = {"suite": "app", "n": int(re.search(r"\d+", name).group())}
+    # Its other metrics, such as `frameCount`, are counts, not times.
+    timed = [
+        labels
+        | {
+            "workload": f"{name} {metric}",
+            "median_ns": timings["median"] * NS_PER_MS,
+            "p95_ns": sorted(timings["runs"])[math.ceil(0.95 * len(timings["runs"])) - 1]
+            * NS_PER_MS,
+            "runs": len(timings["runs"]),
+        }
+        for metric, timings in benchmark["metrics"].items()
+        if metric.endswith("Ms")
+    ]
+    # Per-frame samples, pooled across runs into percentiles.
+    sampled = [
+        labels
+        | {
+            "workload": f"{name} {metric}",
+            "median_ns": samples["P50"] * NS_PER_MS,
+            "p95_ns": samples["P95"] * NS_PER_MS,
+            "runs": len(samples["runs"]),
+        }
+        for metric, samples in benchmark["sampledMetrics"].items()
+    ]
+    return timed + sampled
 
 
 def table(rows: list[dict]) -> str:

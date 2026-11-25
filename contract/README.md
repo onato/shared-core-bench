@@ -1,12 +1,12 @@
-# Contract fixtures
+# Contract cases
 
 Behaviour shared by every core is specified once, here, as JSON in / JSON out. Each core runs the
-same cases natively, so no fixture may depend on how one language models a type.
+same cases natively, so no case may depend on how one language models a type.
 
 ## Layout
 
 `contract/cases/*.json` — one file per case. The file name, without `.json`, is the test name, so
-name it for the behaviour (`paging-stops-when-remote-has-no-more.json`). Feature fixtures arrive
+name it for the behaviour (`paging-stops-when-remote-has-no-more.json`). Feature cases arrive
 with the issues that implement the feature.
 
 ## A case
@@ -33,7 +33,7 @@ Every case starts from a fresh core with an empty database, configured with the 
 | `expect` | The exact JSON the call must return; `null` for "nothing". |
 
 The result shapes in the example are illustrative: each step's result is fixed by the issue that
-adds its first fixture.
+adds its first case.
 
 ## Step results
 
@@ -50,7 +50,7 @@ adds its first fixture.
 ## Changing a result or a required field
 
 Runners compare whole results, and every product body must pass `ingest`, so a shape change
-reaches well past the new fixture. Count these into the issue's size before starting:
+reaches well past the new case. Count these into the issue's size before starting:
 
 - **A field added to a step's result:** every case with that step (`grep -l '"step": "detail"'
   contract/cases/*`), the step's row above, and both contract adapters:
@@ -68,6 +68,11 @@ reaches well past the new fixture. Count these into the issue's size before star
   every case too. Both adapters read an optional argument with `args["name"]` and a default, never
   `getValue`: existing cases omit it, and `getValue` fails them with `Key … is missing` before the
   core runs.
+- **A new step:** the `step` row's list of calls and a row in the step table above, and the
+  call in `SPEC.md`'s "Shared core contract" block, which the `step` row points to. The KMP
+  runner's `ContractCore` interface and its dispatch in `ContractRunner.kt` (with the runner's
+  `FakeCore`), both contract adapters, the core's `Core.kt`, and the app's `SharedCore.kt` with
+  `KmpSharedCore.kt` and the test `FakeSharedCore.kt`.
 
 ## Runners
 
