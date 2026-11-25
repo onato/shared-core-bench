@@ -110,6 +110,33 @@ class ProductDetailTest {
     }
 
     @Test
+    fun aFailedReadShowsCouldNotLoadRatherThanProductNotFound() {
+        val core = stocked(mascara)
+        core.detailFailing = true
+        show(core)
+
+        open("Essence Mascara")
+
+        awaitText("Couldn't load this product")
+        assertEquals(0, compose.onAllNodesWithText("Product not found").fetchSemanticsNodes().size)
+    }
+
+    @Test
+    fun retryingOnceStorageRecoversShowsTheProduct() {
+        val core = stocked(mascara)
+        core.detailFailing = true
+        show(core)
+        open("Essence Mascara")
+        awaitText("Couldn't load this product")
+
+        core.detailFailing = false
+        compose.onNodeWithText("Retry").performClick()
+
+        awaitText("Lengthens and volumises lashes")
+        assertEquals(0, compose.onAllNodesWithText("Couldn't load this product").fetchSemanticsNodes().size)
+    }
+
+    @Test
     fun theDetailShowsCategoryPricesRatingAndTags() {
         show(stocked(mascara))
 

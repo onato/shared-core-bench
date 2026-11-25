@@ -138,8 +138,7 @@ fun App(
 
         else -> {
             BackHandler { selected = null }
-            val found = remember(id) { detail(id) } as? DetailResult.Found
-            found?.let { ProductDetailScreen(it.product) } ?: Text("Product not found")
+            LoadedProductDetail(id, detail)
         }
     }
 }

@@ -109,6 +109,13 @@ class SqliteStoragePortTest {
         assertEquals(listOf(1L, null, 3L), listOf(1L, 2L, 3L).map { filePort.storedId(it) })
     }
 
+    @Test
+    fun aClosedPortReportsItsReadsAsAStorageError() {
+        port.close()
+
+        assertEquals(StorageError("android.database.SQLException"), port.stats())
+    }
+
     private fun SqliteStoragePort.storedId(id: Long) = (get(id) as Stored).value?.id
 
     private fun product(id: Long) =

@@ -27,6 +27,9 @@ of these traps cost a session several runs:
   what it captures, and tests never recompose with a new capture. Pass a function-typed property
   of a remembered holder, a top-level `::function`, or `MutableState`'s `component2()` instead, as
   `Filters.kt` does (#112).
+- **An exhaustive `when` over a sealed result in a composable leaves an uncovered line.** Kotlin
+  adds a `NoWhenBranchMatchedException` throw that no test reaches, and Kover doesn't filter it
+  under the Compose compiler. Make the last branch `else`, as `LoadedProductDetail` does (#243).
 - **Assert on text only the new screen shows.** The detail screen repeats the product's title,
   so a test that taps a product and waits for its title passes before navigation exists (#151).
 
@@ -38,12 +41,27 @@ of these traps cost a session several runs:
   still fail in the full suite. Make the code take a database path and a `DriverFactory`, as
   `AndroidCores` does, and test it with a plain JUnit class (`AndroidCoresTest`, on `JvmDrivers`)
   (#215).
+- **A `private companion object` holding a non-`const` `val` leaves Kover one uncovered
+  instruction.** `PortCores` kept `listOf(…)` in one and its module fell to 99.8%; a file-level
+  `private val` fixed it (#248). A `const val` there is fine, as `EmbeddedCores` shows. Like the
+  exhaustive `when` above, it is code the compiler generates and no test can reach.
 - **The app can't call the core's `inline` functions.** `core-kmp` builds for JVM 21 and `app`
   builds for JVM 11, so `:app:compileDebugKotlin` fails with `Cannot inline bytecode built with
   JVM target 21`. Use a non-inline function in the app (#221).
-- **detekt fails a class at 11 functions** (`TooManyFunctions`, in both `android/` and
-  `core-kmp/`). `Core` and `SqliteStoragePort` are close to it. Plan where a new function goes,
-  such as a file-level function or a small helper type, before adding one (#221).
+- **Some code sits at a detekt size limit.** `config/detekt/detekt.yml` keeps detekt's default
+  thresholds, in both `android/` and `core-kmp/`. Check the code an issue touches against these
+  before writing it:
+
+  | Rule | Fails at | At or near it |
+  |---|---|---|
+  | `TooManyFunctions` | 11 functions in a class | `Core`, `SqliteStoragePort` (#221) |
+  | `ReturnCount` | 3 returns in a function | `ProductPagingSource.load`, suppressed with its reason (#249) |
+  | `LongMethod` | 61 lines | `App`, 58 after #250 moved the detail branch out |
+  | `CyclomaticComplexMethod` | complexity 15 | `App` (#250) |
+
+  Plan where new code goes (a file-level function, a small helper type or composable) before
+  adding it. Don't reshape code already on `main` to fit; that is a `Structural:` PR first.
+  #249 folded `main`'s code into a `when` to fit `ReturnCount`, and review failed it.
 
 ## Running the benchmarks
 
@@ -55,5 +73,9 @@ it took about 13 minutes (#202), most of it in the two 10 000-row paging benchma
   should print the model within a second or two. When adb itself is wedged, Gradle fails with
   `TimeoutException getting properties for device` on every emulator, so the run never starts
   (#122). Restart the adb server or lease another emulator rather than retrying the bench.
+- `STORAGE` picks the storage variants (`all`, the default, runs every one). Each variant is its
+  own instrumentation run, passing `storage=<variant>` to the benchmarks; `batched` and `chatty`
+  run only `IngestBenchmark` and `CatalogueBenchmark`, on the app's `SqliteStoragePort`. All runs
+  land in one results file, and the table adds each delegated row's overhead over embedded.
 - Results land in `report/results/<timestamp>/results.json`, which is gitignored; paste the
   printed table into the PR.

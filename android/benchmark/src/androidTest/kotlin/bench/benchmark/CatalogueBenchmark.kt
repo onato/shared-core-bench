@@ -3,7 +3,6 @@ package bench.benchmark
 import androidx.benchmark.junit4.BenchmarkRule
 import androidx.benchmark.junit4.measureRepeated
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import androidx.test.platform.app.InstrumentationRegistry
 import bench.core.Query
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -18,7 +17,7 @@ class CatalogueBenchmark {
     val benchmark = BenchmarkRule()
 
     private val workload =
-        CatalogueWorkload(InstrumentationRegistry.getInstrumentation().targetContext, ROWS, SEED, PAGE_SIZE)
+        CatalogueWorkload(benchCores(), ROWS, SEED, PAGE_SIZE)
 
     @After
     fun closeWorkload() = workload.close()

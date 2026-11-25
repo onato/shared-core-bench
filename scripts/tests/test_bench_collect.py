@@ -173,3 +173,23 @@ def test_a_delegated_row_without_an_embedded_row_shows_a_dash_for_its_overhead()
         "| --- | --- | --- | --- | --- |\n"
         "| search10000Rows | android | chatty | 3.00 | — |\n"
     )
+
+
+def test_main_adds_a_variants_rows_to_the_results_already_saved_and_prints_them_all(
+    tmp_path, capsys
+):
+    output = tmp_path / "connected"
+    output.mkdir()
+    (output / "bench.benchmark.test-benchmarkData.json").write_text(json.dumps(androidx_report()))
+    out = tmp_path / "results" / "20261125T0100"
+    labels = ["--core", "kmp", "--build-type", "release", "--git-sha", "a1", "--out", str(out)]
+
+    for storage in ("embedded", "chatty"):
+        bench_collect.main([*labels, "--storage", storage, str(output)])
+
+    saved = json.loads((out / "results.json").read_text())
+    assert [row["storage"] for row in saved] == ["embedded", "chatty"]
+    assert capsys.readouterr().out.splitlines()[-2:] == [
+        "| ingest1000Products | android | chatty | 0.00 | +0.00 ms (+0%) |",
+        "| ingest1000Products | android | embedded | 0.00 |  |",
+    ]
