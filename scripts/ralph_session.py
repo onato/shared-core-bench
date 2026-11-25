@@ -56,11 +56,14 @@ class ClaudeSession:
         return outcome(text)
 
     def remove(self, issue: int) -> str | None:
-        """What failed, or None once the issue's worktree and branch are gone."""
-        return self._git(
-            ["worktree", "remove", str(self._worktree(issue))],
-            ["branch", "-D", self._branch(issue)],  # -D: a squash merge leaves it unmerged
-        )
+        """What failed, or None once the issue's worktree and branch are gone or never existed."""
+        worktree, branch = self._worktree(issue), self._branch(issue)
+        if worktree.exists() and (failed := self._git(["worktree", "remove", str(worktree)])):
+            return failed
+        exists = ["show-ref", "--verify", "--quiet", f"refs/heads/{branch}"]
+        if self._git(exists):
+            return None
+        return self._git(["branch", "-D", branch])  # -D: a squash merge leaves it unmerged
 
     def _branch(self, issue: int) -> str:
         return f"swilliams/{issue}-ralph"

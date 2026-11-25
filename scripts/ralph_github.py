@@ -111,6 +111,18 @@ query($owner: String!, $repo: String!, $number: Int!) {
 """
 
 
+OPEN_PRS_QUERY = """
+query($owner: String!, $repo: String!, $number: Int!, $branch: String!) {
+  repository(owner: $owner, name: $repo) {
+    issue(number: $number) {
+      closedByPullRequestsReferences(first: 20, includeClosedPrs: false) { nodes { state } }
+    }
+    pullRequests(headRefName: $branch, states: OPEN) { totalCount }
+  }
+}
+"""
+
+
 class GitHubAdapter:
     def __init__(self, owner: str, repo: str, project_number: int, run: Run):
         self.owner = owner
@@ -155,6 +167,20 @@ class GitHubAdapter:
             ci_failure_streak=trailing_failures([runs["ci"] for runs in commits if "ci" in runs]),
             has_retro_notes=any("## Retro notes" in c["body"] for c in pr["comments"]["nodes"]),
             behind=pr["mergeStateStatus"] == "BEHIND",
+        )
+
+    def has_open_pr(self, issue: int) -> bool:
+        """`includeClosedPrs: false` still lists merged PRs, so their state is checked here."""
+        data = self._graphql(
+            OPEN_PRS_QUERY,
+            owner=self.owner,
+            repo=self.repo,
+            number=issue,
+            branch=f"swilliams/{issue}-ralph",
+        )["repository"]
+        closing = data["issue"]["closedByPullRequestsReferences"]["nodes"]
+        return data["pullRequests"]["totalCount"] > 0 or any(
+            pr["state"] == "OPEN" for pr in closing
         )
 
     def update_branch(self, number: int) -> None:

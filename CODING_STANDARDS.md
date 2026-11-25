@@ -10,7 +10,7 @@ judgement calls.
   API, a screen's visible state. A test should survive any refactor that keeps behaviour the same.
 - Name tests for the behaviour (`pagingStopsWhenRemoteReportsNoMorePages`), not the method.
 - Assert on values, not on booleans, so failures say what went wrong.
-- Behaviour shared across cores is specified once, as a golden fixture in `contract/`. A
+- Behaviour shared across cores is specified once, as a contract case in `contract/cases/`. A
   core-specific test is only for behaviour that exists in that core alone (bridge code, memory
   ownership, errors crossing the FFI).
 - The contract adapters (`KmpContractCore.kt` in core-kmp's tests, `SharedCoreContract.kt` in the
@@ -33,7 +33,7 @@ green.
   breaks on a refactor that didn't change behaviour.
 - **Tautological**: the expected value is computed the way the code computes it, so the test
   passes by construction. Expected values come from an independent source: a literal, a worked
-  example, the spec, a contract fixture.
+  example, the spec, a contract case.
 - **Horizontal slicing**: all the tests first, then all the code. One test → one implementation →
   repeat. An issue's contract cases are the exception: they are the outer loop, written together
   before any code (`CLAUDE.md` → TDD), while its tests to write first still go one at a time.
