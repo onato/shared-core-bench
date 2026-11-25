@@ -41,6 +41,14 @@ android {
                 .toInt()
         targetSdk = compileSdk
     }
+    buildTypes {
+        create("benchmark") {
+            initWith(getByName("release"))
+            signingConfig = signingConfigs.getByName("debug")
+            matchingFallbacks += "release"
+            isDebuggable = false
+        }
+    }
     buildFeatures {
         compose = true
     }
