@@ -1,7 +1,6 @@
 package bench.macrobenchmark
 
 import androidx.benchmark.macro.FrameTimingMetric
-import androidx.benchmark.macro.StartupMode
 import androidx.benchmark.macro.junit4.MacrobenchmarkRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.uiautomator.By
@@ -23,7 +22,6 @@ class ScrollBenchmark {
             packageName = APP_PACKAGE,
             metrics = listOf(FrameTimingMetric()),
             iterations = ITERATIONS,
-            startupMode = StartupMode.COLD,
             setupBlock = {
                 device.executeShellCommand("pm clear $APP_PACKAGE")
                 startActivityAndWait(fixtureIntent(RECORDS))
