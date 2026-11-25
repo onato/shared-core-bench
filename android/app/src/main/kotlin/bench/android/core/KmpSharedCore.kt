@@ -1,9 +1,15 @@
 package bench.android.core
 
 import android.content.Context
+import bench.android.CoreChoice
+import bench.android.CoreFactory
+import bench.android.Storage
 import bench.core.AndroidDrivers
 import bench.core.Core
 import bench.core.CoreConfig
+import bench.core.DriverFactory
+import bench.core.PortCalls
+import java.io.File
 import bench.core.IngestResult as CoreIngestResult
 import bench.core.PageResult as CorePageResult
 import bench.core.ProductSummary as CoreProductSummary
@@ -102,3 +108,32 @@ private fun stockStatus(status: CoreStockStatus) =
 
 private fun summary(summary: CoreProductSummary) =
     with(summary) { ProductSummary(id, title, price, discountedPrice, rating, thumbnail) }
+
+/** Opens the KMP core on the database at [path], embedded on [drivers] or on the app's [SqliteStoragePort]. */
+class AndroidCores(
+    private val path: String,
+    private val drivers: DriverFactory,
+) : CoreFactory {
+    override fun open(
+        choice: CoreChoice,
+        empty: Boolean,
+    ): SharedCore {
+        if (empty) SQLITE_FILES.forEach { File(path + it).delete() }
+        val config = CoreConfig(path)
+        return KmpSharedCore(
+            when (choice.storage) {
+                Storage.Embedded -> Core.create(config, drivers)
+                Storage.Batched -> Core.create(config, SqliteStoragePort.open(path))
+                Storage.Chatty -> Core.create(config, SqliteStoragePort.open(path), PortCalls.CHATTY)
+            },
+        )
+    }
+
+    companion object {
+        fun create(context: Context) =
+            AndroidCores(context.getDatabasePath("products.db").path, AndroidDrivers(context))
+    }
+}
+
+// The database and the journal files SQLite keeps beside it.
+private val SQLITE_FILES = listOf("", "-journal", "-wal", "-shm")
