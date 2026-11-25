@@ -61,9 +61,15 @@ class SharedCoreContract(
         return json("requestId" to request.requestId, "url" to request.url)
     }
 
-    override fun detail(args: JsonObject): JsonElement {
-        val product = core.detail(args.getValue("id").jsonPrimitive.long) ?: return JsonNull
-        return with(product) {
+    override fun detail(args: JsonObject): JsonElement =
+        when (val result = core.detail(args.getValue("id").jsonPrimitive.long)) {
+            is DetailResult.Found -> detailJson(result.product)
+            DetailResult.NotFound -> JsonNull
+            DetailResult.StorageFailed -> json("error" to "storage-failed")
+        }
+
+    private fun detailJson(product: ProductDetail) =
+        with(product) {
             json(
                 "id" to id,
                 "title" to title,
@@ -81,7 +87,6 @@ class SharedCoreContract(
                 "tags" to JsonArray(tags.map(::JsonPrimitive)),
             )
         }
-    }
 
     override fun stats(args: JsonObject): JsonElement =
         with(core.stats()) { json("productCount" to productCount, "deletedCount" to deletedCount) }

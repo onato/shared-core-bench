@@ -38,4 +38,14 @@ class KmpSharedCoreTest {
 
         assertEquals(PageResult.StorageFailed, core.page(cursor = null, size = 20))
     }
+
+    @Test
+    fun aStorageFailureInTheCoreReachesTheAppAsAFailedDetail() {
+        val core = KmpSharedCore(Core.create(CoreConfig(dbPath = dbPath), JvmDrivers))
+        DriverManager.getConnection("jdbc:sqlite:$dbPath").use {
+            it.createStatement().execute("DROP TABLE product_tag")
+        }
+
+        assertEquals(DetailResult.StorageFailed, core.detail(id = 1))
+    }
 }

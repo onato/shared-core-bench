@@ -63,7 +63,7 @@ class FakeSharedCore(
         return PageResult.Page(items, nextCursor = if (after.size > size) items.last().id else null)
     }
 
-    override fun detail(id: Long): ProductDetail? = details[id]
+    override fun detail(id: Long): DetailResult = details[id]?.let(DetailResult::Found) ?: DetailResult.NotFound
 
     override fun stats(): CoreStats =
         CoreStats(productCount = products.size.toLong(), deletedCount = deleted.size.toLong())

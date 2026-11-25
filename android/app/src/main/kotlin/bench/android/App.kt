@@ -34,6 +34,7 @@ import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import androidx.paging.compose.collectAsLazyPagingItems
+import bench.android.core.DetailResult
 import bench.android.core.FetchRequest
 import bench.android.core.ProductDetail
 import bench.android.core.ProductSummary
@@ -82,7 +83,7 @@ private fun ProductCell(
 @Composable
 fun App(
     products: (Query) -> Flow<PagingData<ProductSummary>>,
-    detail: (Long) -> ProductDetail?,
+    detail: (Long) -> DetailResult,
     refresh: () -> Unit,
     categories: () -> List<String>,
 ) {
@@ -134,7 +135,8 @@ fun App(
 
         else -> {
             BackHandler { selected = null }
-            remember(id) { detail(id) }?.let { ProductDetailScreen(it) } ?: Text("Product not found")
+            val found = remember(id) { detail(id) } as? DetailResult.Found
+            found?.let { ProductDetailScreen(it.product) } ?: Text("Product not found")
         }
     }
 }

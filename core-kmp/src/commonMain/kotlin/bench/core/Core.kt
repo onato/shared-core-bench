@@ -49,7 +49,11 @@ class Core private constructor(
         }
     }
 
-    fun detail(id: Long): ProductDetail? = storage.get(id)
+    fun detail(id: Long): DetailResult =
+        when (val product = storage.get(id)) {
+            is StorageError -> DetailResult.StorageFailed
+            is Stored -> product.value?.let(DetailResult::Found) ?: DetailResult.NotFound
+        }
 
     fun categories(): List<String> = storage.categories()
 

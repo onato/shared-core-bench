@@ -16,7 +16,7 @@ interface SharedCore {
         query: Query = Query(),
     ): PageResult
 
-    fun detail(id: Long): ProductDetail?
+    fun detail(id: Long): DetailResult
 
     fun stats(): CoreStats
 
@@ -72,6 +72,17 @@ data class ProductDetail(
     val thumbnail: String,
     val tags: List<String>,
 )
+
+sealed interface DetailResult {
+    data class Found(
+        val product: ProductDetail,
+    ) : DetailResult
+
+    /** No stored product has the id, or it is soft-deleted. */
+    data object NotFound : DetailResult
+
+    data object StorageFailed : DetailResult
+}
 
 enum class RatingBucket { Excellent, Good, Fair, Poor }
 

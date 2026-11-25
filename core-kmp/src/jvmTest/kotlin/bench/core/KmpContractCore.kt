@@ -92,9 +92,15 @@ class KmpContractCore(
         return JsonObject(mapOf("requestId" to JsonPrimitive(request.requestId), "url" to JsonPrimitive(request.url)))
     }
 
-    override fun detail(args: JsonObject): JsonElement {
-        val product = core.detail(args.getValue("id").jsonPrimitive.long) ?: return JsonNull
-        return JsonObject(
+    override fun detail(args: JsonObject): JsonElement =
+        when (val result = core.detail(args.getValue("id").jsonPrimitive.long)) {
+            is DetailResult.Found -> detailJson(result.product)
+            DetailResult.NotFound -> JsonNull
+            DetailResult.StorageFailed -> errorResult("storage-failed")
+        }
+
+    private fun detailJson(product: ProductDetail) =
+        JsonObject(
             mapOf(
                 "id" to JsonPrimitive(product.id),
                 "title" to JsonPrimitive(product.title),
@@ -112,7 +118,6 @@ class KmpContractCore(
                 "tags" to JsonArray(product.tags.map(::JsonPrimitive)),
             ),
         )
-    }
 
     private fun productJson(product: ProductSummary) =
         JsonObject(
