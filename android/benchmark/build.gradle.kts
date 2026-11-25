@@ -22,6 +22,20 @@ android {
     }
     // Benchmarks measure release code; androidx.benchmark refuses debuggable builds.
     testBuildType = "release"
+    testOptions {
+        unitTests.all { test ->
+            // The port workloads' tests open the storage module's port, which loads its host SQLite natives.
+            test.dependsOn(":storage:hostSqliteNatives")
+            test.systemProperty(
+                "java.library.path",
+                project(":storage")
+                    .layout.buildDirectory
+                    .dir("hostSqliteNatives")
+                    .get()
+                    .asFile.path,
+            )
+        }
+    }
 }
 
 kotlin {
