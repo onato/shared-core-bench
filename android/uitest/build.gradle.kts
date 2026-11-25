@@ -32,7 +32,6 @@ dependencies {
     implementation(libs.androidx.test.junit)
     implementation(libs.androidx.test.runner)
     implementation(libs.uiautomator)
-    implementation(project(":fixtures"))
 }
 
 ktlint {

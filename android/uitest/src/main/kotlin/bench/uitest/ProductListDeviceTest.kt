@@ -6,7 +6,6 @@ import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.By
 import androidx.test.uiautomator.UiDevice
 import androidx.test.uiautomator.Until
-import bench.fixtures.ProductFixtures
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -39,7 +38,7 @@ class ProductListDeviceTest {
     @Test
     fun scrollingToTheEndLoadsEveryPage() {
         firstTitle()
-        assertTrue("product $RECORDS never showed", scrollUntilShown(lastTitle()))
+        assertTrue("product $RECORDS never showed", scrollUntilShown(LAST_TITLE))
     }
 
     @Test
@@ -47,20 +46,10 @@ class ProductListDeviceTest {
         val first = firstTitle()
         swipe(fromY = device.displayHeight / 3, toY = device.displayHeight)
         assertTrue("the list emptied on refresh", device.wait(Until.hasObject(By.text(first)), TIMEOUT_MS))
-        assertTrue("product $RECORDS never showed", scrollUntilShown(lastTitle()))
+        assertTrue("product $RECORDS never showed", scrollUntilShown(LAST_TITLE))
     }
 
     private fun firstTitle(): String = device.wait(Until.findObject(By.text(PRODUCT_TITLE)), TIMEOUT_MS).text
-
-    // The last product's title, from the same fixture page the app's "network" serves.
-    private fun lastTitle(): String {
-        val page = ProductFixtures.page(PAGE_SIZE, SEED, skip = RECORDS - PAGE_SIZE, total = RECORDS)
-        return TITLE_IN_JSON
-            .toRegex()
-            .findAll(page.decodeToString())
-            .last()
-            .groupValues[1]
-    }
 
     private fun scrollUntilShown(title: String): Boolean =
         (1..MAX_SWIPES).any {
@@ -78,12 +67,13 @@ class ProductListDeviceTest {
     private companion object {
         const val APP = "bench.android"
         const val RECORDS = 100
-        const val PAGE_SIZE = 20
         const val SEED = 7L
+
+        // Product 100's title for seed 7. Only the last page (skip 80) gives it, since each page has titles of its own.
+        const val LAST_TITLE = "Product 16309089497050970934"
         const val TIMEOUT_MS = 10_000L
         const val STEPS = 20
         const val MAX_SWIPES = 60
-        const val TITLE_IN_JSON = "\"title\":\"(Product \\d+)\""
         val PRODUCT_TITLE: Pattern = Pattern.compile("Product \\d+")
     }
 }
