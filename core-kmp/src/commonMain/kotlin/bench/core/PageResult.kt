@@ -7,4 +7,6 @@ sealed interface PageResult {
     ) : PageResult
 
     data object InvalidSize : PageResult
+
+    data object StorageFailed : PageResult
 }

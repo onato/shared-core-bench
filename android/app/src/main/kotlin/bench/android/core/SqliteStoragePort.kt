@@ -71,11 +71,15 @@ class SqliteStoragePort private constructor(
         query: Query,
         cursor: Long?,
         size: Int,
-    ): List<ProductSummary> =
-        with(query) {
-            run(PAGE_AFTER, listOf(cursor, sortKey(sort), text, category, minPrice, maxPrice, size.toLong())) {
-                rows { ProductSummary(long(), text(), double(), double(), double(), text()) }
-            }
+    ): StorageResult<List<ProductSummary>> =
+        catching {
+            Stored(
+                with(query) {
+                    run(PAGE_AFTER, listOf(cursor, sortKey(sort), text, category, minPrice, maxPrice, size.toLong())) {
+                        rows { ProductSummary(long(), text(), double(), double(), double(), text()) }
+                    }
+                },
+            )
         }
 
     override fun get(id: Long): ProductDetail? {
@@ -130,9 +134,9 @@ class SqliteStoragePort private constructor(
     }
 }
 
-private inline fun catching(write: () -> StorageResult<Unit>): StorageResult<Unit> =
+private inline fun <T> catching(call: () -> StorageResult<T>): StorageResult<T> =
     try {
-        write()
+        call()
     } catch (failure: SQLiteException) {
         StorageError(failure.toString())
     }

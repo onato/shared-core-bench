@@ -50,6 +50,21 @@ class StoragePortTest {
     }
 
     @Test
+    fun aQueryThatReturnsAStorageErrorIsAStorageFailedPage() {
+        val failingItsQuery =
+            object : StoragePort by port {
+                override fun query(
+                    query: Query,
+                    cursor: Long?,
+                    size: Int,
+                ): StorageResult<List<ProductSummary>> = StorageError("disk full")
+            }
+        val core = Core.create(CoreConfig(dbPath = ":memory:"), failingItsQuery)
+
+        assertEquals(PageResult.StorageFailed, core.page(cursor = null, size = 20, query = Query()))
+    }
+
+    @Test
     fun ingestingAPageOf20ThroughTheChattyVariantMakes20UpsertOneCallsAndNoUpsertCall() {
         val calls = mutableListOf<String>()
         val counting =

@@ -45,6 +45,7 @@ class KmpSharedCore(
         when (val result = core.page(cursor, size, coreQuery(query))) {
             is CorePageResult.Page -> PageResult.Page(result.items.map(::summary), result.nextCursor)
             CorePageResult.InvalidSize -> PageResult.InvalidSize
+            CorePageResult.StorageFailed -> PageResult.StorageFailed
         }
 
     private fun coreQuery(query: Query) = with(query) { CoreQuery(text, category, minPrice, maxPrice, coreSort(sort)) }

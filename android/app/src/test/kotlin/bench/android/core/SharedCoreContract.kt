@@ -38,6 +38,10 @@ class SharedCoreContract(
             PageResult.InvalidSize -> {
                 json("error" to "invalid-page-size")
             }
+
+            PageResult.StorageFailed -> {
+                json("error" to "storage-failed")
+            }
         }
     }
 

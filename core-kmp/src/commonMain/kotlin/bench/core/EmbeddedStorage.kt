@@ -55,19 +55,23 @@ internal class EmbeddedStorage(
         query: Query,
         cursor: Long?,
         size: Int,
-    ): List<ProductSummary> =
-        queries
-            .pageAfter(
-                cursor = cursor,
-                text = query.text,
-                category = query.category,
-                minPrice = query.minPrice,
-                maxPrice = query.maxPrice,
-                sort = query.sort.key,
-                limit = size.toLong(),
-            ) { id, title, price, discountedPrice, rating, thumbnail ->
-                ProductSummary(id, title, price, discountedPrice, rating, thumbnail)
-            }.executeAsList()
+    ): StorageResult<List<ProductSummary>> =
+        catching {
+            Stored(
+                queries
+                    .pageAfter(
+                        cursor = cursor,
+                        text = query.text,
+                        category = query.category,
+                        minPrice = query.minPrice,
+                        maxPrice = query.maxPrice,
+                        sort = query.sort.key,
+                        limit = size.toLong(),
+                    ) { id, title, price, discountedPrice, rating, thumbnail ->
+                        ProductSummary(id, title, price, discountedPrice, rating, thumbnail)
+                    }.executeAsList(),
+            )
+        }
 
     override fun get(id: Long): ProductDetail? {
         val tags = queries.tagsOf(id).executeAsList()
@@ -88,9 +92,9 @@ internal class EmbeddedStorage(
 // Drivers throw platform exceptions (java.sql.SQLException, android.database.SQLException)
 // with no common supertype, so common code can only catch Exception.
 @Suppress("TooGenericExceptionCaught")
-private inline fun catching(write: () -> StorageResult<Unit>): StorageResult<Unit> =
+private inline fun <T> catching(call: () -> StorageResult<T>): StorageResult<T> =
     try {
-        write()
+        call()
     } catch (failure: Exception) {
         StorageError(failure.toString())
     }
