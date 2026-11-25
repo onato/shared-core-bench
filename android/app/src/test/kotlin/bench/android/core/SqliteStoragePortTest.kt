@@ -5,6 +5,7 @@ import androidx.sqlite.execSQL
 import bench.core.CoreStats
 import bench.core.ProductDetail
 import bench.core.StorageError
+import bench.core.Stored
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.io.File
@@ -41,6 +42,26 @@ class SqliteStoragePortTest {
 
         // The JVM's stub android.database.SQLException drops its message; on a device it carries the driver's.
         assertEquals(StorageError("android.database.SQLException"), result)
+    }
+
+    @Test
+    fun aCommitThatFailsKeepsNoneOfTheTransactionsWritesAndTheNextOneCommits() {
+        val path = File(Files.createTempDirectory("port").toFile(), "products.db").path
+        val filePort = SqliteStoragePort.open(path)
+        filePort.transaction { filePort.upsertOne(product(id = 1), generation = 1) }
+
+        val failed =
+            BundledSQLiteDriver().open(path).use { reader ->
+                // A reader mid-query holds a shared lock, so the port's COMMIT can't take the exclusive one.
+                reader.prepare("SELECT id FROM product").use { query ->
+                    query.step()
+                    filePort.transaction { filePort.upsertOne(product(id = 2), generation = 1) }
+                }
+            }
+        val next = filePort.transaction { filePort.upsertOne(product(id = 3), generation = 1) }
+
+        assertEquals(listOf(StorageError("android.database.SQLException"), Stored(Unit)), listOf(failed, next))
+        assertEquals(listOf(1L, null, 3L), listOf(1L, 2L, 3L).map { filePort.get(it)?.id })
     }
 
     private fun product(id: Long) =

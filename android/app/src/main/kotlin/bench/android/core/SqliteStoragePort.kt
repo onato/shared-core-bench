@@ -23,8 +23,18 @@ class SqliteStoragePort private constructor(
         catching {
             connection.execSQL("BEGIN")
             val result = block()
-            connection.execSQL(if (result is StorageError) "ROLLBACK" else "COMMIT")
-            result
+            val committed =
+                if (result is StorageError) {
+                    result
+                } else {
+                    catching {
+                        connection.execSQL("COMMIT")
+                        result
+                    }
+                }
+            // A failed COMMIT, such as one blocked by a reader, leaves the transaction open.
+            if (committed is StorageError) connection.execSQL("ROLLBACK")
+            committed
         }
 
     override fun upsert(
