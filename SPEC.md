@@ -168,9 +168,9 @@ database.
 throws, panics or raises across the boundary. Its implementation catches its own driver's
 exceptions (`SQLiteException`, a Swift `throw`, a Lua error) and returns them as a `StorageError`.
 `transaction(block)` rolls back everything the block wrote, and returns the error, when the block
-returns one or the commit fails. During `ingest` the core turns any `StorageError` into
-`storage-failed` (`contract/README.md`). The read calls have no failure code in the contract yet;
-adding one is part of moving the KMP port to results.
+returns one or the commit fails. The core turns any `StorageError` into `storage-failed`, during
+`ingest` and in every call that reads storage (`page`, `detail`, `categories`, `stats`), as
+`contract/README.md` gives.
 
 This follows `CODING_STANDARDS.md` ("Errors that cross a core boundary are results"), and it is
 the one choice that works the same through all three bridges: a Kotlin exception that reaches
