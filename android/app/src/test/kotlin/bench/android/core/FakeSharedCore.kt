@@ -13,6 +13,9 @@ class FakeSharedCore(
     /** While set, every [page] read fails as a storage error would. */
     @Volatile var storageFailing = false
 
+    /** While set, every [detail] read fails as a storage error would. */
+    @Volatile var detailFailing = false
+
     private val products = stored.associateBy { it.id }.toSortedMap()
     private val details = details.associateBy { it.id }
     private var fetched = 0
@@ -67,7 +70,11 @@ class FakeSharedCore(
         return PageResult.Page(items, nextCursor = if (after.size > size) items.last().id else null)
     }
 
-    override fun detail(id: Long): DetailResult = details[id]?.let(DetailResult::Found) ?: DetailResult.NotFound
+    override fun detail(id: Long): DetailResult =
+        when {
+            detailFailing -> DetailResult.StorageFailed
+            else -> details[id]?.let(DetailResult::Found) ?: DetailResult.NotFound
+        }
 
     override fun stats(): StatsResult =
         StatsResult.Stats(CoreStats(productCount = products.size.toLong(), deletedCount = deleted.size.toLong()))
