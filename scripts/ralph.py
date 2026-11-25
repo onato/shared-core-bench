@@ -41,6 +41,7 @@ class PullRequest:
     ci_failure_streak: int = 0
     has_retro_notes: bool = True
     behind: bool = False
+    branch: str = ""
 
 
 @dataclass(frozen=True)
@@ -73,7 +74,6 @@ class GitHub(ReadsBoard, Protocol):
     def pull_request(self, number: int) -> PullRequest: ...
     def has_open_pr(self, issue: int) -> bool: ...  # one closes it or is on its branch
     def set_status(self, issue: int, status: str) -> None: ...
-    def update_branch(self, number: int) -> None: ...
     def comment(self, issue: int, body: str) -> str: ...  # the comment's URL
     def plan_approved(self, parent: int) -> bool: ...  # the owner added plan-approved last
     def undraft(self, issue: int) -> None: ...
@@ -83,6 +83,7 @@ class Session(Protocol):
     # `while_running` is called every POLL_SECONDS until the session ends.
     def work(self, issue: Issue, while_running: Callable[[], None]) -> Outcome: ...
     def remove(self, issue: int) -> str | None: ...  # what failed, if the worktree stays
+    def update(self, pr: PullRequest) -> str | None: ...  # merges main in; what failed
     def improve(self, prs: tuple[int, ...], while_running: Callable[[], None]) -> Improvement: ...
 
 
@@ -145,6 +146,7 @@ class _Loop:
     worktrees: dict[int, int] = field(default_factory=dict)  # a pending PR → its issue
     left_in_place: dict[int, str] = field(default_factory=dict)  # issue → why its worktree stayed
     errors_while_running: list[str] = field(default_factory=list)
+    not_brought_up_to_date: list[str] = field(default_factory=list)  # PRs no issue holds
     waiting_since: float | None = None
 
     def run(self) -> str:
@@ -216,8 +218,22 @@ class _Loop:
 
     def update_behind(self, prs: list[PullRequest]) -> None:
         for pr in prs:
-            if not pr.merged and pr.behind:
-                self.github.update_branch(pr.number)
+            if not pr.merged and pr.behind and (failed := self.session.update(pr)):
+                self.not_updated(pr.number, failed)
+
+    def not_updated(self, pr: int, failed: str) -> None:
+        """Stop waiting for a PR the loop can't bring up to date: it won't merge without help."""
+        self.pending.remove(pr)
+        reason = f"PR #{pr} can't be brought up to date with main: {failed}"
+        if pr not in self.worktrees:  # a session's other PR, or the improver's
+            self.not_brought_up_to_date.append(reason)
+            self.notify(f"Ralph loop: {reason}.")
+            return
+        issue = self.worktrees.pop(pr)
+        self.stuck[issue] = reason
+        self.github.set_status(issue, IN_REVIEW)
+        url = self.github.comment(issue, f"Moved to In review by the Ralph loop: {reason}.")
+        self.notify(f"Ralph loop: #{issue} needs you (moved to In review): {reason}.\n{url}")
 
     def update_behind_pending(self) -> None:
         """While a session runs: a GitHub error is reported at the end, not raised into it."""
@@ -330,6 +346,8 @@ class _Loop:
                 "GitHub errors while a session ran:",
                 *(f"- {e}" for e in self.errors_while_running),
             ]
+        if self.not_brought_up_to_date:
+            lines += ["Not brought up to date:", *(f"- {r}" for r in self.not_brought_up_to_date)]
         return "\n".join(lines + self.improver_lines())
 
     def improver_lines(self) -> list[str]:
