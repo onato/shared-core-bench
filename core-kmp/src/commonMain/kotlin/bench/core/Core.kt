@@ -48,23 +48,29 @@ class Core private constructor(
 
     fun stats(): CoreStats = storage.stats()
 
-    // Drivers throw platform exceptions (java.sql.SQLException, android.database.SQLException)
-    // with no common supertype, so common code can only catch Exception.
-    @Suppress("TooGenericExceptionCaught")
     private fun store(page: PageDecoding.Products): IngestResult =
-        try {
-            storage.transaction {
-                when (calls) {
-                    PortCalls.BATCHED -> storage.upsert(page.rows, paging.generation)
-                    PortCalls.CHATTY -> page.rows.forEach { storage.upsertOne(it, paging.generation) }
-                }
-                if (paging.isLastPage(page.total)) storage.markMissingDeleted(paging.generation)
+        when (storage.transaction { write(page) }) {
+            is StorageError -> {
+                IngestResult.StorageFailed
             }
-            paging.advance(page.total)
-            IngestResult.Decoded(accepted = page.rows.size, rejected = page.rejected)
-        } catch (_: Exception) {
-            IngestResult.StorageFailed
+
+            is Stored -> {
+                paging.advance(page.total)
+                IngestResult.Decoded(accepted = page.rows.size, rejected = page.rejected)
+            }
         }
+
+    private fun write(page: PageDecoding.Products): StorageResult<Unit> {
+        val generation = paging.generation
+        val upserted =
+            when (calls) {
+                PortCalls.BATCHED -> storage.upsert(page.rows, generation)
+                PortCalls.CHATTY -> page.rows.storeEach { storage.upsertOne(it, generation) }
+            }
+        return upserted.then {
+            if (paging.isLastPage(page.total)) storage.markMissingDeleted(generation) else Stored(Unit)
+        }
+    }
 
     companion object {
         private val SUCCESS = 200..299
