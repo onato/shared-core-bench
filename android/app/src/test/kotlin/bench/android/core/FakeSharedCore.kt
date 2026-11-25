@@ -65,8 +65,8 @@ class FakeSharedCore(
 
     override fun detail(id: Long): DetailResult = details[id]?.let(DetailResult::Found) ?: DetailResult.NotFound
 
-    override fun stats(): CoreStats =
-        CoreStats(productCount = products.size.toLong(), deletedCount = deleted.size.toLong())
+    override fun stats(): StatsResult =
+        StatsResult.Stats(CoreStats(productCount = products.size.toLong(), deletedCount = deleted.size.toLong()))
 
     override fun categories(): CategoriesResult = CategoriesResult.Categories(categoryOf.values.distinct().sorted())
 

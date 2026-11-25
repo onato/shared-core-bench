@@ -131,15 +131,21 @@ class KmpContractCore(
             ),
         )
 
-    override fun stats(args: JsonObject): JsonElement {
-        val stats = core.stats()
-        return JsonObject(
-            mapOf(
-                "productCount" to JsonPrimitive(stats.productCount),
-                "deletedCount" to JsonPrimitive(stats.deletedCount),
-            ),
-        )
-    }
+    override fun stats(args: JsonObject): JsonElement =
+        when (val result = core.stats()) {
+            is StatsResult.Stats -> {
+                JsonObject(
+                    mapOf(
+                        "productCount" to JsonPrimitive(result.stats.productCount),
+                        "deletedCount" to JsonPrimitive(result.stats.deletedCount),
+                    ),
+                )
+            }
+
+            StatsResult.StorageFailed -> {
+                errorResult("storage-failed")
+            }
+        }
 
     override fun refresh(args: JsonObject): JsonElement {
         core.refresh()

@@ -20,28 +20,28 @@ class AndroidCoresTest {
         core.ingest(request.requestId, response.status, response.body)
     }
 
-    private fun productCountAfterReopening(
+    private fun statsAfterReopening(
         storage: Storage,
         empty: Boolean,
-    ): Long {
+    ): StatsResult {
         val choice = CoreChoice(CoreKind.Kmp, storage)
         ingestFirstPage(cores.open(choice, empty = true))
-        return cores.open(choice, empty).stats().productCount
+        return cores.open(choice, empty).stats()
     }
 
     @Test
     fun everyStorageVariantKeepsItsProductsWhenReopened() {
         assertEquals(
-            Storage.entries.associateWith { 20L },
-            Storage.entries.associateWith { productCountAfterReopening(it, empty = false) },
+            Storage.entries.associateWith { StatsResult.Stats(CoreStats(productCount = 20, deletedCount = 0)) },
+            Storage.entries.associateWith { statsAfterReopening(it, empty = false) },
         )
     }
 
     @Test
     fun everyStorageVariantStartsWithNoProductsWhenReopenedEmpty() {
         assertEquals(
-            Storage.entries.associateWith { 0L },
-            Storage.entries.associateWith { productCountAfterReopening(it, empty = true) },
+            Storage.entries.associateWith { StatsResult.Stats(CoreStats(productCount = 0, deletedCount = 0)) },
+            Storage.entries.associateWith { statsAfterReopening(it, empty = true) },
         )
     }
 }

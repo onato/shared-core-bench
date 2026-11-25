@@ -27,6 +27,6 @@ class AndroidCoresCreateTest {
 
         val relaunched = AndroidCores.create(RuntimeEnvironment.getApplication()).open(embedded, empty = false)
 
-        assertEquals(20L, relaunched.stats().productCount)
+        assertEquals(StatsResult.Stats(CoreStats(productCount = 20, deletedCount = 0)), relaunched.stats())
     }
 }

@@ -114,11 +114,15 @@ class SqliteStoragePort private constructor(
             Stored(run("SELECT DISTINCT category FROM product WHERE deleted = 0 ORDER BY category") { rows { text() } })
         }
 
-    override fun stats(): CoreStats =
-        CoreStats(
-            productCount = count("SELECT count(*) FROM product"),
-            deletedCount = count("SELECT count(*) FROM product WHERE deleted = 1"),
-        )
+    override fun stats(): StorageResult<CoreStats> =
+        catching {
+            Stored(
+                CoreStats(
+                    productCount = count("SELECT count(*) FROM product"),
+                    deletedCount = count("SELECT count(*) FROM product WHERE deleted = 1"),
+                ),
+            )
+        }
 
     private fun count(sql: String): Long = run(sql) { rows { long() }.single() }
 
