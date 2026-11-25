@@ -39,6 +39,29 @@ learned.
 
   Either list may be `none` (say why). Order the tests to write first so each one needs code the
   earlier ones didn't: a test the previous step already satisfies belongs in no list.
+- **Before filing an issue**, check these five things. Each one cost a session time when an issue
+  left it out:
+  - **Where the code goes.** Name the module, and check that the module can depend on what the
+    code uses. An Android library can't depend on `:app`, so #123 had to be split partway
+    through (#216, #217). If the code it changes is at a detekt size limit (`android/README.md`
+    lists them), say where the new branch or function goes: #249 and #250 found `ReturnCount`
+    and `LongMethod` mid-change.
+  - **What it waits for.** List under `Blocked by` every issue whose change one of these tests
+    needs, including a doc line the test reads. #213 left out #214 and its session sat idle.
+  - **How it can fail.** A failure path gets one test for each way it can fail (the block returns
+    an error, the commit fails, the driver throws) in each port or core that has the path. #212
+    listed no commit-failure test for the Android port, and only review caught the missing
+    `ROLLBACK`.
+  - **Who calls it.** When the issue changes a signature or a return shape, list the callers
+    (`grep -rn '<call>(' core-kmp android`) and size the issue from them. #220 grouped four
+    reads, and its session had to split it into three issues before writing code. For each
+    caller that puts something on screen, add a test to write first for what the user sees when
+    the call fails. #234 and #235 had to guess this.
+  - **Which test goes red first.** When the UI that shows a result already exists (an error row,
+    a Retry button), list the screen test before the fix underneath it, so the screen test fails
+    until that fix lands, and say in the issue that the UI exists. #242 listed the paging-source
+    fix first, its screen tests then passed on their first run, and the session had to rerun them
+    against `main` to show them red (#249).
 - Hierarchy uses GitHub sub-issues: one parent issue per milestone, tasks as its sub-issues, and
   GitHub issue dependencies ("blocked by") for order.
 - Board: https://github.com/users/onato/projects/2
@@ -65,7 +88,7 @@ and stores them in SQLite, and the list pages through them from the database. Pr
 1. **KMP module and CI** — Gradle KMP (jvm, android; ios target added in M3), Kover 100% gate,
    ktlint, detekt, `make test/lint/coverage` for it, CI workflow; one trivial test to prove the gate
    fails when coverage drops.
-2. **Contract format** — JSON fixture format, runner on the JVM, first fixture: decode a page.
+2. **Contract format** — JSON case format, runner on the JVM, first contract case: decode a page.
 3. **Decode products** — minimal fields; malformed items are skipped and counted, not fatal.
 4. **Store products** — SQLDelight schema, upsert by id inside one transaction.
 5. **Read a page** — `page(cursor, size)`, keyset paging by id.

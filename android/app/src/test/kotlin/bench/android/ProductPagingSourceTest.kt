@@ -90,6 +90,17 @@ class ProductPagingSourceTest {
         }
 
     @Test
+    fun aStorageFailureLoadsAsAnError() =
+        runTest {
+            val core = FakeSharedCore(stored = listOf(mascara))
+            core.storageFailing = true
+
+            val result = pager(core).refresh()
+
+            assertEquals("Couldn't load products", (result as LoadResult.Error).throwable.message)
+        }
+
+    @Test
     fun refreshingAfterScrollingStartsAgainFromTheFirstProduct() =
         runTest {
             val source =

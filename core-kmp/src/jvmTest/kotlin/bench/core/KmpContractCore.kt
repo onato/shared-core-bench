@@ -69,6 +69,10 @@ class KmpContractCore(
             PageResult.InvalidSize -> {
                 errorResult("invalid-page-size")
             }
+
+            PageResult.StorageFailed -> {
+                errorResult("storage-failed")
+            }
         }
     }
 
@@ -88,9 +92,15 @@ class KmpContractCore(
         return JsonObject(mapOf("requestId" to JsonPrimitive(request.requestId), "url" to JsonPrimitive(request.url)))
     }
 
-    override fun detail(args: JsonObject): JsonElement {
-        val product = core.detail(args.getValue("id").jsonPrimitive.long) ?: return JsonNull
-        return JsonObject(
+    override fun detail(args: JsonObject): JsonElement =
+        when (val result = core.detail(args.getValue("id").jsonPrimitive.long)) {
+            is DetailResult.Found -> detailJson(result.product)
+            DetailResult.NotFound -> JsonNull
+            DetailResult.StorageFailed -> errorResult("storage-failed")
+        }
+
+    private fun detailJson(product: ProductDetail) =
+        JsonObject(
             mapOf(
                 "id" to JsonPrimitive(product.id),
                 "title" to JsonPrimitive(product.title),
@@ -108,7 +118,6 @@ class KmpContractCore(
                 "tags" to JsonArray(product.tags.map(::JsonPrimitive)),
             ),
         )
-    }
 
     private fun productJson(product: ProductSummary) =
         JsonObject(
@@ -122,22 +131,32 @@ class KmpContractCore(
             ),
         )
 
-    override fun stats(args: JsonObject): JsonElement {
-        val stats = core.stats()
-        return JsonObject(
-            mapOf(
-                "productCount" to JsonPrimitive(stats.productCount),
-                "deletedCount" to JsonPrimitive(stats.deletedCount),
-            ),
-        )
-    }
+    override fun stats(args: JsonObject): JsonElement =
+        when (val result = core.stats()) {
+            is StatsResult.Stats -> {
+                JsonObject(
+                    mapOf(
+                        "productCount" to JsonPrimitive(result.stats.productCount),
+                        "deletedCount" to JsonPrimitive(result.stats.deletedCount),
+                    ),
+                )
+            }
+
+            StatsResult.StorageFailed -> {
+                errorResult("storage-failed")
+            }
+        }
 
     override fun refresh(args: JsonObject): JsonElement {
         core.refresh()
         return JsonNull
     }
 
-    override fun categories(args: JsonObject): JsonElement = JsonArray(core.categories().map(::JsonPrimitive))
+    override fun categories(args: JsonObject): JsonElement =
+        when (val result = core.categories()) {
+            is CategoriesResult.Categories -> JsonArray(result.names.map(::JsonPrimitive))
+            CategoriesResult.StorageFailed -> errorResult("storage-failed")
+        }
 
     private companion object {
         val SORTS =

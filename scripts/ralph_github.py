@@ -95,6 +95,7 @@ query($owner: String!, $repo: String!, $number: Int!) {
     pullRequest(number: $number) {
       merged
       mergeStateStatus
+      headRefName
       comments(last: 100) { nodes { body } }
       commits(last: 100) {
         nodes {
@@ -106,6 +107,18 @@ query($owner: String!, $repo: String!, $number: Int!) {
         }
       }
     }
+  }
+}
+"""
+
+
+OPEN_PRS_QUERY = """
+query($owner: String!, $repo: String!, $number: Int!, $branch: String!) {
+  repository(owner: $owner, name: $repo) {
+    issue(number: $number) {
+      closedByPullRequestsReferences(first: 20, includeClosedPrs: false) { nodes { state } }
+    }
+    pullRequests(headRefName: $branch, states: OPEN) { totalCount }
   }
 }
 """
@@ -155,13 +168,21 @@ class GitHubAdapter:
             ci_failure_streak=trailing_failures([runs["ci"] for runs in commits if "ci" in runs]),
             has_retro_notes=any("## Retro notes" in c["body"] for c in pr["comments"]["nodes"]),
             behind=pr["mergeStateStatus"] == "BEHIND",
+            branch=pr["headRefName"],
         )
 
-    def update_branch(self, number: int) -> None:
-        """Merge main into the PR's branch: `main` only merges up-to-date branches."""
-        self.run(
-            ["api", "-X", "PUT", f"repos/{self.owner}/{self.repo}/pulls/{number}/update-branch"],
-            None,
+    def has_open_pr(self, issue: int) -> bool:
+        """`includeClosedPrs: false` still lists merged PRs, so their state is checked here."""
+        data = self._graphql(
+            OPEN_PRS_QUERY,
+            owner=self.owner,
+            repo=self.repo,
+            number=issue,
+            branch=f"swilliams/{issue}-ralph",
+        )["repository"]
+        closing = data["issue"]["closedByPullRequestsReferences"]["nodes"]
+        return data["pullRequests"]["totalCount"] > 0 or any(
+            pr["state"] == "OPEN" for pr in closing
         )
 
     def set_status(self, issue: int, status: str) -> None:

@@ -5,7 +5,7 @@ Compares KMP, Rust/UniFFI and Lua as a shared business-logic core for an iOS and
 - `SPEC.md` — what gets built and measured
 - `ISSUES.md` — delivery milestones and how work flows
 - `CODING_STANDARDS.md` — what the PR review enforces; read it before writing tests or code
-- `contract/README.md` and `android/README.md` — what fixtures and app tests need; read before changing either
+- `contract/README.md` and `android/README.md` — what contract cases and app tests need; read before changing either
 - GitHub issues on `onato/shared-core-bench` — the work queue (board: users/onato/projects/2)
 
 Each issue carries two checklists: "Contract cases" (the outer loop, below) and "Tests to write
@@ -54,7 +54,8 @@ Two loops, as in *Growing Object-Oriented Software, Guided by Tests*:
 - Red → Green → Refactor. Write the simplest failing test, run it, and see it fail for the
   expected reason before writing production code. A test that passes on first run proves
   nothing: drop it if it adds no behaviour, or rewrite it until it demands code that doesn't exist
-  yet. Never break code on purpose to see it fail.
+  yet. Never break code on purpose to see it fail. A branch the compiler forces before its test
+  exists (an exhaustive `when`, a required override) is `TODO()` until its own test has failed.
 - Implement only enough to pass. Refactor only when green, in named steps (Extract Function,
   Inline Variable, …), running the tests after each. The refactor step reshapes only code this
   branch added. Extracting from, renaming or moving code already on `main` is a structural change:
@@ -87,6 +88,7 @@ them; until then they fail with "not implemented".
 | `make test-core CORE=kmp\|rust\|lua` | One core's tests |
 | `make test-ios` / `make test-android` | App unit, contract-through-bridge and UI tests |
 | `make lint` | clippy, ktlint/detekt, SwiftLint, luacheck; warnings are errors |
+| `make fmt` | Apply ktlint's and ruff's fixes; run before `make lint` (detekt findings stay manual) |
 | `make coverage` | Run tests with coverage and fail below the gates |
 | `make bench` | Run the benchmark matrix and print the results table |
 | `make bench-report` | Build the HTML report from saved results |

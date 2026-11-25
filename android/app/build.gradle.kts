@@ -20,6 +20,14 @@ android {
                 .toInt()
         targetSdk = compileSdk
     }
+    buildTypes {
+        create("benchmark") {
+            initWith(getByName("release"))
+            signingConfig = signingConfigs.getByName("debug")
+            matchingFallbacks += "release"
+            isDebuggable = false
+        }
+    }
     buildFeatures {
         compose = true
     }
@@ -30,6 +38,16 @@ android {
             val contractCases = rootDir.resolve("../contract/cases").canonicalFile
             test.inputs.dir(contractCases).withPropertyName("contractCases")
             test.systemProperty("contract.cases", contractCases.path)
+            // The contract runs open the storage module's port, which loads its host SQLite natives.
+            test.dependsOn(":storage:hostSqliteNatives")
+            test.systemProperty(
+                "java.library.path",
+                project(":storage")
+                    .layout.buildDirectory
+                    .dir("hostSqliteNatives")
+                    .get()
+                    .asFile.path,
+            )
         }
     }
 }
@@ -43,8 +61,10 @@ kotlin {
 dependencies {
     implementation("bench:core-kmp")
     implementation(project(":fixtures"))
+    implementation(project(":storage"))
     kover(project(":benchmark"))
     kover(project(":fixtures"))
+    kover(project(":storage"))
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.material3)
     implementation(libs.activity.compose)

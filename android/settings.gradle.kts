@@ -22,4 +22,4 @@ includeBuild("../core-kmp") {
     }
 }
 
-include(":app", ":benchmark", ":fixtures", ":uitest")
+include(":app", ":benchmark", ":fixtures", ":storage", ":uitest")

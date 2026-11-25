@@ -1,5 +1,5 @@
 .PHONY: help bootstrap test lint coverage test-core test-scripts lint-scripts coverage-scripts \
-	test-kmp lint-kmp coverage-kmp test-android test-android-device lint-android coverage-android bench bench-report
+	test-kmp lint-kmp coverage-kmp test-android test-android-device lint-android coverage-android fmt bench bench-report
 
 # uv would warn about, then ignore, a VIRTUAL_ENV inherited from another checkout's shell.
 unexport VIRTUAL_ENV
@@ -19,6 +19,11 @@ test: test-scripts test-kmp test-android ## All tests except benchmarks
 lint: lint-scripts lint-kmp lint-android ## All linters; warnings are errors
 
 coverage: coverage-scripts coverage-kmp coverage-android ## Tests with coverage gates
+
+fmt: ## Apply ktlint's fixes to core-kmp and android; detekt's findings still need a hand
+	$(GRADLE) ktlintFormat
+	$(ANDROID_GRADLE) ktlintFormat
+	uv run ruff format scripts
 
 test-core: ## One core's tests: CORE=kmp
 	@test -n "$(CORE)" || { echo "test-core: set CORE=kmp" >&2; exit 1; }
@@ -44,7 +49,7 @@ coverage-kmp:
 	$(GRADLE) koverXmlReport koverVerify koverLog
 
 test-android: ## Android app unit and Robolectric tests
-	$(ANDROID_GRADLE) :app:testDebugUnitTest :benchmark:testReleaseUnitTest :fixtures:testDebugUnitTest
+	$(ANDROID_GRADLE) :app:testDebugUnitTest :benchmark:testReleaseUnitTest :fixtures:testDebugUnitTest :storage:testDebugUnitTest
 
 test-android-device: ## Instrumented UI tests in fixture mode on ANDROID_SERIAL (not part of make test)
 	@test -n "$(ANDROID_SERIAL)" || { echo "test-android-device: set ANDROID_SERIAL to a simpool lease" >&2; exit 1; }
@@ -57,22 +62,38 @@ coverage-android:
 	$(ANDROID_GRADLE) :app:koverXmlReportApp :app:koverVerifyApp :app:koverLogApp
 
 BENCH_UNSUPPORTED = $(strip $(filter-out all android,$(PLATFORM)) $(filter-out all kmp,$(CORE)) \
-	$(filter-out all embedded,$(STORAGE)) $(filter-out all core boundary,$(SUITE)))
+	$(filter-out all embedded batched chatty,$(STORAGE)) $(filter-out all core boundary,$(SUITE)))
 
 BOUNDARY_BENCHMARK = bench.benchmark.BoundaryBenchmark
 BENCH_SUITE_core = -Pandroid.testInstrumentationRunnerArguments.notClass=$(BOUNDARY_BENCHMARK)
 BENCH_SUITE_boundary = -Pandroid.testInstrumentationRunnerArguments.class=$(BOUNDARY_BENCHMARK)
 
-bench: ## Run benchmarks on ANDROID_SERIAL and print the table (android, kmp, embedded, core|boundary so far)
-	@test -z "$(BENCH_UNSUPPORTED)" || { echo "bench: not implemented: $(BENCH_UNSUPPORTED)" >&2; exit 1; }
-	@test -n "$(ANDROID_SERIAL)" || { echo "bench: set ANDROID_SERIAL to a simpool lease" >&2; exit 1; }
-	rm -rf android/benchmark/build/outputs/connected_android_test_additional_output
+# The delegated variants run only benchmarks 7–9; the others never touch storage.
+BENCH_CLASSES_embedded = $(BENCH_SUITE_$(SUITE))
+BENCH_CLASSES_batched = \
+	-Pandroid.testInstrumentationRunnerArguments.class=bench.benchmark.IngestBenchmark,bench.benchmark.CatalogueBenchmark
+BENCH_CLASSES_chatty = $(BENCH_CLASSES_batched)
+BENCH_STORAGES = $(filter $(if $(filter-out all,$(STORAGE)),$(STORAGE),embedded batched chatty), \
+	embedded $(if $(filter boundary,$(SUITE)),,batched chatty))
+
+BENCH_OUTPUT = android/benchmark/build/outputs/connected_android_test_additional_output
+BENCH_RESULTS := report/results/$(shell date +%Y%m%dT%H%M%S)
+
+# One storage variant's run, collected into the shared results so the table compares them.
+define BENCH_RUN
+	rm -rf $(BENCH_OUTPUT)
 	ANDROID_SERIAL=$(ANDROID_SERIAL) $(ANDROID_GRADLE) :benchmark:connectedReleaseAndroidTest \
 		-Pandroid.testInstrumentationRunnerArguments.androidx.benchmark.suppressErrors=EMULATOR \
-		$(BENCH_SUITE_$(SUITE))
-	uv run python scripts/bench_collect.py --core kmp --storage embedded --build-type release \
-		--git-sha $$(git rev-parse --short HEAD) --out report/results/$$(date +%Y%m%dT%H%M%S) \
-		android/benchmark/build/outputs/connected_android_test_additional_output
+		-Pandroid.testInstrumentationRunnerArguments.storage=$(1) $(BENCH_CLASSES_$(1))
+	uv run python scripts/bench_collect.py --core kmp --storage $(1) --build-type release \
+		--git-sha $(shell git rev-parse --short HEAD) --out $(BENCH_RESULTS) $(BENCH_OUTPUT)
+
+endef
+
+bench: ## Run benchmarks on ANDROID_SERIAL and print the table (android, kmp, core|boundary so far)
+	@test -z "$(BENCH_UNSUPPORTED)" || { echo "bench: not implemented: $(BENCH_UNSUPPORTED)" >&2; exit 1; }
+	@test -n "$(ANDROID_SERIAL)" || { echo "bench: set ANDROID_SERIAL to a simpool lease" >&2; exit 1; }
+	$(foreach storage,$(BENCH_STORAGES),$(call BENCH_RUN,$(storage)))
 
 bench-report: ## Not implemented yet
 	@echo "$@: not implemented" >&2; exit 1

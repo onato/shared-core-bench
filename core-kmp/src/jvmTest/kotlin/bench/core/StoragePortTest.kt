@@ -7,15 +7,15 @@ class StoragePortTest {
     private val port = jdbcTestPort(":memory:")
 
     @Test
-    fun aPortFailureInsideTheTransactionIsStorageFailedAndStoresNoneOfThePage() {
+    fun anUpsertThatReturnsAStorageErrorIsStorageFailedAndStoresNoneOfThePage() {
         val failingAfterTheFirstRow =
             object : StoragePort by port {
                 override fun upsert(
                     items: List<ProductDetail>,
                     generation: Long,
-                ) {
+                ): StorageResult<Unit> {
                     port.upsert(items.take(1), generation)
-                    error("disk full")
+                    return StorageError("disk full")
                 }
             }
         val core = Core.create(CoreConfig(dbPath = ":memory:"), failingAfterTheFirstRow)
@@ -28,7 +28,73 @@ class StoragePortTest {
             )
 
         assertEquals(IngestResult.StorageFailed, result)
-        assertEquals(CoreStats(productCount = 0, deletedCount = 0), core.stats())
+        assertEquals(StatsResult.Stats(CoreStats(productCount = 0, deletedCount = 0)), core.stats())
+    }
+
+    @Test
+    fun aCommitThatFailsIsStorageFailedAndLeavesTheRequestPending() {
+        val failingItsCommit =
+            object : StoragePort by port {
+                override fun transaction(block: () -> StorageResult<Unit>): StorageResult<Unit> {
+                    block()
+                    return StorageError("disk full")
+                }
+            }
+        val core = Core.create(CoreConfig(dbPath = ":memory:"), failingItsCommit)
+
+        val result =
+            core.ingest(requestId = 1, status = 200, body = """{"products": [${product(1)}]}""".encodeToByteArray())
+
+        assertEquals(IngestResult.StorageFailed, result)
+        assertEquals(1L, core.nextFetch()?.requestId)
+    }
+
+    @Test
+    fun aQueryThatReturnsAStorageErrorIsAStorageFailedPage() {
+        val failingItsQuery =
+            object : StoragePort by port {
+                override fun query(
+                    query: Query,
+                    cursor: Long?,
+                    size: Int,
+                ): StorageResult<List<ProductSummary>> = StorageError("disk full")
+            }
+        val core = Core.create(CoreConfig(dbPath = ":memory:"), failingItsQuery)
+
+        assertEquals(PageResult.StorageFailed, core.page(cursor = null, size = 20, query = Query()))
+    }
+
+    @Test
+    fun aGetThatReturnsAStorageErrorIsAStorageFailedDetail() {
+        val failingItsGet =
+            object : StoragePort by port {
+                override fun get(id: Long): StorageResult<ProductDetail?> = StorageError("disk full")
+            }
+        val core = Core.create(CoreConfig(dbPath = ":memory:"), failingItsGet)
+
+        assertEquals(DetailResult.StorageFailed, core.detail(id = 1))
+    }
+
+    @Test
+    fun categoriesThatReturnAStorageErrorAreStorageFailedCategories() {
+        val failingItsCategories =
+            object : StoragePort by port {
+                override fun categories(): StorageResult<List<String>> = StorageError("disk full")
+            }
+        val core = Core.create(CoreConfig(dbPath = ":memory:"), failingItsCategories)
+
+        assertEquals(CategoriesResult.StorageFailed, core.categories())
+    }
+
+    @Test
+    fun statsThatReturnAStorageErrorAreStorageFailedStats() {
+        val failingItsStats =
+            object : StoragePort by port {
+                override fun stats(): StorageResult<CoreStats> = StorageError("disk full")
+            }
+        val core = Core.create(CoreConfig(dbPath = ":memory:"), failingItsStats)
+
+        assertEquals(StatsResult.StorageFailed, core.stats())
     }
 
     @Test
@@ -39,17 +105,17 @@ class StoragePortTest {
                 override fun upsert(
                     items: List<ProductDetail>,
                     generation: Long,
-                ) {
+                ): StorageResult<Unit> {
                     calls += "upsert"
-                    port.upsert(items, generation)
+                    return port.upsert(items, generation)
                 }
 
                 override fun upsertOne(
                     item: ProductDetail,
                     generation: Long,
-                ) {
+                ): StorageResult<Unit> {
                     calls += "upsertOne"
-                    port.upsertOne(item, generation)
+                    return port.upsertOne(item, generation)
                 }
             }
         val core = Core.create(CoreConfig(dbPath = ":memory:"), counting, PortCalls.CHATTY)

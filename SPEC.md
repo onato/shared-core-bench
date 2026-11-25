@@ -74,6 +74,7 @@ ingest(requestId, status, body: bytes): IngestResult   // decode → validate �
 page(query: Query, cursor: Cursor?, size: Int): Page   // reads only from the DB
 detail(id): Product?
 refresh(): void                        // invalidates and resets remote paging state
+categories(): [String]                 // distinct categories of the stored products
 stats(): CoreStats                     // row counts, last sync, timings
 ```
 
@@ -148,18 +149,42 @@ main comparison.
 callback interface, a Kotlin interface on K/N, host functions registered into Lua):
 
 ```
-upsert(items: [ProductRow])                 // batched: one call per ingested page
-upsertOne(item: ProductRow)                 // chatty: one call per item
-query(query: Query, cursor: Cursor?, size: Int): [ProductRow]
-get(id): ProductRow?
-markMissingDeleted(syncedBefore: Timestamp)
-transaction(block)                          // begin/commit around an ingest
+upsert(items: [ProductRow], generation: Int): Result<()>   // batched: one call per ingested page
+upsertOne(item: ProductRow, generation: Int): Result<()>   // chatty: one call per item
+query(query: Query, cursor: Cursor?, size: Int): Result<[ProductRow]>
+get(id): Result<ProductRow?>
+markMissingDeleted(generation: Int): Result<()>  // rows the refresh walk `generation` didn't see
+categories(): Result<[String]>
+stats(): Result<CoreStats>
+transaction(block): Result<()>              // begin/commit around an ingest
 ```
+
+`generation` numbers the walk of the remote pages that a refresh starts: each write records the
+walk that saw the row, so the rows that walk never saw are the ones to soft-delete.
+`categories()` and `stats()` are on the port because the core can't answer them without the
+database.
+
+**Failure is a result.** Each call returns its value or a `StorageError { message }`; a port never
+throws, panics or raises across the boundary. Its implementation catches its own driver's
+exceptions (`SQLiteException`, a Swift `throw`, a Lua error) and returns them as a `StorageError`.
+`transaction(block)` rolls back everything the block wrote, and returns the error, when the block
+returns one or the commit fails. The core turns any `StorageError` into `storage-failed`, during
+`ingest` and in every call that reads storage (`page`, `detail`, `categories`, `stats`), as
+`contract/README.md` gives.
+
+This follows `CODING_STANDARDS.md` ("Errors that cross a core boundary are results"), and it is
+the one choice that works the same through all three bridges: a Kotlin exception that reaches
+Swift without `@Throws` crashes the app, UniFFI already hands a foreign callback's error to Rust as
+a `Result`, and Lua's own convention is `nil, err`. Exceptions would make each port shorter, since
+the native SQLite layers throw, but only per-bridge annotations would keep them from crashing,
+and the failure would not appear in the port's signature. No benchmark runs a failure path, so
+the choice changes no number in the report. Inside a core, each language propagates the result in
+its own way (`?` in Rust, a helper in Kotlin).
 
 The core keeps all decision logic (validation, derived fields, dedupe, which rows to write, paging
 cursors); only SQL execution moves to the app. The native implementations use the **same schema and
-SQL** as the embedded cores, on raw SQLite (the SQLite3 C API from Swift; `sqlite-android` on
-Android, so the SQLite version is also the bundled one), so the difference measured is the boundary
+SQL** as the embedded cores, on raw SQLite (the SQLite3 C API from Swift;
+`androidx.sqlite:sqlite-bundled` on Android, so the SQLite version is also the bundled one), so the difference measured is the boundary
 and not a different database layer.
 
 **Variants**, each run against all three cores on both platforms:
@@ -188,9 +213,9 @@ shared-core-bench/
   ISSUES.md            # delivery milestones, PR gates, workflow
   Makefile             # test, lint, coverage, bench, bench-report
   scripts/             # coverage-gate, bench-collect, report builder
-  contract/            # the API above, golden fixtures, expected outputs
+  contract/            # the API above, contract cases with expected outputs
   core-kmp/            # Kotlin Multiplatform library; its own Gradle build with its own wrapper
-                       #   contract-runner/: the JVM fixture runner the app's tests reuse
+                       #   contract-runner/: the JVM case runner the app's tests reuse
   core-rust/           # Rust crate + uniffi.toml
   core-lua/            # Lua sources + C/JNI/Swift bridge
   fixtures/            # deterministic data generator + local fixture server (M1's generator is
@@ -246,8 +271,8 @@ previews, each listed with a reason.
 | ios | `xcodebuild -enableCodeCoverage YES` + `xccov`, checked by `scripts/coverage-gate` |
 | android | Kover for unit/Robolectric tests, JaCoCo for instrumented tests, merged |
 
-- **Contract tests**: one suite of golden fixtures (`contract/`) with expected outputs; each core runs
-  them natively (Kotlin tests, `cargo test`, busted for Lua). The same fixtures run again through
+- **Contract tests**: one suite of contract cases (`contract/cases/`) with expected outputs; each core runs
+  them natively (Kotlin tests, `cargo test`, busted for Lua). The same cases run again through
   the Swift and Kotlin wrappers to prove the bridges, not just the cores.
 - **Storage port**: the contract suite runs a second time with each core wired to the native
   storage ports, and must produce identical results to the embedded run.
@@ -264,7 +289,7 @@ suite, the benchmark harness and the app; each later one plugs a new core or pla
 exists, so the remaining unknowns are the bridge and the core, not the app.
 
 0. **Foundations**: `git init`, Makefile with `test`, `lint` and `coverage` gates,
-   `contract/` golden fixtures, fixture generator and local fixture server.
+   `contract/` cases, fixture generator and local fixture server.
 1. **Android + KMP**: no boundary, the shortest path to a working app.
    - Full Android app: paged list (Paging 3), detail, refresh, search, backend picker.
    - KMP core passes the contract suite (JVM tests).
@@ -284,7 +309,7 @@ Rules for the sequence:
 - **The app talks to an app-level core interface, never to a core's types.** On Android a Kotlin
   `SharedCore` interface, on iOS a Swift protocol; each core gets an adapter behind it. Otherwise the
   KMP-first build bakes KMP types into the app, and every later core is forced to mimic them.
-- **The contract stays core-neutral.** Golden fixtures are JSON in/JSON out, not Kotlin types, so
+- **The contract stays core-neutral.** Contract cases are JSON in/JSON out, not Kotlin types, so
   later cores can't fail a test because of how Kotlin happened to model something.
 - **Every combination ends with a checkpoint**: run its benchmarks, write down what was learned,
   update `SPEC.md` and write the next milestone's issues, and decide whether to continue —
