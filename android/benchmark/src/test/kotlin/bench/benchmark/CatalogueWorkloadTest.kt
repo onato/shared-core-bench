@@ -10,7 +10,8 @@ import org.robolectric.RuntimeEnvironment
 
 @RunWith(RobolectricTestRunner::class)
 class CatalogueWorkloadTest {
-    private val workload = CatalogueWorkload(RuntimeEnvironment.getApplication(), rows = 5, seed = 1, pageSize = 2)
+    private val workload =
+        CatalogueWorkload(EmbeddedCores(RuntimeEnvironment.getApplication()), rows = 5, seed = 1, pageSize = 2)
 
     @After
     fun closeWorkload() = workload.close()

@@ -12,7 +12,7 @@ import org.robolectric.RuntimeEnvironment
 
 @RunWith(RobolectricTestRunner::class)
 class IngestWorkloadTest {
-    private val workload = IngestWorkload(RuntimeEnvironment.getApplication(), count = 3, seed = 1)
+    private val workload = IngestWorkload(EmbeddedCores(RuntimeEnvironment.getApplication()), count = 3, seed = 1)
 
     @After
     fun closeWorkload() = workload.close()
