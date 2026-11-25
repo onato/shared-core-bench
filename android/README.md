@@ -41,6 +41,10 @@ of these traps cost a session several runs:
   still fail in the full suite. Make the code take a database path and a `DriverFactory`, as
   `AndroidCores` does, and test it with a plain JUnit class (`AndroidCoresTest`, on `JvmDrivers`)
   (#215).
+- **A `private companion object` holding a non-`const` `val` leaves Kover one uncovered
+  instruction.** `PortCores` kept `listOf(…)` in one and its module fell to 99.8%; a file-level
+  `private val` fixed it (#248). A `const val` there is fine, as `EmbeddedCores` shows. Like the
+  exhaustive `when` above, it is code the compiler generates and no test can reach.
 - **The app can't call the core's `inline` functions.** `core-kmp` builds for JVM 21 and `app`
   builds for JVM 11, so `:app:compileDebugKotlin` fails with `Cannot inline bytecode built with
   JVM target 21`. Use a non-inline function in the app (#221).
