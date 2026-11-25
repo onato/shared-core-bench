@@ -69,6 +69,10 @@ class KmpContractCore(
             PageResult.InvalidSize -> {
                 errorResult("invalid-page-size")
             }
+
+            PageResult.StorageFailed -> {
+                errorResult("storage-failed")
+            }
         }
     }
 

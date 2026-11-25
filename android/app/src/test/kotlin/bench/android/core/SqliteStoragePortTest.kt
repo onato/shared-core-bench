@@ -4,6 +4,7 @@ import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.sqlite.execSQL
 import bench.core.CoreStats
 import bench.core.ProductDetail
+import bench.core.Query
 import bench.core.StorageError
 import bench.core.Stored
 import org.junit.Assert.assertEquals
@@ -41,6 +42,17 @@ class SqliteStoragePortTest {
         val result = filePort.upsertOne(product(id = 1), generation = 1)
 
         // The JVM's stub android.database.SQLException drops its message; on a device it carries the driver's.
+        assertEquals(StorageError("android.database.SQLException"), result)
+    }
+
+    @Test
+    fun aQueryTheDriverFailsComesBackAsAStorageError() {
+        val path = File(Files.createTempDirectory("port").toFile(), "products.db").path
+        val filePort = SqliteStoragePort.open(path)
+        BundledSQLiteDriver().open(path).use { it.execSQL("DROP TABLE product") }
+
+        val result = filePort.query(Query(), cursor = null, size = 20)
+
         assertEquals(StorageError("android.database.SQLException"), result)
     }
 

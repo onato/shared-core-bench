@@ -37,9 +37,16 @@ class Core private constructor(
     ): PageResult {
         if (size <= 0) return PageResult.InvalidSize
         // One row past the page tells whether another page follows.
-        val rows = storage.query(query, cursor, size + 1)
-        val items = rows.take(size)
-        return PageResult.Page(items, nextCursor = if (rows.size > size) items.last().id else null)
+        return when (val rows = storage.query(query, cursor, size + 1)) {
+            is StorageError -> {
+                PageResult.StorageFailed
+            }
+
+            is Stored -> {
+                val items = rows.value.take(size)
+                PageResult.Page(items, nextCursor = if (rows.value.size > size) items.last().id else null)
+            }
+        }
     }
 
     fun detail(id: Long): ProductDetail? = storage.get(id)
