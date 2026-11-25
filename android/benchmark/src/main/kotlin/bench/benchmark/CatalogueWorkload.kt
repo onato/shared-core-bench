@@ -1,17 +1,16 @@
 package bench.benchmark
 
-import android.content.Context
 import bench.core.PageResult
 import bench.core.Query
 
 /** Benchmarks 8 and 9: a database already holding [rows] generated products, read [pageSize] at a time. */
 class CatalogueWorkload(
-    context: Context,
+    cores: FreshCores,
     rows: Int,
     seed: Long,
     private val pageSize: Int,
 ) : AutoCloseable {
-    private val ingest = IngestWorkload(context, rows, seed)
+    private val ingest = IngestWorkload(cores, rows, seed)
     private val core = ingest.freshCore().also(ingest::ingestInto)
 
     /** Follows the cursor from the first page to the last; the ids in the order the pages held them. */

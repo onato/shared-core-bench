@@ -35,3 +35,5 @@ e44753dbfaa1f6f37f91481471125f0d0a381caa
 
 # Structural: Core reaches SQLite through one storage class (#189)
 8cfd6750814db2acb32f08ab2637aef4ddef3854
+# Structural: the Android storage port in its own module (#229)
+31d2e37279ac6028b9e90395e67487b9dc489894

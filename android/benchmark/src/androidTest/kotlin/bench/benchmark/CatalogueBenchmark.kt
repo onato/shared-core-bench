@@ -18,7 +18,12 @@ class CatalogueBenchmark {
     val benchmark = BenchmarkRule()
 
     private val workload =
-        CatalogueWorkload(InstrumentationRegistry.getInstrumentation().targetContext, ROWS, SEED, PAGE_SIZE)
+        CatalogueWorkload(
+            EmbeddedCores(InstrumentationRegistry.getInstrumentation().targetContext),
+            ROWS,
+            SEED,
+            PAGE_SIZE,
+        )
 
     @After
     fun closeWorkload() = workload.close()
