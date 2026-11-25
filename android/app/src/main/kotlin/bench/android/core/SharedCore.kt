@@ -18,7 +18,7 @@ interface SharedCore {
 
     fun detail(id: Long): DetailResult
 
-    fun stats(): CoreStats
+    fun stats(): StatsResult
 
     /** The categories of the products a page can show, sorted. */
     fun categories(): CategoriesResult
@@ -82,6 +82,14 @@ sealed interface DetailResult {
     data object NotFound : DetailResult
 
     data object StorageFailed : DetailResult
+}
+
+sealed interface StatsResult {
+    data class Stats(
+        val stats: CoreStats,
+    ) : StatsResult
+
+    data object StorageFailed : StatsResult
 }
 
 sealed interface CategoriesResult {

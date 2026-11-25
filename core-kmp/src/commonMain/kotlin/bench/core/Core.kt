@@ -61,7 +61,11 @@ class Core private constructor(
             is Stored -> CategoriesResult.Categories(names.value)
         }
 
-    fun stats(): CoreStats = storage.stats()
+    fun stats(): StatsResult =
+        when (val stats = storage.stats()) {
+            is StorageError -> StatsResult.StorageFailed
+            is Stored -> StatsResult.Stats(stats.value)
+        }
 
     private fun store(page: PageDecoding.Products): IngestResult =
         when (storage.transaction { write(page) }) {

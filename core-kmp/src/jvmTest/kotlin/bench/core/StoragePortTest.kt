@@ -28,7 +28,7 @@ class StoragePortTest {
             )
 
         assertEquals(IngestResult.StorageFailed, result)
-        assertEquals(CoreStats(productCount = 0, deletedCount = 0), core.stats())
+        assertEquals(StatsResult.Stats(CoreStats(productCount = 0, deletedCount = 0)), core.stats())
     }
 
     @Test
@@ -84,6 +84,17 @@ class StoragePortTest {
         val core = Core.create(CoreConfig(dbPath = ":memory:"), failingItsCategories)
 
         assertEquals(CategoriesResult.StorageFailed, core.categories())
+    }
+
+    @Test
+    fun statsThatReturnAStorageErrorAreStorageFailedStats() {
+        val failingItsStats =
+            object : StoragePort by port {
+                override fun stats(): StorageResult<CoreStats> = StorageError("disk full")
+            }
+        val core = Core.create(CoreConfig(dbPath = ":memory:"), failingItsStats)
+
+        assertEquals(StatsResult.StorageFailed, core.stats())
     }
 
     @Test

@@ -89,7 +89,15 @@ class SharedCoreContract(
         }
 
     override fun stats(args: JsonObject): JsonElement =
-        with(core.stats()) { json("productCount" to productCount, "deletedCount" to deletedCount) }
+        when (val result = core.stats()) {
+            is StatsResult.Stats -> {
+                json("productCount" to result.stats.productCount, "deletedCount" to result.stats.deletedCount)
+            }
+
+            StatsResult.StorageFailed -> {
+                json("error" to "storage-failed")
+            }
+        }
 
     override fun refresh(args: JsonObject): JsonElement {
         core.refresh()

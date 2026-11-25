@@ -26,7 +26,7 @@ class SqliteStoragePortTest {
 
         assertEquals(StorageError("disk full"), failed)
         assertEquals(listOf(null, 2L), listOf(port.storedId(1), port.storedId(2)))
-        assertEquals(CoreStats(productCount = 1, deletedCount = 0), port.stats())
+        assertEquals(Stored(CoreStats(productCount = 1, deletedCount = 0)), port.stats())
     }
 
     @Test
@@ -74,6 +74,17 @@ class SqliteStoragePortTest {
         BundledSQLiteDriver().open(path).use { it.execSQL("DROP TABLE product") }
 
         val result = filePort.categories()
+
+        assertEquals(StorageError("android.database.SQLException"), result)
+    }
+
+    @Test
+    fun statsTheDriverFailsComeBackAsAStorageError() {
+        val path = File(Files.createTempDirectory("port").toFile(), "products.db").path
+        val filePort = SqliteStoragePort.open(path)
+        BundledSQLiteDriver().open(path).use { it.execSQL("DROP TABLE product") }
+
+        val result = filePort.stats()
 
         assertEquals(StorageError("android.database.SQLException"), result)
     }

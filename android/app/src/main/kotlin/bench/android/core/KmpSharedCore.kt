@@ -19,6 +19,7 @@ import bench.core.ProductSummary as CoreProductSummary
 import bench.core.Query as CoreQuery
 import bench.core.RatingBucket as CoreRatingBucket
 import bench.core.Sort as CoreSort
+import bench.core.StatsResult as CoreStatsResult
 import bench.core.StockStatus as CoreStockStatus
 
 class KmpSharedCore(
@@ -88,7 +89,11 @@ class KmpSharedCore(
             )
         }
 
-    override fun stats(): CoreStats = with(core.stats()) { CoreStats(productCount, deletedCount) }
+    override fun stats(): StatsResult =
+        when (val result = core.stats()) {
+            is CoreStatsResult.Stats -> StatsResult.Stats(with(result.stats) { CoreStats(productCount, deletedCount) })
+            CoreStatsResult.StorageFailed -> StatsResult.StorageFailed
+        }
 
     override fun refresh() = core.refresh()
 

@@ -22,7 +22,7 @@ class IngestStorageTest {
             )
 
         assertEquals(IngestResult.StorageFailed, result)
-        assertEquals(CoreStats(productCount = 0, deletedCount = 0), core.stats())
+        assertEquals(StatsResult.Stats(CoreStats(productCount = 0, deletedCount = 0)), core.stats())
     }
 
     @Test
@@ -81,6 +81,21 @@ class IngestStorageTest {
         DriverManager.getConnection("jdbc:sqlite:$dbPath").use { it.createStatement().execute("DROP TABLE product") }
 
         val result = port.categories()
+
+        assertEquals(
+            StorageError(
+                "org.sqlite.SQLiteException: [SQLITE_ERROR] SQL error or missing database (no such table: product)",
+            ),
+            result,
+        )
+    }
+
+    @Test
+    fun statsTheDriverFailsComeBackFromTheEmbeddedStorageAsAStorageError() {
+        val port = jdbcTestPort(dbPath)
+        DriverManager.getConnection("jdbc:sqlite:$dbPath").use { it.createStatement().execute("DROP TABLE product") }
+
+        val result = port.stats()
 
         assertEquals(
             StorageError(

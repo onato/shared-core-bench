@@ -58,7 +58,7 @@ class FakeSharedCoreTest {
         val result = core.ingest(requestId = 7, status = 200, body = ByteArray(0))
 
         assertEquals(IngestResult.Failed(IngestFailure.UnknownRequest), result)
-        assertEquals(CoreStats(productCount = 0, deletedCount = 0), core.stats())
+        assertEquals(StatsResult.Stats(CoreStats(productCount = 0, deletedCount = 0)), core.stats())
     }
 
     @Test
