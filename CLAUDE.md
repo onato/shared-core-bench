@@ -54,7 +54,8 @@ Two loops, as in *Growing Object-Oriented Software, Guided by Tests*:
 - Red → Green → Refactor. Write the simplest failing test, run it, and see it fail for the
   expected reason before writing production code. A test that passes on first run proves
   nothing: drop it if it adds no behaviour, or rewrite it until it demands code that doesn't exist
-  yet. Never break code on purpose to see it fail.
+  yet. Never break code on purpose to see it fail. A branch the compiler forces before its test
+  exists (an exhaustive `when`, a required override) is `TODO()` until its own test has failed.
 - Implement only enough to pass. Refactor only when green, in named steps (Extract Function,
   Inline Variable, …), running the tests after each. The refactor step reshapes only code this
   branch added. Extracting from, renaming or moving code already on `main` is a structural change:
