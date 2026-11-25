@@ -74,6 +74,7 @@ ingest(requestId, status, body: bytes): IngestResult   // decode â†’ validate â†
 page(query: Query, cursor: Cursor?, size: Int): Page   // reads only from the DB
 detail(id): Product?
 refresh(): void                        // invalidates and resets remote paging state
+categories(): [String]                 // distinct categories of the stored products
 stats(): CoreStats                     // row counts, last sync, timings
 ```
 
@@ -148,18 +149,42 @@ main comparison.
 callback interface, a Kotlin interface on K/N, host functions registered into Lua):
 
 ```
-upsert(items: [ProductRow])                 // batched: one call per ingested page
-upsertOne(item: ProductRow)                 // chatty: one call per item
-query(query: Query, cursor: Cursor?, size: Int): [ProductRow]
-get(id): ProductRow?
-markMissingDeleted(syncedBefore: Timestamp)
-transaction(block)                          // begin/commit around an ingest
+upsert(items: [ProductRow], generation: Int): Result<()>   // batched: one call per ingested page
+upsertOne(item: ProductRow, generation: Int): Result<()>   // chatty: one call per item
+query(query: Query, cursor: Cursor?, size: Int): Result<[ProductRow]>
+get(id): Result<ProductRow?>
+markMissingDeleted(generation: Int): Result<()>  // rows the refresh walk `generation` didn't see
+categories(): Result<[String]>
+stats(): Result<CoreStats>
+transaction(block): Result<()>              // begin/commit around an ingest
 ```
+
+`generation` numbers the walk of the remote pages that a refresh starts: each write records the
+walk that saw the row, so the rows that walk never saw are the ones to soft-delete.
+`categories()` and `stats()` are on the port because the core can't answer them without the
+database.
+
+**Failure is a result.** Each call returns its value or a `StorageError { message }`; a port never
+throws, panics or raises across the boundary. Its implementation catches its own driver's
+exceptions (`SQLiteException`, a Swift `throw`, a Lua error) and returns them as a `StorageError`.
+`transaction(block)` rolls back everything the block wrote, and returns the error, when the block
+returns one or the commit fails. During `ingest` the core turns any `StorageError` into
+`storage-failed` (`contract/README.md`). The read calls have no failure code in the contract yet;
+adding one is part of moving the KMP port to results.
+
+This follows `CODING_STANDARDS.md` ("Errors that cross a core boundary are results"), and it is
+the one choice that works the same through all three bridges: a Kotlin exception that reaches
+Swift without `@Throws` crashes the app, UniFFI already hands a foreign callback's error to Rust as
+a `Result`, and Lua's own convention is `nil, err`. Exceptions would make each port shorter, since
+the native SQLite layers throw, but only per-bridge annotations would keep them from crashing,
+and the failure would not appear in the port's signature. No benchmark runs a failure path, so
+the choice changes no number in the report. Inside a core, each language propagates the result in
+its own way (`?` in Rust, a helper in Kotlin).
 
 The core keeps all decision logic (validation, derived fields, dedupe, which rows to write, paging
 cursors); only SQL execution moves to the app. The native implementations use the **same schema and
-SQL** as the embedded cores, on raw SQLite (the SQLite3 C API from Swift; `sqlite-android` on
-Android, so the SQLite version is also the bundled one), so the difference measured is the boundary
+SQL** as the embedded cores, on raw SQLite (the SQLite3 C API from Swift;
+`androidx.sqlite:sqlite-bundled` on Android, so the SQLite version is also the bundled one), so the difference measured is the boundary
 and not a different database layer.
 
 **Variants**, each run against all three cores on both platforms:
