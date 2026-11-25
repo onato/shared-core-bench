@@ -62,12 +62,11 @@ coverage-android:
 	$(ANDROID_GRADLE) :app:koverXmlReportApp :app:koverVerifyApp :app:koverLogApp
 
 BENCH_UNSUPPORTED = $(strip $(filter-out all android,$(PLATFORM)) $(filter-out all kmp,$(CORE)) \
-	$(filter-out all embedded batched chatty,$(STORAGE)) $(filter-out all core boundary,$(SUITE)))
+	$(filter-out all embedded batched chatty,$(STORAGE)) $(filter-out all core boundary app,$(SUITE)))
 
 BOUNDARY_BENCHMARK = bench.benchmark.BoundaryBenchmark
 BENCH_SUITE_core = -Pandroid.testInstrumentationRunnerArguments.notClass=$(BOUNDARY_BENCHMARK)
 BENCH_SUITE_boundary = -Pandroid.testInstrumentationRunnerArguments.class=$(BOUNDARY_BENCHMARK)
-
 # The delegated variants run only benchmarks 7–9; the others never touch storage.
 BENCH_CLASSES_embedded = $(BENCH_SUITE_$(SUITE))
 BENCH_CLASSES_batched = \
@@ -90,10 +89,21 @@ define BENCH_RUN
 
 endef
 
-bench: ## Run benchmarks on ANDROID_SERIAL and print the table (android, kmp, core|boundary so far)
+# SUITE=app is the Macrobenchmark module, run alone against the app's `benchmark` build.
+APP_BENCH_OUTPUT = android/macrobenchmark/build/outputs/connected_android_test_additional_output
+define BENCH_APP
+	rm -rf $(APP_BENCH_OUTPUT)
+	ANDROID_SERIAL=$(ANDROID_SERIAL) $(ANDROID_GRADLE) :macrobenchmark:connectedBenchmarkAndroidTest \
+		-Pandroid.testInstrumentationRunnerArguments.androidx.benchmark.suppressErrors=EMULATOR
+	uv run python scripts/bench_collect.py --core kmp --storage embedded --build-type release \
+		--git-sha $(shell git rev-parse --short HEAD) --out $(BENCH_RESULTS) $(APP_BENCH_OUTPUT)
+
+endef
+
+bench: ## Run benchmarks on ANDROID_SERIAL and print the table (android, kmp; core|boundary, or app alone)
 	@test -z "$(BENCH_UNSUPPORTED)" || { echo "bench: not implemented: $(BENCH_UNSUPPORTED)" >&2; exit 1; }
 	@test -n "$(ANDROID_SERIAL)" || { echo "bench: set ANDROID_SERIAL to a simpool lease" >&2; exit 1; }
-	$(foreach storage,$(BENCH_STORAGES),$(call BENCH_RUN,$(storage)))
+	$(if $(filter app,$(SUITE)),$(BENCH_APP),$(foreach storage,$(BENCH_STORAGES),$(call BENCH_RUN,$(storage))))
 
 bench-report: ## Not implemented yet
 	@echo "$@: not implemented" >&2; exit 1
