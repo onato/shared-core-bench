@@ -30,4 +30,38 @@ class KmpSharedCoreTest {
 
         assertEquals(IngestResult.Failed(IngestFailure.StorageFailed), result)
     }
+
+    @Test
+    fun aStorageFailureInTheCoreReachesTheAppAsAFailedPage() {
+        val core = KmpSharedCore(Core.create(CoreConfig(dbPath = dbPath), JvmDrivers))
+        DriverManager.getConnection("jdbc:sqlite:$dbPath").use { it.createStatement().execute("DROP TABLE product") }
+
+        assertEquals(PageResult.StorageFailed, core.page(cursor = null, size = 20))
+    }
+
+    @Test
+    fun aStorageFailureInTheCoreReachesTheAppAsAFailedDetail() {
+        val core = KmpSharedCore(Core.create(CoreConfig(dbPath = dbPath), JvmDrivers))
+        DriverManager.getConnection("jdbc:sqlite:$dbPath").use {
+            it.createStatement().execute("DROP TABLE product_tag")
+        }
+
+        assertEquals(DetailResult.StorageFailed, core.detail(id = 1))
+    }
+
+    @Test
+    fun aStorageFailureInTheCoreReachesTheAppAsFailedCategories() {
+        val core = KmpSharedCore(Core.create(CoreConfig(dbPath = dbPath), JvmDrivers))
+        DriverManager.getConnection("jdbc:sqlite:$dbPath").use { it.createStatement().execute("DROP TABLE product") }
+
+        assertEquals(CategoriesResult.StorageFailed, core.categories())
+    }
+
+    @Test
+    fun aStorageFailureInTheCoreReachesTheAppAsFailedStats() {
+        val core = KmpSharedCore(Core.create(CoreConfig(dbPath = dbPath), JvmDrivers))
+        DriverManager.getConnection("jdbc:sqlite:$dbPath").use { it.createStatement().execute("DROP TABLE product") }
+
+        assertEquals(StatsResult.StorageFailed, core.stats())
+    }
 }

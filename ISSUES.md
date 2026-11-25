@@ -39,6 +39,22 @@ learned.
 
   Either list may be `none` (say why). Order the tests to write first so each one needs code the
   earlier ones didn't: a test the previous step already satisfies belongs in no list.
+- **Before filing an issue**, check these four things. Each one cost a session time when an issue
+  left it out:
+  - **Where the code goes.** Name the module, and check that the module can depend on what the
+    code uses. An Android library can't depend on `:app`, so #123 had to be split partway
+    through (#216, #217).
+  - **What it waits for.** List under `Blocked by` every issue whose change one of these tests
+    needs, including a doc line the test reads. #213 left out #214 and its session sat idle.
+  - **How it can fail.** A failure path gets one test for each way it can fail (the block returns
+    an error, the commit fails, the driver throws) in each port or core that has the path. #212
+    listed no commit-failure test for the Android port, and only review caught the missing
+    `ROLLBACK`.
+  - **Who calls it.** When the issue changes a signature or a return shape, list the callers
+    (`grep -rn '<call>(' core-kmp android`) and size the issue from them. #220 grouped four
+    reads, and its session had to split it into three issues before writing code. For each
+    caller that puts something on screen, add a test to write first for what the user sees when
+    the call fails. #234 and #235 had to guess this.
 - Hierarchy uses GitHub sub-issues: one parent issue per milestone, tasks as its sub-issues, and
   GitHub issue dependencies ("blocked by") for order.
 - Board: https://github.com/users/onato/projects/2

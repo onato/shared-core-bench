@@ -10,6 +10,7 @@ from pathlib import Path
 # Fingerprints of the SDK's emulator images; a physical device never carries these.
 EMULATOR_MARKERS = ("sdk_gphone", "generic", "emulator")
 NS_PER_MS = 1_000_000
+EMBEDDED = "embedded"
 
 
 def collect(report: dict, *, core: str, storage: str, build_type: str, git_sha: str) -> list[dict]:
@@ -80,19 +81,37 @@ def _app_timings(benchmark: dict) -> list[dict]:
 
 
 def table(rows: list[dict]) -> str:
-    """Markdown table: one line per workload, platform and storage, one column per core."""
+    """Markdown table: one line per workload, platform and storage, one column per core.
+
+    When any row is a delegated storage variant, each core also gets an overhead column: the
+    delegated median over the embedded median of the same workload and platform.
+    """
     cores = sorted({row["core"] for row in rows})
     medians = {}
     for row in rows:
         key = (row["workload"], row["platform"], row["storage"])
-        medians.setdefault(key, {})[row["core"]] = f"{row['median_ns'] / 1e6:.2f}"
+        medians.setdefault(key, {})[row["core"]] = row["median_ns"] / NS_PER_MS
+    delegated = any(storage != EMBEDDED for _, _, storage in medians)
     header = ["workload", "platform", "storage", *(f"{core} (median ms)" for core in cores)]
+    if delegated:
+        header += [f"{core} overhead" for core in cores]
     lines = [header, ["---"] * len(header)]
-    lines += [
-        [*key, *(by_core.get(core, "-") for core in cores)]
-        for key, by_core in sorted(medians.items())
-    ]
+    for key, by_core in sorted(medians.items()):
+        line = [*key, *(f"{by_core[core]:.2f}" if core in by_core else "-" for core in cores)]
+        if delegated:
+            embedded = medians.get((*key[:2], EMBEDDED), {})
+            line += [_overhead(key[2], by_core.get(core), embedded.get(core)) for core in cores]
+        lines.append(line)
     return "".join(f"| {' | '.join(line)} |\n" for line in lines)
+
+
+def _overhead(storage: str, median_ms: float | None, embedded_ms: float | None) -> str:
+    if storage == EMBEDDED:
+        return ""
+    if median_ms is None or embedded_ms is None:
+        return "—"
+    added = median_ms - embedded_ms
+    return f"{added:+.2f} ms ({added / embedded_ms:+.0%})"
 
 
 def main(argv: list[str]) -> int:

@@ -38,6 +38,10 @@ class SharedCoreContract(
             PageResult.InvalidSize -> {
                 json("error" to "invalid-page-size")
             }
+
+            PageResult.StorageFailed -> {
+                json("error" to "storage-failed")
+            }
         }
     }
 
@@ -57,9 +61,15 @@ class SharedCoreContract(
         return json("requestId" to request.requestId, "url" to request.url)
     }
 
-    override fun detail(args: JsonObject): JsonElement {
-        val product = core.detail(args.getValue("id").jsonPrimitive.long) ?: return JsonNull
-        return with(product) {
+    override fun detail(args: JsonObject): JsonElement =
+        when (val result = core.detail(args.getValue("id").jsonPrimitive.long)) {
+            is DetailResult.Found -> detailJson(result.product)
+            DetailResult.NotFound -> JsonNull
+            DetailResult.StorageFailed -> json("error" to "storage-failed")
+        }
+
+    private fun detailJson(product: ProductDetail) =
+        with(product) {
             json(
                 "id" to id,
                 "title" to title,
@@ -77,17 +87,28 @@ class SharedCoreContract(
                 "tags" to JsonArray(tags.map(::JsonPrimitive)),
             )
         }
-    }
 
     override fun stats(args: JsonObject): JsonElement =
-        with(core.stats()) { json("productCount" to productCount, "deletedCount" to deletedCount) }
+        when (val result = core.stats()) {
+            is StatsResult.Stats -> {
+                json("productCount" to result.stats.productCount, "deletedCount" to result.stats.deletedCount)
+            }
+
+            StatsResult.StorageFailed -> {
+                json("error" to "storage-failed")
+            }
+        }
 
     override fun refresh(args: JsonObject): JsonElement {
         core.refresh()
         return JsonNull
     }
 
-    override fun categories(args: JsonObject): JsonElement = JsonArray(core.categories().map(::JsonPrimitive))
+    override fun categories(args: JsonObject): JsonElement =
+        when (val result = core.categories()) {
+            is CategoriesResult.Categories -> JsonArray(result.names.map(::JsonPrimitive))
+            CategoriesResult.StorageFailed -> json("error" to "storage-failed")
+        }
 
     private fun summaryJson(summary: ProductSummary) =
         with(summary) {

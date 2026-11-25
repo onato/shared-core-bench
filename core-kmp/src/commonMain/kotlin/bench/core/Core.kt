@@ -37,34 +37,59 @@ class Core private constructor(
     ): PageResult {
         if (size <= 0) return PageResult.InvalidSize
         // One row past the page tells whether another page follows.
-        val rows = storage.query(query, cursor, size + 1)
-        val items = rows.take(size)
-        return PageResult.Page(items, nextCursor = if (rows.size > size) items.last().id else null)
+        return when (val rows = storage.query(query, cursor, size + 1)) {
+            is StorageError -> {
+                PageResult.StorageFailed
+            }
+
+            is Stored -> {
+                val items = rows.value.take(size)
+                PageResult.Page(items, nextCursor = if (rows.value.size > size) items.last().id else null)
+            }
+        }
     }
 
-    fun detail(id: Long): ProductDetail? = storage.get(id)
-
-    fun categories(): List<String> = storage.categories()
-
-    fun stats(): CoreStats = storage.stats()
-
-    // Drivers throw platform exceptions (java.sql.SQLException, android.database.SQLException)
-    // with no common supertype, so common code can only catch Exception.
-    @Suppress("TooGenericExceptionCaught")
-    private fun store(page: PageDecoding.Products): IngestResult =
-        try {
-            storage.transaction {
-                when (calls) {
-                    PortCalls.BATCHED -> storage.upsert(page.rows, paging.generation)
-                    PortCalls.CHATTY -> page.rows.forEach { storage.upsertOne(it, paging.generation) }
-                }
-                if (paging.isLastPage(page.total)) storage.markMissingDeleted(paging.generation)
-            }
-            paging.advance(page.total)
-            IngestResult.Decoded(accepted = page.rows.size, rejected = page.rejected)
-        } catch (_: Exception) {
-            IngestResult.StorageFailed
+    fun detail(id: Long): DetailResult =
+        when (val product = storage.get(id)) {
+            is StorageError -> DetailResult.StorageFailed
+            is Stored -> product.value?.let(DetailResult::Found) ?: DetailResult.NotFound
         }
+
+    fun categories(): CategoriesResult =
+        when (val names = storage.categories()) {
+            is StorageError -> CategoriesResult.StorageFailed
+            is Stored -> CategoriesResult.Categories(names.value)
+        }
+
+    fun stats(): StatsResult =
+        when (val stats = storage.stats()) {
+            is StorageError -> StatsResult.StorageFailed
+            is Stored -> StatsResult.Stats(stats.value)
+        }
+
+    private fun store(page: PageDecoding.Products): IngestResult =
+        when (storage.transaction { write(page) }) {
+            is StorageError -> {
+                IngestResult.StorageFailed
+            }
+
+            is Stored -> {
+                paging.advance(page.total)
+                IngestResult.Decoded(accepted = page.rows.size, rejected = page.rejected)
+            }
+        }
+
+    private fun write(page: PageDecoding.Products): StorageResult<Unit> {
+        val generation = paging.generation
+        val upserted =
+            when (calls) {
+                PortCalls.BATCHED -> storage.upsert(page.rows, generation)
+                PortCalls.CHATTY -> page.rows.storeEach { storage.upsertOne(it, generation) }
+            }
+        return upserted.then {
+            if (paging.isLastPage(page.total)) storage.markMissingDeleted(generation) else Stored(Unit)
+        }
+    }
 
     companion object {
         private val SUCCESS = 200..299

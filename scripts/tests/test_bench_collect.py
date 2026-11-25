@@ -148,3 +148,28 @@ def test_main_saves_the_rows_it_finds_under_the_output_directory_and_prints_them
         capsys.readouterr().out.splitlines()[-1]
         == "| ingest1000Products | android | embedded | 0.00 |"
     )
+
+
+def test_table_shows_a_delegated_rows_overhead_over_its_embedded_row():
+    where = {"workload": "ingest1000Products", "platform": "android", "core": "kmp"}
+    rows = [
+        where | {"storage": "embedded", "median_ns": 12_500_000},
+        where | {"storage": "batched", "median_ns": 15_000_000},
+    ]
+
+    assert bench_collect.table(rows) == (
+        "| workload | platform | storage | kmp (median ms) | kmp overhead |\n"
+        "| --- | --- | --- | --- | --- |\n"
+        "| ingest1000Products | android | batched | 15.00 | +2.50 ms (+20%) |\n"
+        "| ingest1000Products | android | embedded | 12.50 |  |\n"
+    )
+
+
+def test_a_delegated_row_without_an_embedded_row_shows_a_dash_for_its_overhead():
+    row = {"workload": "search10000Rows", "platform": "android", "core": "kmp"}
+
+    assert bench_collect.table([row | {"storage": "chatty", "median_ns": 3_000_000}]) == (
+        "| workload | platform | storage | kmp (median ms) | kmp overhead |\n"
+        "| --- | --- | --- | --- | --- |\n"
+        "| search10000Rows | android | chatty | 3.00 | — |\n"
+    )

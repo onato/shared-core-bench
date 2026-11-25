@@ -16,12 +16,12 @@ interface SharedCore {
         query: Query = Query(),
     ): PageResult
 
-    fun detail(id: Long): ProductDetail?
+    fun detail(id: Long): DetailResult
 
-    fun stats(): CoreStats
+    fun stats(): StatsResult
 
     /** The categories of the products a page can show, sorted. */
-    fun categories(): List<String>
+    fun categories(): CategoriesResult
 
     /** Starts the remote walk again from the first page. */
     fun refresh()
@@ -73,6 +73,33 @@ data class ProductDetail(
     val tags: List<String>,
 )
 
+sealed interface DetailResult {
+    data class Found(
+        val product: ProductDetail,
+    ) : DetailResult
+
+    /** No stored product has the id, or it is soft-deleted. */
+    data object NotFound : DetailResult
+
+    data object StorageFailed : DetailResult
+}
+
+sealed interface StatsResult {
+    data class Stats(
+        val stats: CoreStats,
+    ) : StatsResult
+
+    data object StorageFailed : StatsResult
+}
+
+sealed interface CategoriesResult {
+    data class Categories(
+        val names: List<String>,
+    ) : CategoriesResult
+
+    data object StorageFailed : CategoriesResult
+}
+
 enum class RatingBucket { Excellent, Good, Fair, Poor }
 
 enum class StockStatus { InStock, LowStock, OutOfStock }
@@ -107,4 +134,6 @@ sealed interface PageResult {
     ) : PageResult
 
     data object InvalidSize : PageResult
+
+    data object StorageFailed : PageResult
 }
