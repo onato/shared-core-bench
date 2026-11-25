@@ -1,6 +1,8 @@
 package bench.android
 
+import bench.android.core.CoreStats
 import bench.android.core.KmpSharedCore
+import bench.android.core.StatsResult
 import bench.fixtures.ProductFixtures
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -27,14 +29,17 @@ class FixtureModeTest {
     fun pagingStopsAtTheFixtureRecordCount() {
         val fetcher = OkHttpFetcher(fixtureClient(records = 50, seed = 7))
 
-        val countAfterEachPage =
+        val statsAfterEachPage =
             generateSequence { core.nextFetch() }
                 .map { request ->
                     val response = fetcher.fetch(request) as FetchResult.Response
                     core.ingest(request.requestId, response.status, response.body)
-                    core.stats().productCount
+                    core.stats()
                 }.toList()
 
-        assertEquals(listOf(20L, 40L, 50L), countAfterEachPage)
+        assertEquals(
+            listOf(20L, 40L, 50L).map { StatsResult.Stats(CoreStats(productCount = it, deletedCount = 0)) },
+            statsAfterEachPage,
+        )
     }
 }

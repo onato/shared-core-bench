@@ -21,7 +21,7 @@ class AndroidDriversTest {
             """
         core.ingest(requestId = 1, status = HTTP_OK, body = body.encodeToByteArray())
 
-        assertEquals(CoreStats(productCount = 1, deletedCount = 0), core.stats())
+        assertEquals(StatsResult.Stats(CoreStats(productCount = 1, deletedCount = 0)), core.stats())
     }
 
     private companion object {
