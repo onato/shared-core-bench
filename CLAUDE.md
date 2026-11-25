@@ -88,6 +88,7 @@ them; until then they fail with "not implemented".
 | `make test-core CORE=kmp\|rust\|lua` | One core's tests |
 | `make test-ios` / `make test-android` | App unit, contract-through-bridge and UI tests |
 | `make lint` | clippy, ktlint/detekt, SwiftLint, luacheck; warnings are errors |
+| `make fmt` | Apply ktlint's and ruff's fixes; run before `make lint` (detekt findings stay manual) |
 | `make coverage` | Run tests with coverage and fail below the gates |
 | `make bench` | Run the benchmark matrix and print the results table |
 | `make bench-report` | Build the HTML report from saved results |

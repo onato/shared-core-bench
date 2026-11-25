@@ -1,5 +1,5 @@
 .PHONY: help bootstrap test lint coverage test-core test-scripts lint-scripts coverage-scripts \
-	test-kmp lint-kmp coverage-kmp test-android lint-android coverage-android bench bench-report
+	test-kmp lint-kmp coverage-kmp test-android lint-android coverage-android fmt bench bench-report
 
 # uv would warn about, then ignore, a VIRTUAL_ENV inherited from another checkout's shell.
 unexport VIRTUAL_ENV
@@ -19,6 +19,11 @@ test: test-scripts test-kmp test-android ## All tests except benchmarks
 lint: lint-scripts lint-kmp lint-android ## All linters; warnings are errors
 
 coverage: coverage-scripts coverage-kmp coverage-android ## Tests with coverage gates
+
+fmt: ## Apply ktlint's fixes to core-kmp and android; detekt's findings still need a hand
+	$(GRADLE) ktlintFormat
+	$(ANDROID_GRADLE) ktlintFormat
+	uv run ruff format scripts
 
 test-core: ## One core's tests: CORE=kmp
 	@test -n "$(CORE)" || { echo "test-core: set CORE=kmp" >&2; exit 1; }
