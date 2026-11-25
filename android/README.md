@@ -29,3 +29,16 @@ of these traps cost a session several runs:
   `Filters.kt` does (#112).
 - **Assert on text only the new screen shows.** The detail screen repeats the product's title,
   so a test that taps a product and waits for its title passes before navigation exists (#151).
+
+## Running the benchmarks
+
+`make bench SUITE=core ANDROID_SERIAL=<serial>` builds the release benchmark APK, runs the
+microbenchmarks on the leased device and prints one table row per workload and N. On an emulator
+it took about 13 minutes (#202), most of it in the two 10 000-row paging benchmarks.
+
+- **Check that adb answers before starting.** `adb -s <serial> shell getprop ro.product.model`
+  should print the model within a second or two. When adb itself is wedged, Gradle fails with
+  `TimeoutException getting properties for device` on every emulator, so the run never starts
+  (#122). Restart the adb server or lease another emulator rather than retrying the bench.
+- Results land in `report/results/<timestamp>/results.json`, which is gitignored; paste the
+  printed table into the PR.
