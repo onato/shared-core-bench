@@ -22,6 +22,7 @@ class FakeProcesses:
         self.waits = []  # each wait's timeout
         self.calls = []
         self.fails = {}  # git subcommand, one word or two → the CompletedProcess it fails with
+        self.outputs = {}  # git subcommand, or another command's first two words → its stdout
 
     def start(self, args, **kwargs):
         self.calls.append((args, kwargs))
@@ -31,10 +32,12 @@ class FakeProcesses:
 
     def __call__(self, args, **kwargs):
         self.calls.append((args, kwargs))
-        for subcommand in (" ".join(args[3:5]), args[3]) if args[0] == "git" else ():
-            if subcommand in self.fails:
-                return self.fails[subcommand]
-        return subprocess.CompletedProcess(args, 0)
+        keys = (" ".join(args[3:5]), args[3]) if args[0] == "git" else (" ".join(args[:2]),)
+        for key in keys:
+            if key in self.fails:
+                return self.fails[key]
+        stdout = next((self.outputs[key] for key in keys if key in self.outputs), "")
+        return subprocess.CompletedProcess(args, 0, stdout, "")
 
     def claude(self):
         return next((args, kwargs) for args, kwargs in self.calls if args[0] == "claude")
@@ -82,8 +85,17 @@ def test_a_session_runs_claude_on_the_issue_in_its_own_worktree_and_logs_the_str
 
     worktree = tmp_path / "shared-core-bench-7"
     assert outcome == Outcome(pr=52)
-    assert [args for args, _ in processes.calls[:2]] == [
+    assert [args for args, _ in processes.calls[:3]] == [
         ["git", "-C", str(repo), "fetch", "origin"],
+        [
+            "git",
+            "-C",
+            str(repo),
+            "for-each-ref",
+            "--format=%(refname)",
+            "refs/heads/swilliams/7-ralph",
+            "refs/remotes/origin/swilliams/7-ralph",
+        ],
         [
             "git",
             "-C",
@@ -111,6 +123,61 @@ def test_a_session_runs_claude_on_the_issue_in_its_own_worktree_and_logs_the_str
     assert kwargs["env"]["GH_TOKEN"] == "ghs_bot"
     log = repo / ".ralph" / "logs" / "20261123-010203-7.log"
     assert log.read_text().splitlines()[-1] == json.dumps(result("Opened it.\nPR: #52"))
+
+
+def test_an_issue_whose_worktree_is_still_there_is_resumed_in_it_without_adding_one(tmp_path):
+    processes = FakeProcesses(result("PR: #52"))
+    _, claude = session(tmp_path, processes)
+    worktree = tmp_path / "shared-core-bench-7"
+    worktree.mkdir()
+
+    outcome = claude.work(Issue(7, "In progress"), nothing)
+
+    assert outcome == Outcome(pr=52)
+    adds = [args for args, _ in processes.calls if args[3:5] == ["worktree", "add"]]
+    assert adds == []
+    assert processes.claude()[1]["cwd"] == worktree
+
+
+def test_a_session_on_a_branch_still_there_is_told_it_resumes_and_where_the_ruling_is(tmp_path):
+    processes = FakeProcesses(result("PR: #52"))
+    processes.outputs = {"for-each-ref": "refs/heads/swilliams/7-ralph\n", "gh pr": "52\n"}
+    _, claude = session(tmp_path, processes)
+
+    claude.work(Issue(7, "In progress"), nothing)
+
+    assert processes.claude()[0][2] == (
+        "Work on issue #7 on branch swilliams/7-ralph.\n"
+        "\nResuming: an earlier session left branch `swilliams/7-ralph` with open PR #52. Before"
+        " anything else, read the latest comments on the issue and on the PR: the owner's"
+        " ruling is there.\n"
+    )
+
+
+def test_a_session_resuming_a_branch_whose_pr_was_never_opened_is_told_there_is_none(tmp_path):
+    processes = FakeProcesses(result("PR: #52"))
+    processes.outputs = {"for-each-ref": "refs/heads/swilliams/7-ralph\n"}
+    _, claude = session(tmp_path, processes)
+
+    claude.work(Issue(7, "In progress"), nothing)
+
+    assert processes.claude()[0][2].splitlines()[2] == (
+        "Resuming: an earlier session left branch `swilliams/7-ralph` with no open PR. Before"
+        " anything else, read the latest comments on the issue and on the PR: the owner's"
+        " ruling is there."
+    )
+
+
+def test_an_issue_whose_branch_is_still_there_gets_a_worktree_on_that_branch(tmp_path):
+    processes = FakeProcesses(result("PR: #52"))
+    processes.outputs = {"for-each-ref": "refs/remotes/origin/swilliams/7-ralph\n"}
+    repo, claude = session(tmp_path, processes)
+
+    claude.work(Issue(7, "In progress"), nothing)
+
+    worktree = tmp_path / "shared-core-bench-7"
+    adds = [args for args, _ in processes.calls if args[3:5] == ["worktree", "add"]]
+    assert adds == [["git", "-C", str(repo), "worktree", "add", str(worktree), "swilliams/7-ralph"]]
 
 
 def test_while_claude_runs_the_session_calls_while_running_every_poll(tmp_path):
@@ -176,7 +243,7 @@ def test_a_session_finds_simpool_on_its_path(tmp_path):
 
 def test_a_worktree_that_cannot_be_made_needs_a_human_and_starts_no_claude(tmp_path):
     processes = FakeProcesses(result("PR: #52"))
-    error = "fatal: a branch named 'swilliams/7-ralph' already exists\n"
+    error = "fatal: invalid reference: origin/main\n"
     processes.fails = {"worktree": subprocess.CompletedProcess([], 128, "", error)}
     _, claude = session(tmp_path, processes)
 
@@ -184,10 +251,9 @@ def test_a_worktree_that_cannot_be_made_needs_a_human_and_starts_no_claude(tmp_p
 
     assert outcome == Outcome(
         pr=None,
-        needs_human="git worktree add failed: fatal: a branch named 'swilliams/7-ralph' "
-        "already exists",
+        needs_human="git worktree add failed: fatal: invalid reference: origin/main",
     )
-    assert [args[0] for args, _ in processes.calls] == ["git", "git"]
+    assert [args[0] for args, _ in processes.calls] == ["git", "git", "git"]
 
 
 def test_a_needs_human_marker_is_reported_to_the_loop_as_its_reason(tmp_path):

@@ -380,6 +380,38 @@ def test_a_pr_with_no_issue_of_its_own_that_cannot_be_updated_is_reported_and_no
     assert clock.sleeps == []
 
 
+def held_by_threads(pr, threads):
+    return PullRequest(number=pr, blocked_with_checks_passing=True, unresolved_threads=threads)
+
+
+def test_a_green_pr_held_by_an_unresolved_thread_puts_its_issue_in_review_and_is_not_waited_for():
+    github = FakeGitHub([Issue(7, TODO), Issue(8, TODO)])
+    session = FakeSession(github, {7: (Outcome(pr=40), held_by_threads(40, 2), True)})
+    session.runs[8] = merged_run(41)
+    clock = Clock()
+
+    stop = loop(github, session, clock=clock)
+
+    reason = "PR #40 is held by 2 unresolved review threads"
+    assert (7, IN_REVIEW) in github.moves
+    assert github.comments == [(7, f"Moved to In review by the Ralph loop: {reason}.")]
+    assert f"- #7: {reason}" in stop.splitlines()
+    assert clock.sleeps == []
+
+
+def test_a_green_pr_with_no_issue_of_its_own_held_by_an_unresolved_thread_is_in_the_stop_message():
+    github = FakeGitHub([Issue(18, TODO)])
+    github.prs[127] = held_by_threads(127, 1)
+    session = FakeSession(github, {18: (Outcome(pr=130, also=(127,)), PullRequest(130), False)})
+    clock = Clock()
+
+    stop = loop(github, session, clock=clock)
+
+    reason = "PR #127 is held by 1 unresolved review thread"
+    assert stop.splitlines()[-2:] == ["Held by review threads:", f"- {reason}"]
+    assert clock.sleeps == []
+
+
 def test_other_prs_a_session_opened_are_brought_up_to_date_and_waited_for():
     github = FakeGitHub([Issue(18, TODO)])
     github.prs[127] = PullRequest(number=127, behind=True)
