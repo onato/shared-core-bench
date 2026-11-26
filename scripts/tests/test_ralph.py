@@ -76,6 +76,9 @@ class FakeGitHub:
         self.comments.append((issue, body))
         return f"https://github.com/onato/shared-core-bench/issues/{issue}#issuecomment-1"
 
+    def is_open(self, issue):
+        return self.issues[issue].is_open
+
     def merge(self, issue, pr):
         self.issues[issue] = replace(self.issues[issue], is_open=False, status="Done")
         self.prs[pr] = replace(self.prs[pr], merged=True)
@@ -132,6 +135,25 @@ class FakeSession:
         return outcome
 
 
+class FakeEmulators:
+    """Issues with an emulator of their own; a prune in `fails` leaves it and says why."""
+
+    def __init__(self, issues=(), fails=None):
+        self.held = list(issues)
+        self.fails = fails or {}
+        self.pruned = []
+
+    def issues(self):
+        return list(self.held)
+
+    def prune(self, issue):
+        if failed := self.fails.get(issue):
+            return failed
+        self.pruned.append(issue)
+        self.held.remove(issue)
+        return None
+
+
 def merged_run(pr):
     return Outcome(pr=pr), PullRequest(number=pr), False
 
@@ -151,10 +173,11 @@ class Clock:
         self.on_sleep()
 
 
-def loop(github, session, notes=None, clock=None, max_iterations=10):
+def loop(github, session, notes=None, clock=None, max_iterations=10, emulators=None):
     notes = [] if notes is None else notes
     clock = clock or Clock()
-    return run(2, github, session, notes.append, clock, clock.sleep, max_iterations)
+    emulators = emulators or FakeEmulators()
+    return run(2, github, session, emulators, notes.append, clock, clock.sleep, max_iterations)
 
 
 def test_takes_the_lowest_ready_todo_issue_and_marks_it_in_progress_first():
@@ -478,6 +501,39 @@ def test_a_failed_removal_is_listed_in_the_stop_message_and_the_loop_goes_on():
     )
 
 
+def test_an_issue_emulator_whose_issue_is_closed_is_pruned_after_a_pass():
+    github = FakeGitHub([Issue(7, TODO)])
+    session = FakeSession(github, {7: merged_run(40)})
+    emulators = FakeEmulators([7])
+
+    loop(github, session, emulators=emulators)
+
+    assert emulators.pruned == [7]
+
+
+def test_an_issue_emulator_whose_issue_is_still_open_is_left_alone():
+    github = FakeGitHub([Issue(7, TODO), Issue(8, IN_PROGRESS)])
+    session = FakeSession(github, {7: merged_run(40)})
+    emulators = FakeEmulators([7, 8])
+
+    loop(github, session, emulators=emulators)
+
+    assert emulators.held == [8]
+
+
+def test_a_prune_that_fails_is_listed_in_the_stop_message_and_the_loop_carries_on():
+    github = FakeGitHub([Issue(7, TODO), Issue(8, TODO)])
+    session = FakeSession(github, {7: merged_run(40), 8: merged_run(41)})
+    emulators = FakeEmulators([7], fails={7: "simpool: keeping scb-7: leased to 'issue-7 bench'"})
+
+    stop = loop(github, session, emulators=emulators)
+
+    assert session.worked == [7, 8]
+    assert stop.endswith(
+        "Emulators left running:\n- #7: simpool: keeping scb-7: leased to 'issue-7 bench'"
+    )
+
+
 def test_an_in_review_issue_nothing_holds_goes_back_to_todo_and_is_taken_in_the_same_run():
     github = FakeGitHub([Issue(7, IN_REVIEW)])
     session = FakeSession(github, {7: merged_run(40)})
@@ -779,7 +835,7 @@ def test_without_dry_run_the_loop_works_the_milestone_and_sends_its_stop_message
     code = main(
         ["--milestone", "2", "--max-iterations", "1"],
         connect=lambda: github,
-        live=lambda: Live(session, notes.append, clock, clock.sleep),
+        live=lambda: Live(session, FakeEmulators(), notes.append, clock, clock.sleep),
     )
 
     assert code == 0
