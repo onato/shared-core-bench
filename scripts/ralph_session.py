@@ -48,15 +48,54 @@ class ClaudeSession:
 
     def work(self, issue: Issue, while_running: Callable[[], None]) -> Outcome:
         branch, worktree = self._branch(issue.number), self._worktree(issue.number)
-        failed = self._add_worktree(worktree, ["-b", branch, "origin/main"])
+        resuming, failed = self._open_worktree(worktree, branch)
         if failed:
             return Outcome(pr=None, needs_human=failed)
         prompt = (self.repo / ".ralph" / "PROMPT.md").read_text()
         prompt = prompt.replace("{issue}", str(issue.number)).replace("{branch}", branch)
+        if resuming:
+            prompt += self._resuming(branch)
         text, log = self._claude(prompt, worktree, str(issue.number), while_running)
         if text is None:
             return Outcome(pr=None, needs_human=f"the session ended without a result; see {log}")
         return outcome(text)
+
+    def _open_worktree(self, worktree: Path, branch: str) -> tuple[bool, str | None]:
+        """Whether the issue's branch was still there, and what failed, if its worktree couldn't
+        be had. A worktree still there is reused; else one is added on the branch, locally or on
+        `origin` (git checks the remote one out as a tracking branch), else on a new branch cut
+        from `origin/main`."""
+        failed = self._git(["fetch", "origin"])
+        resuming = not failed and self._has_branch(branch)
+        if failed or worktree.exists():
+            return resuming, failed
+        start = [branch] if resuming else ["-b", branch, "origin/main"]
+        return resuming, self._git(["worktree", "add", str(worktree), *start])
+
+    def _has_branch(self, branch: str) -> bool:
+        refs = [f"refs/heads/{branch}", f"refs/remotes/origin/{branch}"]
+        found = self.run(
+            ["git", "-C", str(self.repo), "for-each-ref", "--format=%(refname)", *refs],
+            capture_output=True,
+            text=True,
+        ).stdout
+        return bool(found.strip())
+
+    def _resuming(self, branch: str) -> str:
+        found = self.run(
+            ["gh", "pr", "list", "--head", branch, "--state", "open", "--json", "number"]
+            + ["--jq", ".[].number"],
+            capture_output=True,
+            text=True,
+            cwd=self.repo,
+            env=self.tokens.session_env(own_environ(self.environ)),
+        ).stdout.split()
+        pr = f"open PR #{found[0]}" if found else "no open PR"
+        return (
+            f"\nResuming: an earlier session left branch `{branch}` with {pr}. Before anything"
+            " else, read the latest comments on the issue and on the PR: the owner's ruling is"
+            " there.\n"
+        )
 
     def remove(self, issue: int) -> str | None:
         """What failed, or None once the issue's worktree and branch are gone or never existed."""
