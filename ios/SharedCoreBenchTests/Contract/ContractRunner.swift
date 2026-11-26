@@ -31,6 +31,7 @@ extension ContractCase {
             }
     }
 
+    private final class BundleToken {}
 }
 
 enum ContractShapes {
@@ -39,9 +40,9 @@ enum ContractShapes {
         let file = Bundle(for: BundleToken.self).bundleURL.appending(path: "shapes.json")
         return try JSONDecoder().decode([String: Set<String>].self, from: Data(contentsOf: file))["detail"] ?? []
     }
-}
 
-private final class BundleToken {}
+    private final class BundleToken {}
+}
 
 struct ContractFailure: Error, CustomStringConvertible {
     let message: String
