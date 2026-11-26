@@ -1,5 +1,5 @@
 .PHONY: help bootstrap test lint coverage test-core test-scripts lint-scripts coverage-scripts \
-	test-kmp lint-kmp coverage-kmp ios-framework test-ios lint-ios test-android test-android-device lint-android coverage-android fmt bench bench-report
+	test-kmp lint-kmp coverage-kmp ios-framework test-ios lint-ios test-android test-android-device lint-android coverage-android fmt bench bench-report sim-udid
 
 # uv would warn about, then ignore, a VIRTUAL_ENV inherited from another checkout's shell.
 unexport VIRTUAL_ENV
@@ -22,7 +22,11 @@ bootstrap: ## Install tools and configure the clone
 	$(if $(IS_MACOS),cd ios && xcodegen generate --quiet && xcodebuild -resolvePackageDependencies -quiet)
 	git config blame.ignoreRevsFile .git-blame-ignore-revs
 
-test: test-scripts test-kmp test-android $(if $(IS_MACOS),test-ios) ## All tests except benchmarks
+# test-ios's guard would otherwise fire only after the other legs have run for minutes.
+test: $(if $(IS_MACOS),sim-udid) test-scripts test-kmp test-android $(if $(IS_MACOS),test-ios) ## All tests except benchmarks; SIM_UDID on macOS
+
+sim-udid:
+	@test -n "$(SIM_UDID)" || { echo "test: set SIM_UDID to a simulator from \`simpool acquire\` (test-ios runs on macOS)" >&2; exit 1; }
 
 lint: lint-scripts lint-kmp lint-android $(if $(IS_MACOS),lint-ios) ## All linters; warnings are errors
 

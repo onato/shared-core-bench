@@ -27,7 +27,13 @@ targets:
   SharedCoreBenchTests:
     type: bundle.unit-test
     platform: iOS
-    sources: [SharedCoreBenchTests]
+    sources:
+      - SharedCoreBenchTests
+      - path: ../contract/cases
+        type: folder
+        buildPhase: resources
+      - path: ../contract/shapes.json
+        buildPhase: resources
     dependencies:
       - target: SharedCoreBench
       - package: ViewInspector
