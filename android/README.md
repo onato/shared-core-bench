@@ -30,6 +30,19 @@ of these traps cost a session several runs:
 - **An exhaustive `when` over a sealed result in a composable leaves an uncovered line.** Kotlin
   adds a `NoWhenBranchMatchedException` throw that no test reaches, and Kover doesn't filter it
   under the Compose compiler. Make the last branch `else`, as `LoadedProductDetail` does (#243).
+- **App tests run the app's background work on `Dispatchers.Main`, then call `waitForIdle()`
+  and assert.** Pass it as the `background` parameter of `App`, `productPages` or `BenchApp`.
+  Under Robolectric that is the main looper, which `waitForIdle()` drains, so the load is done
+  when it returns. `NoPollingInAppTestsTest` fails on any `waitUntil` in `app/src/test`
+  (#257, #299).
+- **Getting such a test red on `Dispatchers.IO` takes a slow fake.** The fakes answer so fast
+  that the load usually beats the assertion even on IO: `StartupReportTest` passed 4 of 4 runs
+  and `ProductListTest` failed 1 of 23, which review rejected as a flaky red. For the red run,
+  add a temporary `Thread.sleep` to `FakeSharedCore.page` (200 ms was enough under
+  `createComposeRule()`), don't commit it, and say so in the PR. `createAndroidComposeRule`'s
+  `waitForIdle()` waits out most IO work too: with 2 s per page `ProductDetailTest` still passed
+  and `SettingsTest` failed one test of three. When a test can't go red, say why in the PR, with
+  the measurement (#300, #302).
 - **Assert on text only the new screen shows.** The detail screen repeats the product's title,
   so a test that taps a product and waits for its title passes before navigation exists (#151).
 
