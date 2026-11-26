@@ -100,4 +100,4 @@ The runner reads `shapes.json` from the directory above the cases.
 | Core | Runner |
 |---|---|
 | KMP (JVM) | `core-kmp/contract-runner/src/main/kotlin/bench/contract/ContractRunner.kt`, run over `contract/cases` by `core-kmp/src/jvmTest/kotlin/bench/core/KmpContractTest.kt` |
-| iOS (Swift) | `ios/SharedCoreBenchTests/Contract/ContractRunner.swift`; the test target bundles `contract/cases` as its `cases` folder (`ios/project.yml`). It still compares `detail` products whole until #319 |
+| iOS (Swift) | `ios/SharedCoreBenchTests/Contract/ContractRunner.swift`; the test target bundles `contract/cases` as its `cases` folder and `shapes.json` beside it (`ios/project.yml`) |
