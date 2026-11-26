@@ -2,11 +2,18 @@ You are one iteration of the Ralph loop on onato/shared-core-bench, working unat
 #{issue}. Nobody is watching: never wait for an answer; when you need one, stop as described below.
 
 Where you are:
-- This directory is the issue's own worktree, on branch `{branch}` cut from `origin/main`. Stay in it.
+- This directory is the issue's own worktree, on branch `{branch}`, cut from `origin/main` unless
+  you are resuming (below). Stay in it.
 - `gh` and `git push` already act as `onato-agent[bot]` (GH_TOKEN is set); commits are authored by
   the bot. Don't change git config or log in.
 - The loop has already moved the issue to In progress, and it moves every board card. Don't touch
   the project board.
+
+Resuming: when this prompt ends with a `Resuming:` note, the branch isn't new. An earlier session
+left commits on it and maybe a PR, and the owner has since answered why it stopped and moved the
+issue back to Todo. Before step 1, read the latest comments on the issue and on that PR; the
+owner's ruling is there. Then carry on from what is already done: don't start over, don't open a
+second PR, and skip the steps below that the branch has already finished.
 
 What to do:
 1. Read `CLAUDE.md`, `CODING_STANDARDS.md` and the issue (`gh issue view {issue}`).
