@@ -223,10 +223,14 @@ class _Loop:
 
     def not_updated(self, pr: int, failed: str) -> None:
         """Stop waiting for a PR the loop can't bring up to date: it won't merge without help."""
-        self.pending.remove(pr)
         reason = f"PR #{pr} can't be brought up to date with main: {failed}"
+        self.stop_waiting(pr, reason, self.not_brought_up_to_date)
+
+    def stop_waiting(self, pr: int, reason: str, unowned: list[str]) -> None:
+        """Drops a pending PR; its issue goes to In review, or `unowned` lists a PR without one."""
+        self.pending.remove(pr)
         if pr not in self.worktrees:  # a session's other PR, or the improver's
-            self.not_brought_up_to_date.append(reason)
+            unowned.append(reason)
             self.notify(f"Ralph loop: {reason}.")
             return
         issue = self.worktrees.pop(pr)
