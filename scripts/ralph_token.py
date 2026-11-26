@@ -7,6 +7,8 @@ import subprocess
 import urllib.request
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from datetime import datetime, timedelta
+from pathlib import Path
 from typing import IO
 
 Sign = Callable[[bytes], bytes]
@@ -119,3 +121,30 @@ class Tokens:
         header = b64(json.dumps({"alg": "RS256", "typ": "JWT"}).encode())
         signing_input = f"{header}.{b64(json.dumps(claims).encode())}"
         return f"{signing_input}.{b64(self.sign(signing_input.encode()))}"
+
+
+# Installation tokens last an hour; this leaves a quarter of it for a poll to come round.
+TOKEN_LIFE = timedelta(minutes=45)
+
+
+class TokenFile:
+    """A session's installation token, in a file only the owner can read, renewed as it ages."""
+
+    def __init__(self, path: Path, mint: Callable[[], str], clock: Callable[[], datetime]):
+        self.path = path
+        self.mint = mint
+        self.clock = clock
+        self._write()
+
+    def refresh(self) -> None:
+        if self.clock() - self.minted >= TOKEN_LIFE:
+            self._write()
+
+    def _write(self) -> None:
+        self.minted = self.clock()
+        # Renamed into place, so a `gh` reading it mid-renewal never finds it empty.
+        fresh = self.path.with_suffix(".new")
+        fd = os.open(fresh, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        with os.fdopen(fd, "w") as out:
+            out.write(self.mint())
+        os.replace(fresh, self.path)
