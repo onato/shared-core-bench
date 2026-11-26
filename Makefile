@@ -1,5 +1,5 @@
 .PHONY: help bootstrap test lint coverage test-core test-scripts lint-scripts coverage-scripts \
-	test-kmp lint-kmp coverage-kmp test-android test-android-device lint-android coverage-android fmt bench bench-report
+	test-kmp lint-kmp coverage-kmp test-ios lint-ios test-android test-android-device lint-android coverage-android fmt bench bench-report
 
 # uv would warn about, then ignore, a VIRTUAL_ENV inherited from another checkout's shell.
 unexport VIRTUAL_ENV
@@ -10,16 +10,21 @@ ADB := adb
 # A wedged emulator otherwise fails only after Gradle has built for minutes.
 DEVICE_CHECK = uv run python scripts/device_check.py --serial $(ANDROID_SERIAL) --adb $(ADB)
 
+# Linux CI has no Xcode; the iOS targets get a macOS CI job of their own (#272).
+IS_MACOS := $(filter Darwin,$(shell uname -s))
+
 help: ## List targets
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-18s %s\n", $$1, $$2}'
 
 bootstrap: ## Install tools and configure the clone
 	uv sync
+	$(if $(IS_MACOS),brew install xcodegen swiftlint)
+	$(if $(IS_MACOS),cd ios && xcodegen generate --quiet && xcodebuild -resolvePackageDependencies -quiet)
 	git config blame.ignoreRevsFile .git-blame-ignore-revs
 
-test: test-scripts test-kmp test-android ## All tests except benchmarks
+test: test-scripts test-kmp test-android $(if $(IS_MACOS),test-ios) ## All tests except benchmarks
 
-lint: lint-scripts lint-kmp lint-android ## All linters; warnings are errors
+lint: lint-scripts lint-kmp lint-android $(if $(IS_MACOS),lint-ios) ## All linters; warnings are errors
 
 coverage: coverage-scripts coverage-kmp coverage-android ## Tests with coverage gates
 
@@ -58,6 +63,15 @@ test-android-device: ## Instrumented UI tests in fixture mode on ANDROID_SERIAL 
 	@test -n "$(ANDROID_SERIAL)" || { echo "test-android-device: set ANDROID_SERIAL to a simpool lease" >&2; exit 1; }
 	@$(DEVICE_CHECK)
 	ANDROID_SERIAL=$(ANDROID_SERIAL) $(ANDROID_GRADLE) :uitest:connectedDebugAndroidTest
+
+test-ios: ## iOS app unit tests on SIM_UDID
+	@test -n "$(SIM_UDID)" || { echo "test-ios: set SIM_UDID to a simulator from \`simpool acquire\`" >&2; exit 1; }
+	cd ios && xcodegen generate --quiet
+	xcodebuild test -quiet -project ios/SharedCoreBench.xcodeproj -scheme SharedCoreBench \
+		-destination id=$(SIM_UDID)
+
+lint-ios:
+	cd ios && swiftlint lint --strict --quiet
 
 lint-android:
 	$(ANDROID_GRADLE) ktlintCheck detekt
