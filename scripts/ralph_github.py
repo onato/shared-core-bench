@@ -191,6 +191,11 @@ class GitHubAdapter:
             pr["state"] == "OPEN" for pr in closing
         )
 
+    def is_open(self, issue: int) -> bool:
+        repo = f"{self.owner}/{self.repo}"
+        args = ["issue", "view", str(issue), "-R", repo, "--json", "state", "--jq", ".state"]
+        return self.run(args, None).strip() == "OPEN"
+
     def set_status(self, issue: int, status: str) -> None:
         data = self._graphql(
             STATUS_LOOKUP_QUERY,

@@ -282,6 +282,20 @@ def test_an_issue_has_an_open_pr_when_one_closes_it_or_is_on_its_branch(reply, h
     assert {"number=119", "branch=swilliams/119-ralph"} <= set(sent_variables(gh.calls[0]))
 
 
+@pytest.mark.parametrize(("state", "is_open"), [("OPEN", True), ("CLOSED", False)])
+def test_whether_an_issue_is_open_comes_from_its_state(state, is_open):
+    gh = FakeGh(f"{state}\n")
+
+    assert adapter(gh).is_open(120) is is_open
+    assert gh.calls == [
+        (
+            ["issue", "view", "120", "-R", "onato/shared-core-bench", "--json", "state"]
+            + ["--jq", ".state"],
+            None,
+        )
+    ]
+
+
 def test_comment_posts_the_body_on_the_issue_under_the_agent_marker():
     gh = FakeGh("https://github.com/onato/shared-core-bench/issues/7#issuecomment-1\n")
 

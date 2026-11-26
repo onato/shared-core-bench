@@ -75,6 +75,7 @@ class ReadsBoard(Protocol):
 class GitHub(ReadsBoard, Protocol):
     def pull_request(self, number: int) -> PullRequest: ...
     def has_open_pr(self, issue: int) -> bool: ...  # one closes it or is on its branch
+    def is_open(self, issue: int) -> bool: ...
     def set_status(self, issue: int, status: str) -> None: ...
     def comment(self, issue: int, body: str) -> str: ...  # the comment's URL
     def plan_approved(self, parent: int) -> bool: ...  # the owner added plan-approved last
@@ -87,6 +88,11 @@ class Session(Protocol):
     def remove(self, issue: int) -> str | None: ...  # what failed, if the worktree stays
     def update(self, pr: PullRequest) -> str | None: ...  # merges main in; what failed
     def improve(self, prs: tuple[int, ...], while_running: Callable[[], None]) -> Improvement: ...
+
+
+class Emulators(Protocol):
+    def issues(self) -> list[int]: ...  # the issues with an emulator of their own
+    def prune(self, issue: int) -> str | None: ...  # why it stays, if it does
 
 
 def next_issue(issues: list[Issue]) -> Issue | None:
@@ -112,12 +118,15 @@ def run(
     milestone: int,
     github: GitHub,
     session: Session,
+    emulators: Emulators,
     notify: Callable[[str], None],
     clock: Callable[[], float],
     sleep: Callable[[float], None],
     max_iterations: int,
 ) -> str:
-    message = _Loop(milestone, github, session, notify, clock, sleep, max_iterations).run()
+    message = _Loop(
+        milestone, github, session, emulators, notify, clock, sleep, max_iterations
+    ).run()
     notify(message)
     return message
 
@@ -134,6 +143,7 @@ class _Loop:
     milestone: int
     github: GitHub
     session: Session
+    emulators: Emulators
     notify: Callable[[str], None]
     clock: Callable[[], float]
     sleep: Callable[[float], None]
@@ -147,6 +157,7 @@ class _Loop:
     improvements: list[Improvement] = field(default_factory=list)
     worktrees: dict[int, int] = field(default_factory=dict)  # a pending PR → its issue
     left_in_place: dict[int, str] = field(default_factory=dict)  # issue → why its worktree stayed
+    left_running: dict[int, str] = field(default_factory=dict)  # issue → why its emulator stayed
     errors_while_running: list[str] = field(default_factory=list)
     not_brought_up_to_date: list[str] = field(default_factory=list)  # PRs no issue holds
     held_by_threads: list[str] = field(default_factory=list)  # PRs no issue holds, too
@@ -166,8 +177,15 @@ class _Loop:
             self.move_closed_to_done(issues)
             issues = self.release_in_review(issues)
             stop = self.step(next_issue(issues))
+            self.prune_emulators()
             if stop is not None:
                 return self.stop_message(stop.headline)
+
+    def prune_emulators(self) -> None:
+        """Each issue's emulator goes once the issue is closed, here or by hand."""
+        for issue in self.emulators.issues():
+            if not self.github.is_open(issue) and (failed := self.emulators.prune(issue)):
+                self.left_running[issue] = failed
 
     def approve_drafts(self) -> None:
         drafts = [i for i in self.github.milestone_issues(self.milestone) if i.draft and i.is_open]
@@ -358,6 +376,11 @@ class _Loop:
                 "Worktrees left in place:",
                 *(f"- #{n}: {r}" for n, r in self.left_in_place.items()),
             ]
+        if self.left_running:
+            lines += [
+                "Emulators left running:",
+                *(f"- #{n}: {r}" for n, r in self.left_running.items()),
+            ]
         if self.errors_while_running:
             lines += [
                 "GitHub errors while a session ran:",
@@ -396,9 +419,11 @@ def describe(issue: Issue) -> str:
 
 @dataclass(frozen=True)
 class Live:
-    """What a real run needs beyond GitHub: sessions, where the stop message goes, and time."""
+    """What a real run needs beyond GitHub: sessions, issue emulators, where the stop message goes,
+    and time."""
 
     session: Session
+    emulators: Emulators
     notify: Callable[[str], None]
     clock: Callable[[], float]
     sleep: Callable[[float], None]
@@ -420,6 +445,7 @@ def main(argv: list[str], connect: Callable[[], GitHub], live: Callable[[], Live
                 args.milestone,
                 github,
                 real.session,
+                real.emulators,
                 real.notify,
                 real.clock,
                 real.sleep,
@@ -466,6 +492,7 @@ if __name__ == "__main__":
     import ralph
     from ralph_github import GitHubAdapter, gh_runner
     from ralph_session import ClaudeSession
+    from ralph_simpool import SimPool
     from ralph_token import Tokens, github_post, keychain_key, load_app, openssl_signer
 
     repo = Path(__file__).resolve().parents[1]
@@ -492,6 +519,7 @@ if __name__ == "__main__":
         def notify(message: str) -> None:
             subprocess.run([str(telegram), message], check=False)
 
-        return Live(session, notify, time.time, time.sleep)
+        emulators = SimPool(dict(os.environ), subprocess.run)
+        return Live(session, emulators, notify, time.time, time.sleep)
 
     sys.exit(ralph.main(sys.argv[1:], connect, live))
