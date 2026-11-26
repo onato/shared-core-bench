@@ -21,3 +21,14 @@ def test_without_a_simulator_stops_and_names_simpool_acquire(target):
         2,
         f"{target}: set SIM_UDID to a simulator from `simpool acquire`",
     )
+
+
+def test_make_test_on_macos_checks_sim_udid_before_any_other_leg():
+    run = subprocess.run(
+        ["make", "--no-print-directory", "-n", "test", "SIM_UDID=", "IS_MACOS=Darwin"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+    )
+
+    assert "SIM_UDID" in run.stdout.splitlines()[0]

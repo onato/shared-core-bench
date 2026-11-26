@@ -36,6 +36,9 @@ that test pass. Tick an item only when it passes along with every other non-benc
 - A PR touching a path in `.github/protected-paths` (the gates and what they read) passes
   `protected-paths` only once the owner adds the `gate-approved` label. Keep such changes in a PR
   of their own and say why in the body.
+- A PR waiting for either label gets a comment headed `## For the owner`: what changes, what was
+  considered (the alternatives, and why this one), and the risk (door, blast radius, what breaks if
+  it's wrong), plus anything needed before the label helps, such as a conflict with `main`.
 - `main` is protected: never push to it; every change merges through a PR that passes CI, the size
   check, the protected-paths check and the Claude review. Address review comments with new commits, not force pushes.
 
@@ -89,7 +92,7 @@ them; until then they fail with "not implemented".
 | Command | What it does |
 |---|---|
 | `make bootstrap` | Install toolchains and tools (rustup targets, cargo-ndk, cargo-llvm-cov, luarocks deps) |
-| `make test` | All unit + contract tests for every core and both apps (no benchmarks) |
+| `make test` | All unit + contract tests for every core and both apps (no benchmarks); on macOS it needs `SIM_UDID` from `simpool acquire` |
 | `make test-core CORE=kmp\|rust\|lua` | One core's tests |
 | `make test-ios` / `make test-android` | App unit, contract-through-bridge and UI tests |
 | `make lint` | clippy, ktlint/detekt, SwiftLint, luacheck; warnings are errors |

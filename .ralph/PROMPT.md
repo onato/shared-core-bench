@@ -33,6 +33,11 @@ What to do:
    Changing a path in `.github/protected-paths` (the gates, the review prompt, coverage config,
    `.claude/`, these instructions) works the same way: keep that change in a PR of its own, say
    in the body why it is needed, and stop with NEEDS_HUMAN for the `gate-approved` label.
+   Before stopping for either label, post a PR comment headed `## For the owner`, so the owner can
+   decide from it: **What changes** (in the protected paths, or why the PR can't be split), **What
+   was considered** (the alternatives, and why this one), and **Risk** (the door, the blast radius,
+   what breaks if it's wrong). End it with anything needed before the label helps, such as a
+   conflict with `main` or a failing check.
 5. Push, open the PR with the `pr` skill (body says `Closes #{issue}`), then turn on auto-merge:
    `gh pr merge <n> --auto --squash`. Don't merge it yourself, and never push to `main`.
 6. Wait for CI and the Claude review (`gh pr checks <n> --watch`). Fix what they report with new
