@@ -110,6 +110,9 @@ discountedPrice, rating, thumbnail) — the shape a list cell needs — so pages
 To keep the SQLite comparison fair, all three use the same SQLite version bundled into the core
 rather than the OS copy (noted as a deviation if a library forces otherwise).
 
+Deviation: on iOS, KMP's SQLDelight `native-driver` links the OS copy (`/usr/lib/libsqlite3.dylib`),
+so its SQLite version is the device's. `sqlite3_libversion()` on the iOS 26.5 simulator: 3.51.0.
+
 ## Benchmarks
 
 Run from a Benchmark screen in each app (and from a headless instrumented test / XCTest for CI-style

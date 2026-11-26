@@ -1,3 +1,8 @@
+import co.touchlab.skie.configuration.SuppressSkieWarning
+import org.jetbrains.kotlin.gradle.plugin.mpp.DisableCacheInKotlinVersion
+import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeCacheApi
+import org.jetbrains.kotlin.gradle.plugin.mpp.apple.XCFramework
+
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.kotlin.jvm) apply false
@@ -6,6 +11,7 @@ plugins {
     alias(libs.plugins.ktlint)
     alias(libs.plugins.detekt)
     alias(libs.plugins.sqldelight)
+    alias(libs.plugins.skie)
 }
 
 kotlin {
@@ -29,6 +35,18 @@ kotlin {
                 .toInt()
         withHostTest {}
     }
+    val xcFramework = XCFramework("SharedCore")
+    listOf(iosArm64(), iosSimulatorArm64()).forEach {
+        it.binaries.framework {
+            baseName = "SharedCore"
+            xcFramework.add(this)
+            @OptIn(KotlinNativeCacheApi::class)
+            disableNativeCache(
+                DisableCacheInKotlinVersion.`2_4_21`,
+                "Xcode 27's ld can't open the members of Kotlin/Native's prebuilt cache archives and warns once per member",
+            )
+        }
+    }
     compilerOptions {
         allWarningsAsErrors = true
     }
@@ -41,6 +59,9 @@ kotlin {
         }
         androidMain.dependencies {
             implementation(libs.sqldelight.android.driver)
+        }
+        iosMain.dependencies {
+            implementation(libs.sqldelight.native.driver)
         }
         commonTest.dependencies {
             implementation(kotlin("test"))
@@ -61,6 +82,15 @@ sqldelight {
     databases {
         create("ProductDatabase") {
             packageName.set("bench.core.db")
+        }
+    }
+}
+
+// Swift exposes these as `description_`, since `description` is NSObject's.
+skie {
+    features {
+        listOf("bench.core.ProductDetail", "bench.core.db.Product", "bench.core.db.ById").forEach {
+            group("$it.description") { SuppressSkieWarning.NameCollision(true) }
         }
     }
 }
