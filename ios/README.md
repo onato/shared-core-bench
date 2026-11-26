@@ -14,7 +14,7 @@ Tests run on a simulator leased from the pool, never one picked by name or becau
 ```bash
 SIM_UDID=$(simpool acquire)
 make test-ios SIM_UDID=$SIM_UDID
-simpool release
+simpool release $SIM_UDID
 ```
 
 `make lint-ios` runs SwiftLint with warnings as errors.
