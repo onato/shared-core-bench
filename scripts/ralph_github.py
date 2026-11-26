@@ -8,7 +8,7 @@ from gates import approved_by
 from ralph import GitHubError, Issue, PullRequest
 
 Run = Callable[[list[str], str | None], str]
-FAILURE = "FAILURE"
+FAILURE, SUCCESS = "FAILURE", "SUCCESS"
 AGENT_MARKER = "> 🤖 Agent comment — written by Claude Code"
 DRAFT, PLAN_APPROVED = "draft", "plan-approved"
 
@@ -96,6 +96,7 @@ query($owner: String!, $repo: String!, $number: Int!) {
       merged
       mergeStateStatus
       headRefName
+      reviewThreads(first: 100) { nodes { isResolved } }
       comments(last: 100) { nodes { body } }
       commits(last: 100) {
         nodes {
@@ -169,6 +170,11 @@ class GitHubAdapter:
             has_retro_notes=any("## Retro notes" in c["body"] for c in pr["comments"]["nodes"]),
             behind=pr["mergeStateStatus"] == "BEHIND",
             branch=pr["headRefName"],
+            unresolved_threads=sum(
+                not thread["isResolved"] for thread in pr["reviewThreads"]["nodes"]
+            ),
+            blocked_with_checks_passing=pr["mergeStateStatus"] == "BLOCKED"
+            and all_passed(commits[-1]),
         )
 
     def has_open_pr(self, issue: int) -> bool:
@@ -234,6 +240,11 @@ def check_runs(commit: dict) -> dict[str, str]:
     rollup = commit["statusCheckRollup"]
     nodes = rollup["contexts"]["nodes"] if rollup else []
     return {run["name"]: run["conclusion"] for run in nodes if "name" in run}
+
+
+def all_passed(runs: dict[str, str]) -> bool:
+    """Whether a commit has check runs and each one's latest run succeeded."""
+    return bool(runs) and all(conclusion == SUCCESS for conclusion in runs.values())
 
 
 def trailing_failures(conclusions: list[str]) -> int:
