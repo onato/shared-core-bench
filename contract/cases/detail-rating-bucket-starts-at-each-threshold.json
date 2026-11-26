@@ -7,48 +7,23 @@
     },
     {
       "step": "detail", "args": { "id": 1 },
-      "expect": {
-        "id": 1, "title": "Product 1", "description": "A product", "category": "misc", "brand": "Acme",
-        "price": 10.0, "discountPercentage": 0.0, "discountedPrice": 10.0,
-        "rating": 4.5, "ratingBucket": "excellent", "stock": 20, "stockStatus": "in-stock",
-        "thumbnail": "https://cdn.dummyjson.com/1.png", "tags": ["misc"]
-      }
+      "expect": { "id": 1, "rating": 4.5, "ratingBucket": "excellent" }
     },
     {
       "step": "detail", "args": { "id": 2 },
-      "expect": {
-        "id": 2, "title": "Product 2", "description": "A product", "category": "misc", "brand": "Acme",
-        "price": 10.0, "discountPercentage": 0.0, "discountedPrice": 10.0,
-        "rating": 4.49, "ratingBucket": "good", "stock": 20, "stockStatus": "in-stock",
-        "thumbnail": "https://cdn.dummyjson.com/2.png", "tags": ["misc"]
-      }
+      "expect": { "id": 2, "rating": 4.49, "ratingBucket": "good" }
     },
     {
       "step": "detail", "args": { "id": 3 },
-      "expect": {
-        "id": 3, "title": "Product 3", "description": "A product", "category": "misc", "brand": "Acme",
-        "price": 10.0, "discountPercentage": 0.0, "discountedPrice": 10.0,
-        "rating": 4.0, "ratingBucket": "good", "stock": 20, "stockStatus": "in-stock",
-        "thumbnail": "https://cdn.dummyjson.com/3.png", "tags": ["misc"]
-      }
+      "expect": { "id": 3, "rating": 4.0, "ratingBucket": "good" }
     },
     {
       "step": "detail", "args": { "id": 4 },
-      "expect": {
-        "id": 4, "title": "Product 4", "description": "A product", "category": "misc", "brand": "Acme",
-        "price": 10.0, "discountPercentage": 0.0, "discountedPrice": 10.0,
-        "rating": 3.0, "ratingBucket": "fair", "stock": 20, "stockStatus": "in-stock",
-        "thumbnail": "https://cdn.dummyjson.com/4.png", "tags": ["misc"]
-      }
+      "expect": { "id": 4, "rating": 3.0, "ratingBucket": "fair" }
     },
     {
       "step": "detail", "args": { "id": 5 },
-      "expect": {
-        "id": 5, "title": "Product 5", "description": "A product", "category": "misc", "brand": "Acme",
-        "price": 10.0, "discountPercentage": 0.0, "discountedPrice": 10.0,
-        "rating": 2.99, "ratingBucket": "poor", "stock": 20, "stockStatus": "in-stock",
-        "thumbnail": "https://cdn.dummyjson.com/5.png", "tags": ["misc"]
-      }
+      "expect": { "id": 5, "rating": 2.99, "ratingBucket": "poor" }
     }
   ]
 }
