@@ -47,3 +47,6 @@ e44753dbfaa1f6f37f91481471125f0d0a381caa
 
 # Structural: the app's background dispatcher as a parameter (#297)
 29d79cc1aa5932b5979a9e508234d5e1293e780d
+
+# Structural: BenchApp's background dispatcher as a parameter (#301)
+0a9e8a7d803f2ab0ee1eefed4236cf969aa5d194

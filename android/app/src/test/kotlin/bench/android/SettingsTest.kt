@@ -1,13 +1,14 @@
 package bench.android
 
 import androidx.activity.ComponentActivity
-import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import bench.android.core.FakeSharedCore
 import bench.android.core.FetchRequest
 import bench.android.core.summary
+import kotlinx.coroutines.Dispatchers
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -32,13 +33,13 @@ class SettingsTest {
 
     private fun show(cores: CoreFactory = CoreFactory { _, _ -> FakeSharedCore() }) {
         val session = CoreSession(settings, cores)
-        compose.setContent { BenchApp(session, ::noNetwork) }
+        compose.setContent { BenchApp(session, ::noNetwork, Dispatchers.Main) }
     }
 
-    private fun awaitText(text: String) =
-        compose.waitUntil {
-            compose.onAllNodes(hasText(text)).fetchSemanticsNodes().isNotEmpty()
-        }
+    private fun awaitText(text: String) {
+        compose.waitForIdle()
+        compose.onNodeWithText(text).assertIsDisplayed()
+    }
 
     @Test
     fun theSettingsScreenShowsTheCurrentCoreAndStorageVariant() {
