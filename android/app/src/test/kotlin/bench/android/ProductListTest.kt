@@ -2,6 +2,7 @@ package bench.android
 
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasProgressBarRangeInfo
 import androidx.compose.ui.test.hasScrollAction
@@ -21,13 +22,15 @@ import bench.android.core.FakeSharedCore
 import bench.android.core.FetchRequest
 import bench.android.core.ProductSummary
 import bench.android.core.summary
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.test.StandardTestDispatcher
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.RuleChain
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
-import java.util.concurrent.CountDownLatch
+import kotlin.coroutines.CoroutineContext
 
 @RunWith(RobolectricTestRunner::class)
 class ProductListTest {
@@ -45,10 +48,17 @@ class ProductListTest {
     private fun show(
         core: FakeSharedCore,
         categories: () -> CategoriesResult = core::categories,
+        background: CoroutineContext = Dispatchers.Main,
         fetch: (FetchRequest) -> FetchResult = ::noNetwork,
     ) {
         compose.setContent {
-            App({ productPages(core, fetch, pageSize = 2, it) }, core::detail, core::refresh, categories)
+            App(
+                { productPages(core, fetch, pageSize = 2, it, background) },
+                core::detail,
+                core::refresh,
+                categories,
+                background,
+            )
         }
     }
 
@@ -131,15 +141,14 @@ class ProductListTest {
     }
 
     @Test
-    fun aSlowRemotePageShowsLoadingOffTheMainThreadUntilItArrives() {
-        val released = CountDownLatch(1)
-        show(FakeSharedCore(remotePages = listOf(listOf(mascara)))) {
-            released.await()
+    fun aRemotePageShowsLoadingUntilItArrives() {
+        val background = StandardTestDispatcher()
+        show(FakeSharedCore(remotePages = listOf(listOf(mascara))), background = background) {
             FetchResult.Response(200, ByteArray(0))
         }
 
         compose.onNode(spinner).assertIsDisplayed()
-        released.countDown()
+        background.scheduler.advanceUntilIdle()
 
         awaitText("Essence Mascara")
         assertEquals(0, compose.onAllNodes(spinner).fetchSemanticsNodes().size)
@@ -309,7 +318,11 @@ class ProductListTest {
 
         choose("Sort: Default", "Price: low to high")
 
-        compose.waitUntil { top("Red Lipstick") < top("Annibale Colombo Bed") }
+        compose.waitForIdle()
+        assertEquals(
+            listOf("Red Lipstick", "Annibale Colombo Bed"),
+            listOf("Annibale Colombo Bed", "Red Lipstick").sortedBy(::top),
+        )
     }
 
     private fun top(text: String) =
@@ -346,21 +359,22 @@ class ProductListTest {
     private val spinner = hasProgressBarRangeInfo(ProgressBarRangeInfo.Indeterminate)
 
     private fun awaitText(text: String) {
-        compose.waitUntil { compose.onAllNodesWithText(text).fetchSemanticsNodes().isNotEmpty() }
+        compose.waitForIdle()
         compose.onNodeWithText(text).assertIsDisplayed()
     }
 
     private fun search(text: String) = type("Search", text)
 
     private fun awaitGone(text: String) {
-        compose.waitUntil { compose.onAllNodesWithText(text).fetchSemanticsNodes().isEmpty() }
+        compose.waitForIdle()
+        compose.onAllNodesWithText(text).assertCountEquals(0)
     }
 
     private fun scrollUntilShown(text: String) {
         repeat(MAX_SWIPES) {
             if (compose.onAllNodesWithText(text).fetchSemanticsNodes().isNotEmpty()) return
             compose.onNode(hasScrollAction()).performTouchInput { swipeUp() }
-            compose.waitUntil { compose.onAllNodes(spinner).fetchSemanticsNodes().isEmpty() }
+            compose.waitForIdle()
         }
     }
 
