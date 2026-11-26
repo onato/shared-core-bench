@@ -48,6 +48,9 @@ nested objects (reviews, dimensions, tags), which gives the JSON decoder real wo
 For benchmarks the network is taken out of the measurement: a **fixture mode** serves generated,
 deterministic pages (seeded, configurable record count and payload size, up to e.g. 10 000 records)
 from bundled files or a tiny local server, so runs are repeatable and comparable across cores.
+On Android the app's fetcher serves them itself from `ProductFixtures` (`android/fixtures`), when
+launched with the intent extras `fixtureRecords` and `fixtureSeed`; each page is seeded with
+`seed + skip`, so a later page doesn't repeat the first.
 
 ### Networking stays native
 
@@ -121,6 +124,9 @@ p95 over N runs, results exported as CSV.
 4. Return a list of N records (N = 20, 200, 2 000) — the `page` shape.
 5. Callback from core to native × 10 000 (UniFFI callback interface, K/N lambda, Lua→C→host).
 
+The probes are benchmark-only entry points on the core (`bench.core.Boundary` in KMP), not calls
+on the app's `SharedCore`, so each core can mirror them as plain functions.
+
 **Core workloads**:
 
 6. Decode N products from JSON (N = 100, 1 000, 10 000).
@@ -131,6 +137,8 @@ p95 over N runs, results exported as CSV.
 **App-level**:
 
 10. Cold start to first page rendered (from cache), and with an empty cache in fixture mode.
+    "Rendered" is the app reporting fully drawn once the list shows a product, so the time is
+    `timeToFullDisplayMs` on Android.
 11. Scroll the full list (frame drops via Android Macrobenchmark / iOS Instruments hitches).
 
 **Static**: added binary size per ABI/arch, peak memory during workload 7, clean and incremental
@@ -222,6 +230,8 @@ shared-core-bench/
                        #   android/fixtures' ProductFixtures, until another core needs it)
   ios/                 # SwiftUI app, backend picker, benchmark screen
   android/             # Compose app, backend picker, benchmark screen; its own Gradle build
+                       #   modules: app, storage (the storage port), fixtures, benchmark,
+                       #   macrobenchmark, uitest
   report/              # CSV results + generated report
   docs/checkpoints/    # one retro per milestone
 ```
@@ -249,7 +259,8 @@ make bench-report                                  # HTML report from saved resu
 - **Android**: an `androidx.benchmark` microbenchmark module for the boundary and core suites and a
   Macrobenchmark module for startup and scrolling, run with `connectedReleaseAndroidTest` on
   `ANDROID_SERIAL`. Emulator runs need `androidx.benchmark.suppressErrors=EMULATOR` and are labelled
-  as emulator results.
+  as emulator results. `SUITE=app` runs the Macrobenchmark module on its own; `SUITE=all` means
+  the microbenchmark suites.
 - `scripts/bench_collect.py` gathers both platforms' output into `report/results/<timestamp>/` in one
   schema (platform, device, OS, core, storage, suite, workload, N, median, p95, runs, git SHA), and
   prints a table grouped by workload with each core side by side, plus overhead over the embedded
