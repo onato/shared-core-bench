@@ -6,6 +6,9 @@ unexport VIRTUAL_ENV
 
 GRADLE := core-kmp/gradlew --project-dir core-kmp --console=plain
 ANDROID_GRADLE := android/gradlew --project-dir android --console=plain
+ADB := adb
+# A wedged emulator otherwise fails only after Gradle has built for minutes.
+DEVICE_CHECK = uv run python scripts/device_check.py --serial $(ANDROID_SERIAL) --adb $(ADB)
 
 help: ## List targets
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-18s %s\n", $$1, $$2}'
@@ -53,6 +56,7 @@ test-android: ## Android app unit and Robolectric tests
 
 test-android-device: ## Instrumented UI tests in fixture mode on ANDROID_SERIAL (not part of make test)
 	@test -n "$(ANDROID_SERIAL)" || { echo "test-android-device: set ANDROID_SERIAL to a simpool lease" >&2; exit 1; }
+	@$(DEVICE_CHECK)
 	ANDROID_SERIAL=$(ANDROID_SERIAL) $(ANDROID_GRADLE) :uitest:connectedDebugAndroidTest
 
 lint-android:
@@ -103,6 +107,7 @@ endef
 bench: ## Run benchmarks on ANDROID_SERIAL and print the table (android, kmp; core|boundary, or app alone)
 	@test -z "$(BENCH_UNSUPPORTED)" || { echo "bench: not implemented: $(BENCH_UNSUPPORTED)" >&2; exit 1; }
 	@test -n "$(ANDROID_SERIAL)" || { echo "bench: set ANDROID_SERIAL to a simpool lease" >&2; exit 1; }
+	@$(DEVICE_CHECK)
 	$(if $(filter app,$(SUITE)),$(BENCH_APP),$(foreach storage,$(BENCH_STORAGES),$(call BENCH_RUN,$(storage))))
 
 bench-report: ## Not implemented yet
