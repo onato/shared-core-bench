@@ -36,6 +36,9 @@ that test pass. Tick an item only when it passes along with every other non-benc
 - A PR touching a path in `.github/protected-paths` (the gates and what they read) passes
   `protected-paths` only once the owner adds the `gate-approved` label. Keep such changes in a PR
   of their own and say why in the body.
+- A PR waiting for either label gets a comment headed `## For the owner`: what changes, what was
+  considered (the alternatives, and why this one), and the risk (door, blast radius, what breaks if
+  it's wrong), plus anything needed before the label helps, such as a conflict with `main`.
 - `main` is protected: never push to it; every change merges through a PR that passes CI, the size
   check, the protected-paths check and the Claude review. Address review comments with new commits, not force pushes.
 
