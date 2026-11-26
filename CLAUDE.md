@@ -75,6 +75,10 @@ Two loops, as in *Growing Object-Oriented Software, Guided by Tests*:
 - iOS simulators and Android emulators are leased with `simpool` (the `/sim-pool` skill); never
   pick one by name or because it is booted. Make targets take `SIM_UDID` / `ANDROID_SERIAL` and
   refuse to run without one.
+- An issue's Android emulator: `simpool acquire --android --create scb-<issue#>`, with no `--from`.
+  It makes a fresh Pixel 9 emulator on the newest system image the first time and leases the same one
+  after that. Release it when you finish. Never boot or `--boot` another issue's emulator: the loop
+  deletes each one once its issue closes.
 - Physical devices are passed explicitly: `IOS_DEVICE=<udid>`, `ANDROID_SERIAL=<serial>`.
 
 # Project commands
