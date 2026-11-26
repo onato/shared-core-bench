@@ -172,13 +172,14 @@ def commit(**checks):
     return {"commit": {"statusCheckRollup": {"contexts": {"nodes": [*runs, {}]}}}}
 
 
-def pr_reply(merged=False, comments=(), commits=(), merge_state="CLEAN", head=""):
+def pr_reply(merged=False, comments=(), commits=(), merge_state="CLEAN", head="", threads=()):
     return {
         "repository": {
             "pullRequest": {
                 "merged": merged,
                 "mergeStateStatus": merge_state,
                 "headRefName": head,
+                "reviewThreads": {"nodes": [{"isResolved": resolved} for resolved in threads]},
                 "comments": {"nodes": [{"body": body} for body in comments]},
                 "commits": {"nodes": list(commits)},
             }
@@ -231,6 +232,28 @@ def test_pull_request_names_its_branch():
 
     assert adapter(gh).pull_request(54).branch == "swilliams/54-ralph"
     assert "headRefName" in sent_query(gh.calls[0])
+
+
+@pytest.mark.parametrize(
+    ("state", "commits", "held"),
+    [
+        ("BLOCKED", [commit(ci="FAILURE"), commit(ci="SUCCESS", claude_review="SUCCESS")], True),
+        ("BLOCKED", [commit(ci="SUCCESS", claude_review="FAILURE")], False),
+        ("BLOCKED", [commit(ci="SUCCESS"), commit()], False),
+        ("CLEAN", [commit(ci="SUCCESS", claude_review="SUCCESS")], False),
+    ],
+)
+def test_a_pull_request_says_whether_github_blocks_it_once_every_check_passed(state, commits, held):
+    gh = FakeGh(pr_reply(merge_state=state, commits=commits))
+
+    assert adapter(gh).pull_request(201).blocked_with_checks_passing is held
+
+
+def test_a_pull_request_counts_its_unresolved_review_threads():
+    gh = FakeGh(pr_reply(threads=[True, False, True, False, False], commits=[commit()]))
+
+    assert adapter(gh).pull_request(201).unresolved_threads == 3
+    assert "reviewThreads" in sent_query(gh.calls[0])
 
 
 def open_pr_reply(closing=(), on_branch=0):
