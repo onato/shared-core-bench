@@ -1,5 +1,5 @@
 .PHONY: help bootstrap test lint coverage test-core test-scripts lint-scripts coverage-scripts \
-	test-kmp lint-kmp coverage-kmp test-ios lint-ios test-android test-android-device lint-android coverage-android fmt bench bench-report
+	test-kmp lint-kmp coverage-kmp test-ios lint-ios coverage-ios test-android test-android-device lint-android coverage-android fmt bench bench-report
 
 # uv would warn about, then ignore, a VIRTUAL_ENV inherited from another checkout's shell.
 unexport VIRTUAL_ENV
@@ -26,7 +26,7 @@ test: test-scripts test-kmp test-android $(if $(IS_MACOS),test-ios) ## All tests
 
 lint: lint-scripts lint-kmp lint-android $(if $(IS_MACOS),lint-ios) ## All linters; warnings are errors
 
-coverage: coverage-scripts coverage-kmp coverage-android ## Tests with coverage gates
+coverage: coverage-scripts coverage-kmp coverage-android $(if $(IS_MACOS),coverage-ios) ## Tests with coverage gates
 
 fmt: ## Apply ktlint's fixes to core-kmp and android; detekt's findings still need a hand
 	$(GRADLE) ktlintFormat
@@ -69,6 +69,18 @@ test-ios: ## iOS app unit tests on SIM_UDID
 	cd ios && xcodegen generate --quiet
 	xcodebuild test -quiet -project ios/SharedCoreBench.xcodeproj -scheme SharedCoreBench \
 		-destination id=$(SIM_UDID)
+
+IOS_COVERAGE := ios/build/coverage
+
+coverage-ios: ## iOS app unit tests on SIM_UDID, failing below 100% lines
+	@test -n "$(SIM_UDID)" || { echo "coverage-ios: set SIM_UDID to a simulator from \`simpool acquire\`" >&2; exit 1; }
+	cd ios && xcodegen generate --quiet
+	rm -rf $(IOS_COVERAGE).xcresult
+	xcodebuild test -quiet -project ios/SharedCoreBench.xcodeproj -scheme SharedCoreBench \
+		-destination id=$(SIM_UDID) -enableCodeCoverage YES -resultBundlePath $(IOS_COVERAGE).xcresult
+	xcrun xccov view --report --json $(IOS_COVERAGE).xcresult > $(IOS_COVERAGE).json
+	uv run python scripts/coverage_ios.py $(IOS_COVERAGE).json --root $(CURDIR)/ios \
+		--exclusions ios/coverage-exclusions
 
 lint-ios:
 	cd ios && swiftlint lint --strict --quiet

@@ -17,4 +17,6 @@ make test-ios SIM_UDID=$SIM_UDID
 simpool release
 ```
 
-`make lint-ios` runs SwiftLint with warnings as errors.
+`make lint-ios` runs SwiftLint with warnings as errors. `make coverage-ios SIM_UDID=…` runs the same
+tests with coverage and fails below 100% lines for the app target, naming each file under the gate;
+`coverage-exclusions` lists the files it leaves out.
