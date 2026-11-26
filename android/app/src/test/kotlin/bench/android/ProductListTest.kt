@@ -309,7 +309,7 @@ class ProductListTest {
 
         choose("Sort: Default", "Price: low to high")
 
-        compose.waitUntil { top("Red Lipstick") < top("Annibale Colombo Bed") }
+        compose.waitFor { top("Red Lipstick") < top("Annibale Colombo Bed") }
     }
 
     private fun top(text: String) =
@@ -346,21 +346,21 @@ class ProductListTest {
     private val spinner = hasProgressBarRangeInfo(ProgressBarRangeInfo.Indeterminate)
 
     private fun awaitText(text: String) {
-        compose.waitUntil { compose.onAllNodesWithText(text).fetchSemanticsNodes().isNotEmpty() }
+        compose.waitFor { compose.onAllNodesWithText(text).fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithText(text).assertIsDisplayed()
     }
 
     private fun search(text: String) = type("Search", text)
 
     private fun awaitGone(text: String) {
-        compose.waitUntil { compose.onAllNodesWithText(text).fetchSemanticsNodes().isEmpty() }
+        compose.waitFor { compose.onAllNodesWithText(text).fetchSemanticsNodes().isEmpty() }
     }
 
     private fun scrollUntilShown(text: String) {
         repeat(MAX_SWIPES) {
             if (compose.onAllNodesWithText(text).fetchSemanticsNodes().isNotEmpty()) return
             compose.onNode(hasScrollAction()).performTouchInput { swipeUp() }
-            compose.waitUntil { compose.onAllNodes(spinner).fetchSemanticsNodes().isEmpty() }
+            compose.waitFor { compose.onAllNodes(spinner).fetchSemanticsNodes().isEmpty() }
         }
     }
 

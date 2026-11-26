@@ -96,7 +96,7 @@ class ProductDetailTest {
 
         compose.runOnUiThread { compose.activity.onBackPressedDispatcher.onBackPressed() }
 
-        compose.waitUntil { compose.onAllNodesWithText(mascara.description).fetchSemanticsNodes().isEmpty() }
+        compose.waitFor { compose.onAllNodesWithText(mascara.description).fetchSemanticsNodes().isEmpty() }
         compose.onNodeWithText("Product 25").assertIsDisplayed()
     }
 
@@ -164,7 +164,7 @@ class ProductDetailTest {
     }
 
     private fun awaitText(text: String) {
-        compose.waitUntil { compose.onAllNodesWithText(text).fetchSemanticsNodes().isNotEmpty() }
+        compose.waitFor { compose.onAllNodesWithText(text).fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithText(text).assertIsDisplayed()
     }
 }

@@ -36,7 +36,7 @@ class SettingsTest {
     }
 
     private fun awaitText(text: String) =
-        compose.waitUntil {
+        compose.waitFor {
             compose.onAllNodes(hasText(text)).fetchSemanticsNodes().isNotEmpty()
         }
 

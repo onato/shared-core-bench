@@ -45,6 +45,6 @@ class StartupReportTest {
             }
         }
 
-        compose.waitUntil { owner.fullyDrawnReporter.isFullyDrawnReported }
+        compose.waitFor { owner.fullyDrawnReporter.isFullyDrawnReported }
     }
 }
