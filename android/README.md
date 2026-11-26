@@ -82,8 +82,9 @@ of these traps cost a session several runs:
 microbenchmarks on the leased device and prints one table row per workload and N. On an emulator
 it took about 13 minutes (#202), most of it in the two 10 000-row paging benchmarks.
 
-- **Check that adb answers before starting.** `adb -s <serial> shell getprop ro.product.model`
-  should print the model within a second or two. When adb itself is wedged, Gradle fails with
+- **adb must answer first.** `make bench` and `make test-android-device` run
+  `adb -s <serial> shell getprop ro.product.model` before Gradle and stop at once when it fails or
+  takes over 5 seconds (`scripts/device_check.py`). When adb itself is wedged, Gradle fails with
   `TimeoutException getting properties for device` on every emulator, so the run never starts
   (#122). Restart the adb server or lease another emulator rather than retrying the bench.
 - `STORAGE` picks the storage variants (`all`, the default, runs every one). Each variant is its
