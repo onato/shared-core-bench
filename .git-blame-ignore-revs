@@ -44,3 +44,6 @@ e44753dbfaa1f6f37f91481471125f0d0a381caa
 
 # Structural: the Ralph loop's stop-waiting step, out of not_updated (#259)
 63cc804182878439dc3916f895ed1d01931bbae9
+
+# Structural: the app's background dispatcher as a parameter (#297)
+29d79cc1aa5932b5979a9e508234d5e1293e780d
