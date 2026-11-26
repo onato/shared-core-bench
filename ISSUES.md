@@ -146,8 +146,8 @@ them to the loop. Each draft names the protected paths it touches, so a gate cha
 issue from the start.
 
 1. **Retro fixes** — adb checked before a device run (#265), a drafting check for protected paths
-   (#266), SQLDelight's dialect in `core-kmp/README.md` (#267), the full Android matrix in one run
-   (#269); the proposal #268 waits for the owner.
+   (#266), SQLDelight's dialect in `core-kmp/README.md` (#267); the proposal #268 waits for the
+   owner.
 2. **App shell** (#270), the **iOS coverage gate** (#271, gate) and a **macOS CI job** (#272, gate).
 3. **KMP for iOS** — iOS targets, the native driver, the XCFramework and SKIE (#273, gate).
 4. **Swift contract runner** (#274) and the **`SharedCore` protocol with its KMP adapter** (#275).
