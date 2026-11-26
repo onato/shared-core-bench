@@ -31,8 +31,17 @@ extension ContractCase {
             }
     }
 
-    private final class BundleToken {}
 }
+
+enum ContractShapes {
+    /// `detail`'s field names from `contract/shapes.json`, which the test target bundles.
+    static func bundledDetailFields() throws -> Set<String> {
+        let file = Bundle(for: BundleToken.self).bundleURL.appending(path: "shapes.json")
+        return try JSONDecoder().decode([String: Set<String>].self, from: Data(contentsOf: file))["detail"] ?? []
+    }
+}
+
+private final class BundleToken {}
 
 struct ContractFailure: Error, CustomStringConvertible {
     let message: String
@@ -40,24 +49,60 @@ struct ContractFailure: Error, CustomStringConvertible {
 }
 
 enum ContractRunner {
-    static func run(_ contractCase: ContractCase, against core: ContractCore) throws {
+    static func run(_ contractCase: ContractCase, against core: ContractCore, detailFields: Set<String>) throws {
         for (index, step) in contractCase.steps.enumerated() {
             let type = if case let .string(type) = step["step"] { type } else { "" }
             let args = if case let .object(args) = step["args"] { args } else { [String: JSON]() }
             guard let actual = call(core, type, args) else {
                 throw ContractFailure(message: "\(contractCase.name).json step \(index): unknown step type \"\(type)\"")
             }
+            let location = "\(contractCase.name).json step \(index) (\(type))"
+            if type == "detail", let product = product(actual) {
+                try checkShape(location, detailFields, product)
+            }
             let expected = step["expect"] ?? .null
-            if actual != expected {
+            let compared = compared(type, expected, actual)
+            if compared != expected {
                 throw ContractFailure(message: """
-                    \(contractCase.name).json step \(index) (\(type)) returned a different result
+                    \(location) returned a different result
                     expected:
                     \(expected.pretty())
                     actual:
-                    \(actual.pretty())
+                    \(compared.pretty())
                     """)
             }
         }
+    }
+
+    /// A `detail` product is compared on the fields `expect` lists; every other result whole.
+    private static func compared(_ type: String, _ expected: JSON, _ actual: JSON) -> JSON {
+        guard type == "detail", let listed = product(expected), case let .object(fields) = actual else {
+            return actual
+        }
+        return .object(fields.filter { listed[$0.key] != nil })
+    }
+
+    private static func checkShape(_ location: String, _ fields: Set<String>, _ product: [String: JSON]) throws {
+        let missing = fields.subtracting(product.keys)
+        if !missing.isEmpty {
+            throw ContractFailure(
+                message: "\(location) returned a product without the fields shapes.json lists: \(listed(missing))")
+        }
+        let extra = Set(product.keys).subtracting(fields)
+        if !extra.isEmpty {
+            throw ContractFailure(
+                message: "\(location) returned a product with fields shapes.json does not list: \(listed(extra))")
+        }
+    }
+
+    private static func listed(_ fields: Set<String>) -> String {
+        "[" + fields.sorted().joined(separator: ", ") + "]"
+    }
+
+    /// A `detail` result other than `null` and `{"error": …}`.
+    private static func product(_ result: JSON) -> [String: JSON]? {
+        guard case let .object(fields) = result, fields["error"] == nil else { return nil }
+        return fields
     }
 
     private static func call(_ core: ContractCore, _ type: String, _ args: [String: JSON]) -> JSON? {
