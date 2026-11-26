@@ -1,0 +1,18 @@
+{
+  "detail": [
+    "id",
+    "title",
+    "description",
+    "category",
+    "brand",
+    "price",
+    "discountPercentage",
+    "discountedPrice",
+    "rating",
+    "ratingBucket",
+    "stock",
+    "stockStatus",
+    "thumbnail",
+    "tags"
+  ]
+}
