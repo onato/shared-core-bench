@@ -54,7 +54,7 @@ fun productPages(
     fetch: (FetchRequest) -> FetchResult,
     pageSize: Int,
     query: Query,
-    background: CoroutineContext = Dispatchers.IO,
+    background: CoroutineContext,
 ): Flow<PagingData<ProductSummary>> =
     Pager(PagingConfig(pageSize)) {
         ProductPagingSource(core, fetch, query, background)
