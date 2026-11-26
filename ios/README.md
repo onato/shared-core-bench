@@ -17,4 +17,9 @@ make test-ios SIM_UDID=$SIM_UDID
 simpool release
 ```
 
+The app links core-kmp as `SharedCore.xcframework`, which `make test-ios` builds first through
+`make ios-framework` (`CONFIG=Release` for benchmarks). SKIE shapes its Swift API: sealed results
+switch with `onEnum(of:)`, and a Kotlin property named `description` reads as `description_`, since
+`description` is `NSObject`'s.
+
 `make lint-ios` runs SwiftLint with warnings as errors.

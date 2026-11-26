@@ -1,5 +1,5 @@
 .PHONY: help bootstrap test lint coverage test-core test-scripts lint-scripts coverage-scripts \
-	test-kmp lint-kmp coverage-kmp test-ios lint-ios test-android test-android-device lint-android coverage-android fmt bench bench-report
+	test-kmp lint-kmp coverage-kmp ios-framework test-ios lint-ios test-android test-android-device lint-android coverage-android fmt bench bench-report
 
 # uv would warn about, then ignore, a VIRTUAL_ENV inherited from another checkout's shell.
 unexport VIRTUAL_ENV
@@ -64,8 +64,12 @@ test-android-device: ## Instrumented UI tests in fixture mode on ANDROID_SERIAL 
 	@$(DEVICE_CHECK)
 	ANDROID_SERIAL=$(ANDROID_SERIAL) $(ANDROID_GRADLE) :uitest:connectedDebugAndroidTest
 
+ios-framework: ## Build core-kmp's SharedCore.xcframework (CONFIG=Debug|Release, default Debug)
+	$(GRADLE) assembleSharedCore$(or $(CONFIG),Debug)XCFramework
+
 test-ios: ## iOS app unit tests on SIM_UDID
 	@test -n "$(SIM_UDID)" || { echo "test-ios: set SIM_UDID to a simulator from \`simpool acquire\`" >&2; exit 1; }
+	$(MAKE) ios-framework
 	cd ios && xcodegen generate --quiet
 	xcodebuild test -quiet -project ios/SharedCoreBench.xcodeproj -scheme SharedCoreBench \
 		-destination id=$(SIM_UDID)
