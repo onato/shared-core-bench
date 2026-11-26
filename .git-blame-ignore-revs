@@ -41,3 +41,6 @@ e44753dbfaa1f6f37f91481471125f0d0a381caa
 
 # Structural: benchmark workloads open their cores through a FreshCores they are given (#247)
 6138529b89f1537025c385c67c8af05c2f47d3d4
+
+# Structural: the Ralph loop's stop-waiting step, out of not_updated (#259)
+63cc804182878439dc3916f895ed1d01931bbae9
