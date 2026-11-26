@@ -1,0 +1,2 @@
+# One file pattern per line, relative to ios/, with the reason after '#'.
+SharedCoreBench/SharedCoreBenchApp.swift # process entry point

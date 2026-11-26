@@ -1,0 +1,110 @@
+{
+  "coveredLines": 17,
+  "executableLines": 103,
+  "lineCoverage": 0.1650485436893204,
+  "targets": [
+    {
+      "buildProductPath": "/home/Library/Developer/Xcode/DerivedData/SharedCoreBench-bbqazlxwfzhnwceyuztkapzhpbdw/Build/Products/Debug-iphonesimulator/SharedCoreBench.app/SharedCoreBench",
+      "coveredLines": 12,
+      "executableLines": 12,
+      "files": [
+        {
+          "coveredLines": 8,
+          "executableLines": 8,
+          "functions": [
+            {
+              "coveredLines": 5,
+              "executableLines": 5,
+              "executionCount": 1,
+              "lineCoverage": 1,
+              "lineNumber": 5,
+              "name": "SharedCoreBenchApp.body.getter"
+            },
+            {
+              "coveredLines": 3,
+              "executableLines": 3,
+              "executionCount": 1,
+              "lineCoverage": 1,
+              "lineNumber": 6,
+              "name": "closure #1 in SharedCoreBenchApp.body.getter"
+            }
+          ],
+          "lineCoverage": 1,
+          "name": "SharedCoreBenchApp.swift",
+          "path": "/repo/ios/SharedCoreBench/SharedCoreBenchApp.swift"
+        },
+        {
+          "coveredLines": 4,
+          "executableLines": 4,
+          "functions": [
+            {
+              "coveredLines": 4,
+              "executableLines": 4,
+              "executionCount": 3,
+              "lineCoverage": 1,
+              "lineNumber": 4,
+              "name": "RootView.body.getter"
+            }
+          ],
+          "lineCoverage": 1,
+          "name": "RootView.swift",
+          "path": "/repo/ios/SharedCoreBench/RootView.swift"
+        }
+      ],
+      "lineCoverage": 1,
+      "name": "SharedCoreBench.app"
+    },
+    {
+      "buildProductPath": "/home/Library/Developer/Xcode/DerivedData/SharedCoreBench-bbqazlxwfzhnwceyuztkapzhpbdw/Build/Products/Debug-iphonesimulator/SharedCoreBench.app/PlugIns/SharedCoreBenchTests.xctest/SharedCoreBenchTests",
+      "coveredLines": 5,
+      "executableLines": 5,
+      "files": [
+        {
+          "coveredLines": 5,
+          "executableLines": 5,
+          "functions": [
+            {
+              "coveredLines": 5,
+              "executableLines": 5,
+              "executionCount": 1,
+              "lineCoverage": 1,
+              "lineNumber": 8,
+              "name": "RootViewTests.showsTheProductsTitle()"
+            }
+          ],
+          "lineCoverage": 1,
+          "name": "RootViewTests.swift",
+          "path": "/repo/ios/SharedCoreBenchTests/RootViewTests.swift"
+        }
+      ],
+      "lineCoverage": 1,
+      "name": "SharedCoreBenchTests.xctest"
+    },
+    {
+      "buildProductPath": "/home/Library/Developer/Xcode/DerivedData/SharedCoreBench-bbqazlxwfzhnwceyuztkapzhpbdw/Build/Products/Debug-iphonesimulator/PackageFrameworks/ViewInspector_4E6CD4C83AB37A5F_PackageProduct.framework/ViewInspector_4E6CD4C83AB37A5F_PackageProduct",
+      "coveredLines": 0,
+      "executableLines": 86,
+      "files": [
+        {
+          "coveredLines": 0,
+          "executableLines": 86,
+          "functions": [
+            {
+              "coveredLines": 0,
+              "executableLines": 9,
+              "executionCount": 0,
+              "lineCoverage": 0,
+              "lineNumber": 8,
+              "name": "InspectableView.rotation()"
+            }
+          ],
+          "lineCoverage": 0,
+          "name": "TransformingModifiers.swift",
+          "path": "/home/Library/Developer/Xcode/DerivedData/SharedCoreBench-bbqazlxwfzhnwceyuztkapzhpbdw/SourcePackages/checkouts/ViewInspector/Sources/ViewInspector/Modifiers/TransformingModifiers.swift"
+        }
+      ],
+      "lineCoverage": 0.0,
+      "name": "ViewInspector"
+    }
+  ]
+}

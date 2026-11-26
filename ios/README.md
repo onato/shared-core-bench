@@ -22,4 +22,6 @@ The app links core-kmp as `SharedCore.xcframework`, which `make test-ios` builds
 switch with `onEnum(of:)`, and a Kotlin property named `description` reads as `description_`, since
 `description` is `NSObject`'s.
 
-`make lint-ios` runs SwiftLint with warnings as errors.
+`make lint-ios` runs SwiftLint with warnings as errors. `make coverage-ios SIM_UDID=…` runs the same
+tests with coverage and fails below 100% lines for the app target, naming each file under the gate;
+`coverage-exclusions` lists the files it leaves out.
