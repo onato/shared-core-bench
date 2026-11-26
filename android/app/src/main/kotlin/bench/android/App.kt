@@ -47,13 +47,18 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.Locale
+import kotlin.coroutines.CoroutineContext
 
 fun productPages(
     core: SharedCore,
     fetch: (FetchRequest) -> FetchResult,
     pageSize: Int,
     query: Query,
-): Flow<PagingData<ProductSummary>> = Pager(PagingConfig(pageSize)) { ProductPagingSource(core, fetch, query) }.flow
+    background: CoroutineContext,
+): Flow<PagingData<ProductSummary>> =
+    Pager(PagingConfig(pageSize)) {
+        ProductPagingSource(core, fetch, query, background)
+    }.flow
 
 private fun CombinedLoadStates.firstError() = listOf(refresh, append).filterIsInstance<LoadState.Error>().firstOrNull()
 
@@ -88,6 +93,7 @@ fun App(
     detail: (Long) -> DetailResult,
     refresh: () -> Unit,
     categories: () -> CategoriesResult,
+    background: CoroutineContext = Dispatchers.IO,
 ) {
     var text by rememberSaveable { mutableStateOf("") }
     val filters = rememberFilters()
@@ -106,7 +112,7 @@ fun App(
                     isRefreshing = items.loadState.refresh is LoadState.Loading && items.itemCount > 0,
                     onRefresh = {
                         scope.launch {
-                            withContext(Dispatchers.IO) { refresh() }
+                            withContext(background) { refresh() }
                             items.refresh()
                         }
                     },

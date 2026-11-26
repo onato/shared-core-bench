@@ -10,15 +10,17 @@ import bench.android.core.Query
 import bench.android.core.SharedCore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlin.coroutines.CoroutineContext
 
 /** Pages products out of the core, fetching and ingesting remote pages when local ones run out. */
 class ProductPagingSource(
     private val core: SharedCore,
     private val fetch: (FetchRequest) -> FetchResult,
     private val query: Query,
+    private val background: CoroutineContext = Dispatchers.IO,
 ) : PagingSource<Long, ProductSummary>() {
     override suspend fun load(params: LoadParams<Long>): LoadResult<Long, ProductSummary> =
-        withContext(Dispatchers.IO) { load(params.key, params.loadSize) }
+        withContext(background) { load(params.key, params.loadSize) }
 
     // The storage-failure guard is a third return; folding the fetch tail to avoid it would restructure that tail.
     @Suppress("ReturnCount")

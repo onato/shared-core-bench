@@ -2,6 +2,7 @@ package bench.android
 
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.Column
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasText
@@ -15,6 +16,7 @@ import bench.android.core.ProductDetail
 import bench.android.core.RatingBucket
 import bench.android.core.StockStatus
 import bench.android.core.summary
+import kotlinx.coroutines.Dispatchers
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -50,7 +52,15 @@ class ProductDetailTest {
     ) {
         compose.setContent {
             App(
-                { productPages(core, { request -> error("unexpected fetch of ${request.url}") }, pageSize, it) },
+                {
+                    productPages(
+                        core,
+                        { request -> error("unexpected fetch of ${request.url}") },
+                        pageSize,
+                        it,
+                        Dispatchers.Main,
+                    )
+                },
                 core::detail,
                 core::refresh,
                 core::categories,
@@ -96,7 +106,8 @@ class ProductDetailTest {
 
         compose.runOnUiThread { compose.activity.onBackPressedDispatcher.onBackPressed() }
 
-        compose.waitUntil { compose.onAllNodesWithText(mascara.description).fetchSemanticsNodes().isEmpty() }
+        compose.waitForIdle()
+        compose.onAllNodesWithText(mascara.description).assertCountEquals(0)
         compose.onNodeWithText("Product 25").assertIsDisplayed()
     }
 
@@ -164,7 +175,7 @@ class ProductDetailTest {
     }
 
     private fun awaitText(text: String) {
-        compose.waitUntil { compose.onAllNodesWithText(text).fetchSemanticsNodes().isNotEmpty() }
+        compose.waitForIdle()
         compose.onNodeWithText(text).assertIsDisplayed()
     }
 }
