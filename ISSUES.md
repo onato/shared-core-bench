@@ -133,6 +133,34 @@ lost most of their guessing to shapes the issue left open.
    Macrobenchmark (#124).
 9. **Checkpoint** (#125).
 
+At the end of M2 the Android app has every feature on the KMP core, the storage port runs batched
+and chatty on the bundled SQLite, and each bench suite has run on an emulator. Done: see
+`docs/checkpoints/M2.md`.
+
+---
+
+## M3 — iOS + KMP
+
+Parent #264. Drafted at the M2 checkpoint as `draft` sub-issues; `plan-approved` on #264 releases
+them to the loop. Each draft names the protected paths it touches, so a gate change is its own
+issue from the start.
+
+1. **Retro fixes** — adb checked before a device run (#265), a drafting check for protected paths
+   (#266), SQLDelight's dialect in `core-kmp/README.md` (#267), the full Android matrix in one run
+   (#269); the proposal #268 waits for the owner.
+2. **App shell** (#270), the **iOS coverage gate** (#271, gate) and a **macOS CI job** (#272, gate).
+3. **KMP for iOS** — iOS targets, the native driver, the XCFramework and SKIE (#273, gate).
+4. **Swift contract runner** (#274) and the **`SharedCore` protocol with its KMP adapter** (#275).
+5. **URLSession fetcher** (#276) and the **list model** over `page()` and remote loading (#277).
+6. **Screens** — list states and cells (#278), detail (#279), search (#280), filter and sort
+   controls (#281), pull to refresh (#282).
+7. **Swift storage port**, batched and chatty (#283), failure as a result (#284), and the
+   **settings picker** (#285).
+8. **Fixture mode** (#286), the same pages as Android's, and **XCUITests** (#287).
+9. **Benchmarks** — the XCTest harness and collector (#288), boundary (#289), core workloads
+   (#290), delegated-storage rows (#291), cold start and scrolling (#292).
+10. **Checkpoint** (#293).
+
 ---
 
 ## Retros
@@ -154,8 +182,6 @@ writes `docs/checkpoints/<milestone>.md`.
 
 ## Later milestones (tasks written at each checkpoint)
 
-- **M3 — iOS + KMP**: iOS app with the same features, XCFramework + SKIE, Swift storage port,
-  XCTest benches.
 - **M4 — Android + Rust/UniFFI**: Rust core passing the contract suite, cargo-ndk, Kotlin bindings.
 - **M5 — iOS + Rust/UniFFI**: XCFramework, Swift bindings. UniFFI verdict.
 - **M6 — iOS + Lua**: Lua core, C bridge, Swift wrapper.
