@@ -2,7 +2,9 @@
 
 import json
 import re
+import shlex
 import subprocess
+import tempfile
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
@@ -11,6 +13,7 @@ from typing import Protocol
 
 import blame_ignore_revs
 from ralph import POLL_SECONDS, Improvement, Issue, Outcome, PullRequest
+from ralph_token import TokenFile
 
 IGNORE_REVS = ".git-blame-ignore-revs"
 
@@ -32,9 +35,14 @@ BOT_GIT = {
     "GIT_CONFIG_VALUE_2": "!gh auth git-credential",
 }
 
+# A session outlives one token, so its git asks for the token file's: `git-credential-ralph`.
+SESSION_GIT = {**BOT_GIT, "GIT_CONFIG_VALUE_2": "ralph"}
+
 
 class SessionTokens(Protocol):
     def session_env(self, environ: dict[str, str]) -> dict[str, str]: ...
+
+    def current(self) -> str: ...
 
 
 @dataclass
@@ -217,7 +225,10 @@ class ClaudeSession:
         logs = self.repo / ".ralph" / "logs"
         logs.mkdir(exist_ok=True)
         log = logs / f"{self.now():%Y%m%d-%H%M%S}-{name}.log"
-        with log.open("w") as out:
+        with tempfile.TemporaryDirectory() as tmp, log.open("w") as out:
+            private = Path(tmp)
+            token = TokenFile(private / "token", self.tokens.current, self.now)
+            environ = without_token(with_simpool(own_environ(self.environ)))
             process = self.start(
                 [
                     "claude",
@@ -230,12 +241,17 @@ class ClaudeSession:
                     "--verbose",
                 ],
                 cwd=worktree,
-                env=self.tokens.session_env({**with_simpool(own_environ(self.environ)), **BOT_GIT}),
+                env={
+                    **with_token_file(private / "bin", environ),
+                    **SESSION_GIT,
+                    "RALPH_TOKEN_FILE": str(token.path),
+                },
                 stdout=out,
                 stderr=subprocess.STDOUT,
                 text=True,
             )
             while not exited(process):
+                token.refresh()
                 while_running()
         return final_result(log), log
 
@@ -255,6 +271,31 @@ def events(log: Path) -> list[dict]:
 def own_environ(environ: dict[str, str]) -> dict[str, str]:
     """Without the CLAUDE* variables a Claude Code parent sets, which make `claude` a child."""
     return {k: v for k, v in environ.items() if not k.startswith("CLAUDE")}
+
+
+def without_token(environ: dict[str, str]) -> dict[str, str]:
+    """Without the owner's GH_TOKEN: the session's `gh` reads the bot's from its token file."""
+    return {k: v for k, v in environ.items() if k != "GH_TOKEN"}
+
+
+def with_token_file(bin: Path, environ: dict[str, str]) -> dict[str, str]:
+    """With a `gh` first on the PATH that runs the real one with the token file's token, and
+    the git credential helper that answers with it."""
+    bin.mkdir()
+    path = shlex.quote(environ["PATH"])
+    script(bin / "gh", f'GH_TOKEN=$(cat "$RALPH_TOKEN_FILE") PATH={path} exec gh "$@"')
+    script(
+        bin / "git-credential-ralph",
+        'test "$1" = get || exit 0\n'
+        "echo username=x-access-token\n"
+        'echo "password=$(cat "$RALPH_TOKEN_FILE")"',
+    )
+    return {**environ, "PATH": f"{bin}:{environ['PATH']}"}
+
+
+def script(path: Path, body: str) -> None:
+    path.write_text(f"#!/bin/sh\n{body}\n")
+    path.chmod(0o700)
 
 
 def with_simpool(environ: dict[str, str]) -> dict[str, str]:
