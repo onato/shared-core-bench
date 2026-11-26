@@ -1,7 +1,7 @@
 import Foundation
 
 /// A JSON value as the contract compares it: `10` and `10.0` are different values.
-enum JSON: Equatable {
+enum JSON: Equatable, Sendable {
     case null
     case bool(Bool)
     case int(Int)

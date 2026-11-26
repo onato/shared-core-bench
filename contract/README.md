@@ -80,6 +80,10 @@ before starting:
   `FakeCore`), both contract adapters, the core's `Core.kt`, and the app's `SharedCore.kt` with
   `KmpSharedCore.kt` and the test `FakeSharedCore.kt`.
 
+The iOS app mirrors the Android one: wherever a bullet names `SharedCore.kt`, `KmpSharedCore.kt` or
+`SharedCoreContract.kt`, change its Swift twin in `ios/SharedCoreBench/Core/` or
+`ios/SharedCoreBenchTests/Contract/` too.
+
 ## Runners
 
 A core's runner turns each case file into its own test, sends every step to the core and compares
