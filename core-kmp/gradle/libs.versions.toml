@@ -9,6 +9,7 @@ junit = "5.13.4"
 junitPlatform = "1.13.4"
 serialization = "1.9.0"
 sqldelight = "2.4.1"
+skie = "0.10.16"
 robolectric = "4.18.1"
 android-compileSdk = "36"
 android-minSdk = "26"
@@ -20,6 +21,7 @@ junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serialization" }
 sqldelight-jvm-driver = { module = "app.cash.sqldelight:sqlite-driver", version.ref = "sqldelight" }
 sqldelight-android-driver = { module = "app.cash.sqldelight:android-driver", version.ref = "sqldelight" }
+sqldelight-native-driver = { module = "app.cash.sqldelight:native-driver", version.ref = "sqldelight" }
 robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
 
 [plugins]
@@ -30,3 +32,4 @@ kover = { id = "org.jetbrains.kotlinx.kover", version.ref = "kover" }
 ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlintGradle" }
 detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }
 sqldelight = { id = "app.cash.sqldelight", version.ref = "sqldelight" }
+skie = { id = "co.touchlab.skie", version.ref = "skie" }

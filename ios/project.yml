@@ -17,6 +17,8 @@ targets:
     type: application
     platform: iOS
     sources: [SharedCoreBench]
+    dependencies:
+      - framework: ../core-kmp/build/XCFrameworks/debug/SharedCore.xcframework
     settings:
       base:
         GENERATE_INFOPLIST_FILE: YES

@@ -23,3 +23,4 @@ coverage-exclusions
 /scripts/pr_size.py
 /scripts/protected_paths.py
 /scripts/review_verdict.py
+/scripts/coverage_ios.py
