@@ -39,7 +39,7 @@ learned.
 
   Either list may be `none` (say why). Order the tests to write first so each one needs code the
   earlier ones didn't: a test the previous step already satisfies belongs in no list.
-- **Before filing an issue**, check these five things. Each one cost a session time when an issue
+- **Before filing an issue**, check these six things. Each one cost a session time when an issue
   left it out:
   - **Where the code goes.** Name the module, and check that the module can depend on what the
     code uses. An Android library can't depend on `:app`, so #123 had to be split partway
@@ -62,6 +62,12 @@ learned.
     until that fix lands, and say in the issue that the UI exists. #242 listed the paging-source
     fix first, its screen tests then passed on their first run, and the session had to rerun them
     against `main` to show them red (#249).
+  - **Which protected paths it touches.** When the change must edit a path in
+    `.github/protected-paths` (most often `android/app/build.gradle.kts` for a new module,
+    dependency or build type, and `core-kmp/build.gradle.kts` for a target or plugin), split that
+    edit into its own sub-issue, blocking the rest, so its `gate-approved` PR is planned rather
+    than found mid-session. In M2, #167, #193, #205, #207 and #229 each found it partway through
+    and stopped with NEEDS_HUMAN.
 - Hierarchy uses GitHub sub-issues: one parent issue per milestone, tasks as its sub-issues, and
   GitHub issue dependencies ("blocked by") for order.
 - Board: https://github.com/users/onato/projects/2
