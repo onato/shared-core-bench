@@ -1,0 +1,41 @@
+name: SharedCoreBench
+options:
+  bundleIdPrefix: bench
+  deploymentTarget:
+    iOS: "18.0"
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    SWIFT_TREAT_WARNINGS_AS_ERRORS: YES
+    GCC_TREAT_WARNINGS_AS_ERRORS: YES
+packages:
+  ViewInspector:
+    url: https://github.com/nalexn/ViewInspector
+    from: "0.10.5"
+targets:
+  SharedCoreBench:
+    type: application
+    platform: iOS
+    sources: [SharedCoreBench]
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        PRODUCT_BUNDLE_IDENTIFIER: bench.ios.SharedCoreBench
+  SharedCoreBenchTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources: [SharedCoreBenchTests]
+    dependencies:
+      - target: SharedCoreBench
+      - package: ViewInspector
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+schemes:
+  SharedCoreBench:
+    build:
+      targets:
+        SharedCoreBench: all
+    test:
+      targets: [SharedCoreBenchTests]
