@@ -6,6 +6,7 @@ Compares KMP, Rust/UniFFI and Lua as a shared business-logic core for an iOS and
 - `ISSUES.md` — delivery milestones and how work flows
 - `CODING_STANDARDS.md` — what the PR review enforces; read it before writing tests or code
 - `contract/README.md` and `android/README.md` — what contract cases and app tests need; read before changing either
+- `core-kmp/README.md` — the SQLite syntax SQLDelight's dialect rejects; read before writing or porting SQL
 - GitHub issues on `onato/shared-core-bench` — the work queue (board: users/onato/projects/2)
 
 Each issue carries two checklists: "Contract cases" (the outer loop, below) and "Tests to write
