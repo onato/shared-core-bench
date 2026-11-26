@@ -42,6 +42,8 @@ class PullRequest:
     has_retro_notes: bool = True
     behind: bool = False
     branch: str = ""
+    unresolved_threads: int = 0
+    blocked_with_checks_passing: bool = False  # every check passed, yet GitHub won't merge it
 
 
 @dataclass(frozen=True)
@@ -147,6 +149,7 @@ class _Loop:
     left_in_place: dict[int, str] = field(default_factory=dict)  # issue → why its worktree stayed
     errors_while_running: list[str] = field(default_factory=list)
     not_brought_up_to_date: list[str] = field(default_factory=list)  # PRs no issue holds
+    held_by_threads: list[str] = field(default_factory=list)  # PRs no issue holds, too
     waiting_since: float | None = None
 
     def run(self) -> str:
@@ -215,6 +218,16 @@ class _Loop:
             if pr.merged and pr.number in self.worktrees:
                 self.remove_worktree(self.worktrees.pop(pr.number))
         self.update_behind(prs)
+        self.drop_held(prs)
+
+    def drop_held(self, prs: list[PullRequest]) -> None:
+        """Stop waiting for a green PR an unresolved review thread blocks: it never merges."""
+        for pr in prs:
+            if pr.blocked_with_checks_passing and pr.unresolved_threads:
+                count = pr.unresolved_threads
+                threads = f"{count} unresolved review thread" + ("" if count == 1 else "s")
+                reason = f"PR #{pr.number} is held by {threads}"
+                self.stop_waiting(pr.number, reason, self.held_by_threads)
 
     def update_behind(self, prs: list[PullRequest]) -> None:
         for pr in prs:
@@ -352,6 +365,8 @@ class _Loop:
             ]
         if self.not_brought_up_to_date:
             lines += ["Not brought up to date:", *(f"- {r}" for r in self.not_brought_up_to_date)]
+        if self.held_by_threads:
+            lines += ["Held by review threads:", *(f"- {r}" for r in self.held_by_threads)]
         return "\n".join(lines + self.improver_lines())
 
     def improver_lines(self) -> list[str]:
