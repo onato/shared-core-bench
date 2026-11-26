@@ -88,3 +88,4 @@ written `10.0` in `expect`, never `10`. It fails:
 | Core | Runner |
 |---|---|
 | KMP (JVM) | `core-kmp/contract-runner/src/main/kotlin/bench/contract/ContractRunner.kt`, run over `contract/cases` by `core-kmp/src/jvmTest/kotlin/bench/core/KmpContractTest.kt` |
+| iOS (Swift) | `ios/SharedCoreBenchTests/Contract/ContractRunner.swift`; the test target bundles `contract/cases` as its `cases` folder (`ios/project.yml`) |
