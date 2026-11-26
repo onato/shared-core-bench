@@ -1,6 +1,6 @@
 import Foundation
 
-struct ContractCase {
+struct ContractCase: Sendable {
     let name: String
     let steps: [JSON]
 
