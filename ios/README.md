@@ -20,7 +20,9 @@ simpool release $SIM_UDID
 The app links core-kmp as `SharedCore.xcframework`, which `make test-ios` builds first through
 `make ios-framework` (`CONFIG=Release` for benchmarks). SKIE shapes its Swift API: sealed results
 switch with `onEnum(of:)`, and a Kotlin property named `description` reads as `description_`, since
-`description` is `NSObject`'s.
+`description` is `NSObject`'s. The app's own `SharedCore` protocol and result types shadow the KMP
+module's names, so `KmpSharedCore.swift`, the one file that imports it, writes KMP types with a module
+selector: `SharedCore::Query`.
 
 `make lint-ios` runs SwiftLint with warnings as errors. `make coverage-ios SIM_UDID=…` runs the same
 tests with coverage and fails below 100% lines for the app target, naming each file under the gate;
